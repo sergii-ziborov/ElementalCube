@@ -20,14 +20,16 @@ final class InteractiveMetalView: MTKView {
         case 49: if !event.isARepeat { session.tapJump() }
         case 3: if !event.isARepeat { session.frost() }
         case 15: if !event.isARepeat { session.reset() }
-        case 123,0: session.move(-1)
-        case 124,2: session.move(1)
+        case 123,0: session.setMovement(source:"key:\(event.keyCode)",direction:-1,pressed:true)
+        case 124,2: session.setMovement(source:"key:\(event.keyCode)",direction:1,pressed:true)
         case 53: session.cancelAim();session.paused.toggle()
         default: super.keyDown(with:event)
         }
     }
     override func keyUp(with event:NSEvent) {
-        if [123,124,0,2].contains(Int(event.keyCode)) { session.move(0) } else { super.keyUp(with:event) }
+        if [123,124,0,2].contains(Int(event.keyCode)) {
+            session.setMovement(source:"key:\(event.keyCode)",direction:0,pressed:false)
+        } else { super.keyUp(with:event) }
     }
     override func viewWillMove(toWindow newWindow:NSWindow?) { if newWindow == nil { session?.cancelAim() };super.viewWillMove(toWindow:newWindow) }
 }

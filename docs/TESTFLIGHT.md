@@ -4,18 +4,19 @@
 
 Исходники сборки 2 зафиксированы тегом `v0.1.0-alpha.2`. Она добавляет сохранение настроек и тактильный отклик. Подписанная IPA сборки 2 находится в `build/testflight-next/Export`; предыдущая сборка 1 сохранена отдельно в `build/testflight/Export`.
 
-## Локальная сборка и загрузка
+## Загрузка подготовленной сборки 2
 
 Используется стабильный `/Applications/Xcode.app`. Скрипты работают вручную; CI/CD нет.
 
 Ключ App Store Connect хранится вне репозитория. Переменные `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_PATH` можно задать в окружении или в локальном `~/.private_keys/appstoreconnect.env`. Путь к другому файлу задаётся через `ASC_ENV_FILE`. Содержимое ключа не выводится.
 
 ```sh
-ELEMENTAL_RELEASE_DIR=build/testflight-next ./scripts/testflight.sh prepare
 ELEMENTAL_RELEASE_DIR=build/testflight-next ./scripts/testflight.sh validate
 ELEMENTAL_RELEASE_DIR=build/testflight-next ./scripts/testflight.sh upload
 python3 scripts/asc.py status
 ```
+
+Текущая ветка `main` уже содержит доработки для сборки 3. Не пересобирайте её в каталоге `build/testflight-next`: там сохраняется подписанная альфа 2. Для повторения исходной сборки 2 используйте исходники тега `v0.1.0-alpha.2`.
 
 Тексты русской и английской карточки находятся в `docs/app-store/metadata.json`. Проверка ограничений Apple: `python3 scripts/app-store-metadata.py`. После создания карточки: `python3 scripts/app-store-metadata.py --apply`. После обработки сборки 2 добавьте задания тестерам: `python3 scripts/app-store-metadata.py --apply --build 2`. Эти команды не отправляют приложение на публикацию в App Store и не приглашают тестеров.
 

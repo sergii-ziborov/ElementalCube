@@ -4,6 +4,7 @@ import ElementalCore
 final class GameSession: ObservableObject {
     private let settingsStore: PlaygroundSettingsStore
     private let feedback = HapticFeedback()
+    private var movementInput = MovementInput()
     var simulation = Simulation()
     @Published var shards = 0
     @Published var energy:Float = 100
@@ -70,9 +71,16 @@ final class GameSession: ObservableObject {
         let r=max(1,hypot(translation.width,translation.height)),scale=min(1,115/r)
         aim=CGSize(width:translation.width*scale,height:translation.height*scale)
     }
-    func move(_ value:Float) {
-        moving=value;simulation.movement=value
-        if value != 0 { direction=value }
+    func setMovement(source:String,direction:Float,pressed:Bool) {
+        if pressed {
+            guard !paused && !settings else { return }
+            movementInput.press(source:source,direction:direction)
+        } else { movementInput.release(source:source) }
+        applyMovement()
+    }
+    private func applyMovement() {
+        moving=movementInput.value;simulation.movement=moving
+        if moving != 0 { direction=moving }
     }
     func beginAim() { guard !paused && !settings else { return }; aiming=true }
     func releaseAim() {
@@ -85,7 +93,7 @@ final class GameSession: ObservableObject {
         aiming=false;aim = .zero
         deliverFeedback()
     }
-    func cancelAim() { aiming=false;aim = .zero;move(0) }
+    func cancelAim() { aiming=false;aim = .zero;movementInput.clear();applyMovement() }
     func tapJump() { guard !paused && !settings else { return };_ = simulation.jump(Vec(0,7.2));deliverFeedback() }
     func frost() {
         guard !paused && !settings else { return }

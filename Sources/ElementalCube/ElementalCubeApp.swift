@@ -27,6 +27,13 @@ let mint=Color(red:0.68,green:0.92,blue:0.84)
 struct GameView:View {
     @ObservedObject var session:GameSession
     @State private var dismissVictory=false
+    var controlHint:String {
+        #if os(macOS)
+        return "← → — катиться / плыть    ПРОБЕЛ — прыжок    F — дыхание    R — заново"
+        #else
+        return session.inverted ? "Удерживай ← →. Для прыжка потяни назад и отпусти." : "Удерживай ← →. Для прыжка потяни к цели и отпусти."
+        #endif
+    }
     var abilityCaption:String {
         if session.iceTime>0 { return "\(Int(ceil(session.iceTime))) с" }
         #if os(macOS)
@@ -166,7 +173,7 @@ struct GameView:View {
                 }
             }
             HStack {
-                Text(compact ? (session.inverted ? "Удерживай ← →. Для прыжка потяни назад и отпусти." : "Удерживай ← →. Для прыжка потяни к цели и отпусти.") : "← → — катиться / плыть    ПРОБЕЛ — прыжок    F — дыхание    R — заново").font(.system(size:compact ? 9 : 10)).foregroundStyle(cream.opacity(0.65))
+                Text(controlHint).font(.system(size:compact ? 9 : 10)).foregroundStyle(cream.opacity(0.65))
                 Spacer()
                 if !compact { Text("ПРИРОДА ПОМНИТ. КУБ МЕНЯЕТ МИР.").font(.system(size:8,weight:.medium)).tracking(1.8).foregroundStyle(cream.opacity(0.5)) }
             }.padding(.top,6).overlay(alignment:.top) { Rectangle().fill(cream.opacity(0.16)).frame(height:1) }
@@ -186,7 +193,9 @@ struct GameView:View {
             .background(cream.opacity(session.moving==direction ? 0.26 : 0.11),in:RoundedRectangle(cornerRadius:16))
             .overlay(RoundedRectangle(cornerRadius:16).stroke(cream.opacity(0.4),lineWidth:1))
             .contentShape(RoundedRectangle(cornerRadius:16))
-            .gesture(DragGesture(minimumDistance:0).onChanged { _ in if !session.paused && !session.settings { session.move(direction) } }.onEnded { _ in session.move(0) })
+            .gesture(DragGesture(minimumDistance:0)
+                .onChanged { _ in session.setMovement(source:direction<0 ? "touch-left" : "touch-right",direction:direction,pressed:true) }
+                .onEnded { _ in session.setMovement(source:direction<0 ? "touch-left" : "touch-right",direction:direction,pressed:false) })
             .accessibilityLabel(direction<0 ? "Катиться или плыть влево" : "Катиться или плыть вправо")
     }
     var settingsPanel:some View {

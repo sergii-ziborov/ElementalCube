@@ -66,9 +66,9 @@ final class Renderer: NSObject, MTKViewDelegate {
             while accumulator>=Double(Simulation.timestep) { session.tick();accumulator-=Double(Simulation.timestep) }
         }
         let s=session.simulation,p=s.cube.position
-        let half=worldWidth/2,minX = -2.7+half,maxX=25-half
-        let lookAhead:Float=worldWidth<12 ? 1.4 : 3
-        let target=max(minX,min(max(minX,maxX),p.x+lookAhead))
+        let target=CameraFraming.target(cubeX:p.x,velocityX:s.cube.velocity.x,
+            movement:session.moving,facing:session.direction,
+            aimVelocityX:session.aiming ? session.launchVelocity.x : nil,worldWidth:worldWidth)
         cameraX+=(target-cameraX)*Float(1-exp(-dt*3.4))
         guard let drawable=view.currentDrawable,let pass=view.currentRenderPassDescriptor,let cb=queue.makeCommandBuffer(),let e=cb.makeRenderCommandEncoder(descriptor:pass) else { return }
         var floorHeight:Float=0,floorSlope:Float=0
