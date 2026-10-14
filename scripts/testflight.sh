@@ -8,11 +8,14 @@ release_dir="${ELEMENTAL_RELEASE_DIR:-build/testflight}"
 mkdir -p "$release_dir"
 if [ "$mode" = prepare ]; then
     python3 scripts/asc.py prepare-signing
+    archive_settings=("CODE_SIGN_STYLE=Manual" "CODE_SIGN_IDENTITY=Apple Distribution" "PROVISIONING_PROFILE_SPECIFIER=ElementalCube App Store")
+    if [ -n "${ELEMENTAL_BUILD_NUMBER:-}" ]; then
+        case "$ELEMENTAL_BUILD_NUMBER" in *[!0-9]*) echo 'Build number must contain only digits' >&2; exit 2 ;; esac
+        archive_settings+=("CURRENT_PROJECT_VERSION=$ELEMENTAL_BUILD_NUMBER")
+    fi
     xcodebuild -project ElementalCube.xcodeproj -scheme ElementalCube-iOS -configuration Release \
         -destination 'generic/platform=iOS' -archivePath "$release_dir/ElementalCube.xcarchive" \
-        -derivedDataPath "$release_dir/DerivedData" CODE_SIGN_STYLE=Manual \
-        CODE_SIGN_IDENTITY='Apple Distribution' PROVISIONING_PROFILE_SPECIFIER='ElementalCube App Store' \
-        CURRENT_PROJECT_VERSION="${ELEMENTAL_BUILD_NUMBER:-1}" archive
+        -derivedDataPath "$release_dir/DerivedData" "${archive_settings[@]}" archive
     xcodebuild -exportArchive -archivePath "$release_dir/ElementalCube.xcarchive" \
         -exportPath "$release_dir/Export" -exportOptionsPlist ExportOptions.plist
 else

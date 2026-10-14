@@ -2,6 +2,8 @@ import SwiftUI
 import ElementalCore
 
 final class GameSession: ObservableObject {
+    private let settingsStore: PlaygroundSettingsStore
+    private let feedback = HapticFeedback()
     var simulation = Simulation()
     @Published var shards = 0
     @Published var energy:Float = 100
@@ -14,24 +16,30 @@ final class GameSession: ObservableObject {
     @Published var aim: CGSize = .zero
     @Published var aiming = false
     @Published var settings = false
-    @Published var debug = false
+    @Published var debug = false { didSet { persistSettings() } }
     @Published var paused = false
     @Published var hint = "Потяни кнопку назад и отпусти — куб прыгнет по дуге." { didSet { hintUntil=simulation.time+3 } }
     var hintUntil:Float = 0
-    @Published var gravity:Double = 18 { didSet { simulation.gravity=Float(gravity) } }
-    @Published var power:Double = 1 { didSet { simulation.jumpScale=Float(power) } }
-    @Published var water = true { didSet { simulation.waterEnabled=water } }
-    @Published var zoom:Double = 1
-    @Published var inverted = true
+    @Published var gravity:Double = 18 { didSet { simulation.gravity=Float(gravity);persistSettings() } }
+    @Published var power:Double = 1 { didSet { simulation.jumpScale=Float(power);persistSettings() } }
+    @Published var water = true { didSet { simulation.waterEnabled=water;persistSettings() } }
+    @Published var zoom:Double = 1 { didSet { persistSettings() } }
+    @Published var inverted = true { didSet { persistSettings() } }
+    @Published var haptics = true { didSet { persistSettings() } }
     @Published var direction:Float = 1
     @Published var moving:Float = 0
     var dragging = false
     private var publishTime:Float = 0
     private var visualPreview = false
     init() {
-        // Local visual QA scenes; normal launches always start at the beginning of the map.
+        settingsStore = PlaygroundSettingsStore()
         let args=ProcessInfo.processInfo.arguments
         visualPreview=args.contains("--preview-water") || args.contains("--preview-wet") || args.contains("--preview-ice")
+        let stored = visualPreview ? PlaygroundSettings() : settingsStore.load()
+        gravity=stored.gravity;power=stored.power;zoom=stored.zoom;water=stored.water
+        inverted=stored.inverted;debug=stored.debug;haptics=stored.haptics
+        simulation.gravity=Float(gravity);simulation.jumpScale=Float(power);simulation.waterEnabled=water
+        // Local visual QA scenes; normal launches always start at the beginning of the map.
         if args.contains("--preview-water") || args.contains("--preview-wet") {
             simulation.placeCube(Vec(10,-1.2))
             for _ in 0..<240 { simulation.step() }
@@ -42,6 +50,18 @@ final class GameSession: ObservableObject {
         }
         refresh()
     }
+    private func persistSettings() {
+        var stored = PlaygroundSettings()
+        stored.gravity=gravity;stored.power=power;stored.zoom=zoom;stored.water=water
+        stored.inverted=inverted;stored.debug=debug;stored.haptics=haptics
+        settingsStore.save(stored)
+    }
+    func restoreDefaults() {
+        let stored = PlaygroundSettings()
+        gravity=stored.gravity;power=stored.power;zoom=stored.zoom;water=stored.water
+        inverted=stored.inverted;debug=stored.debug;haptics=stored.haptics
+    }
+    private func deliverFeedback() { feedback.play(simulation.takeFeedback(),enabled:haptics && !visualPreview) }
     var aimImpulse:Vec {
         AimPlanner.impulse(dx:Float(aim.width),dy:Float(aim.height),direction:direction,inverted:inverted)
     }
@@ -63,15 +83,18 @@ final class GameSession: ObservableObject {
         else if simulation.inWater { hint="В воде: потяни в сторону берега и отпусти, чтобы выбраться." }
         else { hint="Попробуй короткий прыжок на ящик или длинный — к опоре в воде." }
         aiming=false;aim = .zero
+        deliverFeedback()
     }
     func cancelAim() { aiming=false;aim = .zero;move(0) }
-    func tapJump() { guard !paused && !settings else { return };_ = simulation.jump(Vec(0,7.2)) }
+    func tapJump() { guard !paused && !settings else { return };_ = simulation.jump(Vec(0,7.2));deliverFeedback() }
     func frost() {
+        guard !paused && !settings else { return }
         if simulation.frost() { hint="Ледяной наст готов. У тебя 25 секунд, чтобы перейти воду." }
         else if simulation.iceTime > 0 { hint="Наст уже создан — он растает сам." }
         else if simulation.energy < 30 { hint="Нужно 30 энергии. Она постепенно восстанавливается." }
         else { hint="Подойди к воде: дыхание действует только вблизи берега." }
         refresh()
+        deliverFeedback()
     }
     func reset() {
         simulation=Simulation();simulation.gravity=Float(gravity);simulation.jumpScale=Float(power);simulation.waterEnabled=water
@@ -79,7 +102,7 @@ final class GameSession: ObservableObject {
     }
     func tick() {
         guard !paused && !settings && !visualPreview else { return }
-        simulation.step();publishTime+=Simulation.timestep
+        simulation.step();deliverFeedback();publishTime+=Simulation.timestep
         if publishTime > 0.06 { publishTime=0;refresh() }
     }
     func refresh() {

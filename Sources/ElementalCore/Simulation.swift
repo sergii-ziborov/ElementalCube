@@ -10,6 +10,14 @@ public struct BodyState {
 }
 public enum Mood { case curious, focused, delighted, startled, displeased, sleepy }
 public enum Surface: String { case grass = "трава", stone = "камень", ice = "лёд", wood = "дерево", water = "вода" }
+public enum SimulationFeedback: Equatable {
+    case jumped
+    case landed(impact: Float, surface: Surface)
+    case enteredWater(strength: Float)
+    case collectedCrystal
+    case frozeWater
+    case finished
+}
 public struct Platform {
     public let x: Float, y: Float, width: Float, height: Float
     public init(_ x:Float,_ y:Float,_ width:Float,_ height:Float) { self.x=x;self.y=y;self.width=width;self.height=height }
@@ -52,6 +60,14 @@ public final class Simulation {
     private var cooldown: Float = 0
     private var buffer: (Vec,Float)?
     private var randomSeed: UInt64 = 8251
+    private var feedback: [SimulationFeedback] = []
+    public func takeFeedback() -> [SimulationFeedback] {
+        let events = feedback; feedback.removeAll(keepingCapacity:true); return events
+    }
+    private func record(_ event: SimulationFeedback) {
+        if feedback.count == 16 { feedback.removeFirst() }
+        feedback.append(event)
+    }
     public var gravity: Float = 18 { didSet { ec_gravity(world,gravity) } }
     public var waterEnabled = true
     public var jumpScale: Float = 1
@@ -109,6 +125,7 @@ public final class Simulation {
             cooldown=0.16
         }
         squash = -0.28; jumps += 1; buffer=nil;mood = .focused;emotionTime=0.3
+        record(.jumped)
         emit(cube.position,kind:0,count:12)
         sync()
         return true
@@ -126,6 +143,7 @@ public final class Simulation {
             ec_material(world,id,0.015,0.04);iceIDs.append(id)
         }
         for i in 0..<28 { emit(Vec(7+Float(i)*0.37,waterLevel+0.22),kind:2,count:2) }
+        record(.frozeWater)
         return true
     }
     public func resetCube() { ec_teleport(world,cubeID,2.7,0.75);wetness=0;cooldown=0;buffer=nil;won=false;sync() }
@@ -151,6 +169,7 @@ public final class Simulation {
         if cube.position.y-0.56 > waterLevel { wetness=max(0,wetness-dt*0.065) }
         if old.position.y-0.56 > waterLevel && cube.position.y-0.56 <= waterLevel && cube.position.x > 7 && cube.position.x < 17 && waterEnabled {
             disturb(cube.position.x,amount:min(1.5,abs(old.velocity.y)*0.13));emit(Vec(cube.position.x,waterLevel),kind:1,count:28)
+            record(.enteredWater(strength:min(1,abs(old.velocity.y)/10)))
             mood = .displeased;emotionTime=3
         }
         if cube.grounded {
@@ -161,6 +180,7 @@ public final class Simulation {
         if !old.grounded && cube.grounded && old.velocity.y < -1.5 {
             let hardness:Float=surface == .grass ? 0.65 : (surface == .wood ? 0.8 : 1)
             impact=min(1,abs(old.velocity.y)/11)*hardness;landingAge=0
+            record(.landed(impact:impact,surface:surface))
             squash=min(0.42,abs(old.velocity.y)*0.035*hardness)
             emit(Vec(cube.position.x,cube.position.y-0.56),kind:surface == .ice ? 2 : 0,count:impact>0.65 ? 18 : 7)
             mood = impact>0.7 ? .startled : .delighted;emotionTime=impact>0.7 ? 0.8 : 0.45
@@ -186,9 +206,9 @@ public final class Simulation {
         for i in 1..<wave.count-1 { wave[i]+=waveSpeed[i]*dt }
         for i in shards.indices where !collected.contains(i) {
             let p=shards[i];let d=cube.position
-            if hypot(p.x-d.x,p.y-d.y)<1.0 { collected.insert(i);emit(p,kind:3,count:24);mood = .delighted;emotionTime=1.8 }
+            if hypot(p.x-d.x,p.y-d.y)<1.0 { collected.insert(i);emit(p,kind:3,count:24);mood = .delighted;emotionTime=1.8;record(.collectedCrystal) }
         }
-        if cube.position.x > 22.4 && cube.grounded && !won { won=true;emit(Vec(23,2),kind:3,count:55) }
+        if cube.position.x > 22.4 && cube.grounded && !won { won=true;emit(Vec(23,2),kind:3,count:55);record(.finished) }
         if cube.position.y < -5.2 || !cube.position.x.isFinite { respawns+=1;resetCube() }
         for i in particles.indices { particles[i].life-=dt;particles[i].position.x+=particles[i].velocity.x*dt;particles[i].position.y+=particles[i].velocity.y*dt;particles[i].velocity.y-=dt*4 }
         particles.removeAll { $0.life <= 0 }

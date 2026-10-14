@@ -190,6 +190,9 @@ struct GameView:View {
             .accessibilityLabel(direction<0 ? "Катиться или плыть влево" : "Катиться или плыть вправо")
     }
     var settingsPanel:some View {
+        ScrollView { settingsContents }.background(cream)
+    }
+    var settingsContents:some View {
         VStack(alignment:.leading,spacing:22) {
             HStack { Text("Почувствуй физику").font(.system(size:26,design:.serif));Spacer();Button { session.settings=false } label:{ Image(systemName:"xmark") }.buttonStyle(.plain) }
             Text("Настройки тестовой площадки. Мир приостановлен, пока открыта эта панель.").font(.system(size:13)).foregroundStyle(ink.opacity(0.65))
@@ -199,7 +202,10 @@ struct GameView:View {
             Toggle("Вода и плавучесть",isOn:$session.water)
             Toggle("Прыжок как рогатка: тяни в обратную сторону",isOn:$session.inverted)
             Toggle("Показать столкновения и скорость",isOn:$session.debug)
-            HStack { Button("По умолчанию") { session.gravity=18;session.power=1;session.zoom=1;session.water=true;session.debug=false }.buttonStyle(PillButton(filled:false));Spacer();Button("Продолжить") { session.settings=false }.buttonStyle(PillButton()) }
+            #if os(iOS)
+            Toggle("Отклик вибрацией",isOn:$session.haptics)
+            #endif
+            HStack { Button("По умолчанию") { session.restoreDefaults() }.buttonStyle(PillButton(filled:false));Spacer();Button("Продолжить") { session.settings=false }.buttonStyle(PillButton()) }
             Text("Metal • Box2D 3.1.1 • физика 120 Гц").font(.system(size:10,design:.monospaced)).foregroundStyle(ink.opacity(0.45))
         }.font(.system(size:13)).padding(30).frame(maxWidth:440).foregroundStyle(ink).background(cream)
     }
