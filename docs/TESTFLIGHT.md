@@ -17,6 +17,8 @@
 python3 scripts/asc.py status
 ```
 
+Тексты русской и английской карточки находятся в `docs/app-store/metadata.json`. Проверка ограничений Apple: `python3 scripts/app-store-metadata.py`. После создания карточки: `python3 scripts/app-store-metadata.py --apply`. После обработки сборки 2 добавьте задания тестерам: `python3 scripts/app-store-metadata.py --apply --build 2`. Эти команды не отправляют приложение на публикацию в App Store и не приглашают тестеров.
+
 Для следующей сборки передайте уникальный номер: `ELEMENTAL_BUILD_NUMBER=2 ./scripts/testflight.sh prepare`.
 
 Архив, подписанная IPA и журналы находятся в игнорируемой папке `build/testflight`.
