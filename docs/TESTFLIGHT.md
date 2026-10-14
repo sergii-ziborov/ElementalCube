@@ -1,8 +1,8 @@
-# ElementalCube — alpha 0.1.0 (1)
+# ElementalCube — alpha 0.1.0 (2)
 
 Нативная тестовая площадка для iPhone и iPad. Сборка включает качение, прыжки с предпросмотром траектории, плавание и выход из воды, мокрую шерсть, морозное дыхание, физический ящик и разную реакцию на посадку.
 
-Исходники этой сборки зафиксированы тегом `v0.1.0-alpha.1`. Следующая версия в `main` имеет номер сборки 2 и добавляет сохранение настроек и тактильный отклик. Подготовленная IPA сборки 1 остаётся в `build/testflight/Export`; для подготовки сборки 2 используйте `ELEMENTAL_RELEASE_DIR=build/testflight-next ./scripts/testflight.sh prepare`, чтобы сохранить оба архива.
+Исходники сборки 2 зафиксированы тегом `v0.1.0-alpha.2`. Она добавляет сохранение настроек и тактильный отклик. Подписанная IPA сборки 2 находится в `build/testflight-next/Export`; предыдущая сборка 1 сохранена отдельно в `build/testflight/Export`.
 
 ## Локальная сборка и загрузка
 
@@ -11,15 +11,15 @@
 Ключ App Store Connect хранится вне репозитория. Переменные `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_PATH` можно задать в окружении или в локальном `~/.private_keys/appstoreconnect.env`. Путь к другому файлу задаётся через `ASC_ENV_FILE`. Содержимое ключа не выводится.
 
 ```sh
-./scripts/testflight.sh prepare
-./scripts/testflight.sh validate
-./scripts/testflight.sh upload
+ELEMENTAL_RELEASE_DIR=build/testflight-next ./scripts/testflight.sh prepare
+ELEMENTAL_RELEASE_DIR=build/testflight-next ./scripts/testflight.sh validate
+ELEMENTAL_RELEASE_DIR=build/testflight-next ./scripts/testflight.sh upload
 python3 scripts/asc.py status
 ```
 
 Тексты русской и английской карточки находятся в `docs/app-store/metadata.json`. Проверка ограничений Apple: `python3 scripts/app-store-metadata.py`. После создания карточки: `python3 scripts/app-store-metadata.py --apply`. После обработки сборки 2 добавьте задания тестерам: `python3 scripts/app-store-metadata.py --apply --build 2`. Эти команды не отправляют приложение на публикацию в App Store и не приглашают тестеров.
 
-Для следующей сборки передайте уникальный номер: `ELEMENTAL_BUILD_NUMBER=2 ./scripts/testflight.sh prepare`.
+Для следующей сборки передайте уникальный номер и отдельный каталог: `ELEMENTAL_BUILD_NUMBER=3 ELEMENTAL_RELEASE_DIR=build/alpha3 ./scripts/testflight.sh prepare`.
 
 Архив, подписанная IPA и журналы находятся в игнорируемой папке `build/testflight`.
 
