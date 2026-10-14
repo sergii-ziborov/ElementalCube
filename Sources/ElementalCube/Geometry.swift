@@ -39,10 +39,11 @@ struct RNG { var seed:UInt64=9349823; mutating func next()->Float { seed=seed &*
 func tint(_ hex:UInt32,_ alpha:Float=1)->C4 { C4(Float(hex>>16&255)/255,Float(hex>>8&255)/255,Float(hex&255)/255,alpha) }
 
 enum Geometry {
-    static func cube()->Mesh {
+    static func cube(form:ElementForm = .ice)->Mesh {
         var mesh=Mesh(),r=RNG()
         // Rounded solid cube: six subdivided faces, with physical depth.
-        let h:Float=0.48,round:Float=0.12,n=12
+        let h:Float=0.48,round:Float=form == .stone ? 0.08 : 0.12,n=form == .stone ? 5 : 12
+        let colors:[ElementForm:UInt32]=[.ice:0xd9f6ff,.water:0x65bedd,.air:0xc1efe2,.stone:0x9d9788,.fire:0xffc263]
         let frames:[(V3,V3,V3)]=[(V3(0,0,1),V3(1,0,0),V3(0,1,0)),(V3(1,0,0),V3(0,0,-1),V3(0,1,0)),(V3(-1,0,0),V3(0,0,1),V3(0,1,0)),(V3(0,1,0),V3(1,0,0),V3(0,0,-1)),(V3(0,-1,0),V3(1,0,0),V3(0,0,1)),(V3(0,0,-1),V3(-1,0,0),V3(0,1,0))]
         func rounded(_ p:V3)->(V3,V3) { let q=simd_clamp(p,V3(repeating:-h+round),V3(repeating:h-round));let normal=simd_normalize(p-q);return(q+normal*round,normal) }
         for (normal,u,v) in frames {
@@ -50,31 +51,39 @@ enum Geometry {
                 let x=Float(i)/Float(n)*h*2-h,y=Float(j)/Float(n)*h*2-h,step=h*2/Float(n)
                 let ps=[normal*h+u*x+v*y,normal*h+u*(x+step)+v*y,normal*h+u*(x+step)+v*(y+step),normal*h+u*x+v*(y+step)]
                 let pts=ps.map(rounded)
-                for k in [0,1,2,0,2,3] { mesh.vertices.append(Vertex(position:SIMD4(pts[k].0,1),normal:SIMD4(pts[k].1,0),color:tint(0xd9f6ff))) }
+                let shade:Float=form == .stone ? 0.82+r.next()*0.28 : 1
+                for k in [0,1,2,0,2,3] { mesh.vertices.append(Vertex(position:SIMD4(pts[k].0,1),normal:SIMD4(pts[k].1,0),color:tint(colors[form]!)*SIMD4(shade,shade,shade,1))) }
             } }
-            // Geometry strands attached to the body, with flexible, tapered tips.
-            for _ in 0..<900 {
-                let x=(r.next()*2-1)*h,y=(r.next()*2-1)*h
-                let (root,norm)=rounded(normal*h+u*x+v*y)
-                let front=normal.z>0.9
-                if front {
-                    let nearEye=abs(abs(x)-0.21)<0.14 && abs(y-0.09)<0.19
-                    let nearMouth=abs(x)<0.10 && abs(y+0.17)<0.13
-                    if nearEye || nearMouth { continue }
-                }
-                let length:Float=front ? 0.025+r.next()*0.035 : 0.10+r.next()*0.10
-                let lean=(r.next()-0.5)*0.06,width:Float=0.004+r.next()*0.006
-                let c=mix(tint(0x8bcbf2),tint(0xf6fcff),r.next()*0.8+0.2)
-                for s in 0..<3 {
-                    let t=Float(s)/3,t2=Float(s+1)/3
-                    let a=root+norm*(length*t)+u*(lean*t*t)+v*(-0.025*t*t)
-                    let b=root+norm*(length*t2)+u*(lean*t2*t2)+v*(-0.025*t2*t2)
-                    let w1=u*width*(1-t),w2=u*width*(1-t2)
-                    mesh.triangle(a-w1,b-w2,b+w2,c,norm,hair:t2);mesh.triangle(a-w1,b+w2,a+w1,c,norm,hair:t2)
+
+        }
+        return mesh
+    }
+    static func fur(_ physics:FurPhysics,form:ElementForm)->Mesh {
+        var m=Mesh();m.vertices.reserveCapacity(physics.strands.count*54)
+        for (i,s) in physics.strands.enumerated() {
+            let dry=form == .air ? tint(0xf1fff3) : (form == .water ? tint(0xa6e7f9) : tint(0xf2fbff))
+            let color=mix(dry,tint(0x428ba5),s.wetness*0.72)
+            for offset:Float in [-1,0,1] {
+                let spread:Float=(1-s.wetness*0.8)*offset*0.012
+                for j in 0..<3 {
+                    let a=s.points[j]+V3(spread,0,0),b=s.points[j+1]+V3(spread*0.7,0,0)
+                    let width:Float=(0.008+Float(i%3)*0.002)*(1-Float(j)/3)
+                    var side=simd_cross(b-a,V3(0,0,1))
+                    if simd_length(side)<0.001 { side=V3(1,0,0) }
+                    side=simd_normalize(side)*width
+                    m.quad(a-side,b-side*0.25,b+side*0.25,a+side,color,V3(0,0.5,1))
                 }
             }
         }
-        return mesh
+        return m
+    }
+    static func flames(time:Float,active:Bool)->Mesh {
+        var m=Mesh()
+        for i in 0..<17 {
+            let x=Float(i)/16*1.04-0.52,h=(0.24+sin(time*8+Float(i)*1.7)*0.12)*(active ? 1 : 0.4)
+            m.triangle(V3(x-0.07,0.35,0.42),V3(x+0.07,0.35,0.42),V3(x+sin(time*5+Float(i))*0.07,0.55+h,0.44),tint(i%2==0 ? 0xffb743 : 0xff6b39),V3(0,0.3,1))
+        }
+        return m
     }
     static func face(blink:Float,mood:Mood,look:Float,wet:Float)->Mesh {
         var m=Mesh()
@@ -114,9 +123,9 @@ enum Geometry {
         if wet>0.2 { m.ellipse(center:V3(-0.36,0.3,0.61),rx:0.018,ry:0.038,color:tint(0xa0e9ff,0.9)) }
         return m
     }
-    static func terrain()->Mesh {
+    static func terrain(patches:[MaterialPatch] = [])->Mesh {
         var m=Mesh(),r=RNG(seed:871)
-        for (start,end,top,bottom):(Float,Float,Float,Float) in [(-3,7,0,-4),(17,25,0,-4),(11.15,12.85,-0.1,-4),(7,17,-4,-4.6)] {
+        for (start,end,top,bottom):(Float,Float,Float,Float) in [(-3,7,0,-4),(17,25,0,-4),(11.15,12.85,-0.1,-1.9),(10.9,13.1,-1.9,-2.3),(7,17,-4,-4.6)] {
             m.box(center:V3((start+end)/2,(top+bottom)/2,-0.5),size:V3(end-start,top-bottom,1.8),color:tint(0x6d8070))
             var y=top-0.05
             while y>bottom {
@@ -132,11 +141,14 @@ enum Geometry {
                 m.box(center:V3((start+end)/2,top+0.01,0.0),size:V3(end-start,0.16,1.82),color:tint(0x82a45d))
                 for _ in 0..<Int((end-start)*22) {
                     let x=start+r.next()*(end-start),h=0.05+r.next()*0.16,z=0.5+r.next()*0.35
-                    m.triangle(V3(x-0.035,top+0.08,z),V3(x+0.04,top+0.08,z),V3(x+0.02,top+h,z),mix(tint(0x587e45),tint(0xb9cf79),r.next()),V3(0,0.5,1))
+                    let patch=patches.min(by:{ abs($0.x-x)<abs($1.x-x) })
+                    let fuel=patch?.fuel ?? 1,frost=patch?.frost ?? 0
+                    let color=mix(mix(tint(0x332f2b),mix(tint(0x587e45),tint(0xb9cf79),r.next()),fuel),tint(0xdbf7ff),frost)
+                    m.triangle(V3(x-0.035,top+0.08,z),V3(x+0.04,top+0.08,z),V3(x+0.02,top+h*max(0.1,fuel),z),color,V3(0,0.5,1))
                 }
             }
         }
-        for x:Float in [1.1,1.3,1.55,4,6.8,17.3,20.5,24] {
+        for x:Float in [1.1,1.3,1.55,4,6.8,17.3,20.5,24] where (patches.min(by:{ abs($0.x-x)<abs($1.x-x) })?.fuel ?? 1)>0.5 {
             for i in 0..<3 { let h=0.3+Float(i)*0.09
                 m.line(V3(x,0,0.65),V3(x+0.08*Float(i-1),h,0.65),width:0.018,color:tint(0x6a985f))
                 m.ellipse(center:V3(x+0.08*Float(i-1),h,0.66),rx:0.033,ry:0.043,color:i==1 ? tint(0xf7dc9b) : tint(0xe8efbf),segments:8)
@@ -144,7 +156,7 @@ enum Geometry {
         }
         // Visible shallow banks correspond to the actual sloped collision surfaces.
         for (start,end,right):(Float,Float,Bool) in [(7,9.4,false),(14.6,17,true)] {
-            let y1:Float=right ? -1.8 : 0,y2:Float=right ? 0 : -1.8
+            let y1:Float=right ? -3.9 : 0,y2:Float=right ? 0 : -3.9
             m.quad(V3(start,-4,0.63),V3(end,-4,0.63),V3(end,y2,0.63),V3(start,y1,0.63),tint(0x849b8c),V3(0,0,1))
             m.quad(V3(start,y1,0.8),V3(end,y2,0.8),V3(end,y2,-0.8),V3(start,y1,-0.8),tint(0xa2b4a0),V3(right ? -0.6 : 0.6,0.8,0))
             for i in 0..<8 {

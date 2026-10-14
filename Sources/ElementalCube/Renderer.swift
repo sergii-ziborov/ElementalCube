@@ -10,7 +10,11 @@ final class Renderer: NSObject, MTKViewDelegate {
     let session:GameSession
     var terrain:MTLBuffer,cube:MTLBuffer,crate:MTLBuffer
     var terrainCount:Int,cubeCount:Int,crateCount:Int
-    var cameraX:Float=7.3,worldWidth:Float=22,worldHeight:Float=13.5
+    var cameraX:Float=7.3,cameraY:Float=1.6,worldWidth:Float=22,worldHeight:Float=13.5
+    var renderedForm:ElementForm = .ice
+    var materialTime:Float = -1
+    var dynamicBuffers:[[MTLBuffer]] = [[],[],[]]
+    let inFlight=DispatchSemaphore(value:3)
     var lastTime=ProcessInfo.processInfo.systemUptime,accumulator:Double=0
     var frame=0
     init(view:MTKView,session:GameSession) throws {
@@ -56,12 +60,12 @@ final class Renderer: NSObject, MTKViewDelegate {
     func projection()->simd_float4x4 {
         let sx=2/worldWidth,sy=2/worldHeight
         let shake=sin(session.simulation.time*85)*session.simulation.impact*0.035
-        return simd_float4x4(columns:(SIMD4(sx,0,0,0),SIMD4(0,sy,0,0),SIMD4(sx*0.30,sy*0.34,-0.025,0),SIMD4(-cameraX*sx,(-1.6+shake)*sy,0.5,1)))
+        return simd_float4x4(columns:(SIMD4(sx,0,0,0),SIMD4(0,sy,0,0),SIMD4(sx*0.30,sy*0.34,-0.025,0),SIMD4(-cameraX*sx,(-cameraY+shake)*sy,0.5,1)))
     }
     func draw(in view:MTKView) {
         updateViewport(view.drawableSize)
         let now=ProcessInfo.processInfo.systemUptime,dt=min(0.06,now-lastTime);lastTime=now
-        if session.paused || session.settings { accumulator=0 } else {
+        if session.suspended { accumulator=0 } else {
             accumulator+=dt
             while accumulator>=Double(Simulation.timestep) { session.tick();accumulator-=Double(Simulation.timestep) }
         }
@@ -70,12 +74,23 @@ final class Renderer: NSObject, MTKViewDelegate {
             movement:session.moving,facing:session.direction,
             aimVelocityX:session.aiming ? session.launchVelocity.x : nil,worldWidth:worldWidth)
         cameraX+=(target-cameraX)*Float(1-exp(-dt*3.4))
+        let verticalTarget:Float=min(1.6,max(-2.8,p.y+worldHeight*0.13))
+        cameraY+=(verticalTarget-cameraY)*Float(1-exp(-dt*3.4))
         guard let drawable=view.currentDrawable,let pass=view.currentRenderPassDescriptor,let cb=queue.makeCommandBuffer(),let e=cb.makeRenderCommandEncoder(descriptor:pass) else { return }
+        inFlight.wait();cb.addCompletedHandler { [inFlight] _ in inFlight.signal() }
+        var meshIndex=0
+        let slot=frame%3
+        if s.form != renderedForm {
+            let mesh=Geometry.cube(form:s.form);cube=device.makeBuffer(bytes:mesh.vertices,length:mesh.vertices.count*MemoryLayout<Vertex>.stride,options:.storageModeShared)!;cubeCount=mesh.vertices.count;renderedForm=s.form
+        }
+        if s.time<materialTime || s.time-materialTime>0.25 {
+            let mesh=Geometry.terrain(patches:s.patches);terrain=device.makeBuffer(bytes:mesh.vertices,length:mesh.vertices.count*MemoryLayout<Vertex>.stride,options:.storageModeShared)!;terrainCount=mesh.vertices.count;materialTime=s.time
+        }
         var floorHeight:Float=0,floorSlope:Float=0
-        if s.surface == .ice { floorHeight=s.waterLevel+0.45 }
+        if s.surface == .ice { floorHeight=p.y-0.56 }
         else if s.surface == .wood { floorHeight=s.crate.position.y+0.625 }
-        else if p.x>7 && p.x<9.4 { floorSlope = -0.75;floorHeight = -(p.x-7)*0.75 }
-        else if p.x>14.6 && p.x<17 { floorSlope=0.75;floorHeight = -(17-p.x)*0.75 }
+        else if p.x>7 && p.x<9.4 { floorSlope = -1.625;floorHeight = -(p.x-7)*1.625 }
+        else if p.x>14.6 && p.x<17 { floorSlope=1.625;floorHeight = -(17-p.x)*1.625 }
         else if s.surface == .stone { floorHeight = -0.1 }
         var u=Uniforms(projection:projection(),model:matrix_identity_float4x4,animation:SIMD4(s.time,s.wetness,s.squash,s.cube.velocity.x),camera:SIMD4(cameraX,worldWidth,worldHeight,0),support:SIMD4(s.cube.grounded ? 1 : 0,floorHeight,floorSlope,p.x))
         e.setRenderPipelineState(backgroundPipeline);e.setDepthStencilState(depthRead)
@@ -88,14 +103,18 @@ final class Renderer: NSObject, MTKViewDelegate {
         }
         func drawMesh(_ mesh:Mesh,_ model:simd_float4x4=matrix_identity_float4x4,character:Bool=false) {
             guard !mesh.vertices.isEmpty else { return }
-            let b=device.makeBuffer(bytes:mesh.vertices,length:mesh.vertices.count*MemoryLayout<Vertex>.stride,options:.storageModeShared)!
+            let length=mesh.vertices.count*MemoryLayout<Vertex>.stride
+            if dynamicBuffers[slot].count<=meshIndex { dynamicBuffers[slot].append(device.makeBuffer(length:max(length,4096),options:.storageModeShared)!) }
+            if dynamicBuffers[slot][meshIndex].length<length { dynamicBuffers[slot][meshIndex]=device.makeBuffer(length:length,options:.storageModeShared)! }
+            let b=dynamicBuffers[slot][meshIndex];meshIndex+=1
+            mesh.vertices.withUnsafeBytes { bytes in b.contents().copyMemory(from:bytes.baseAddress!,byteCount:length) }
             drawBuffer(b,mesh.vertices.count,model,character:character)
         }
         drawBuffer(terrain,terrainCount)
         var details=Mesh()
         let shadeAlpha=max(0.05,0.22-(p.y-0.56)*0.035)
         if p.y > -0.2 { details.ellipse(center:V3(p.x,0.11,0.86),rx:0.67,ry:0.07,color:tint(0x254c46,shadeAlpha)) }
-        if s.crate.position.y>0 && (s.crate.position.x<7 || s.crate.position.x>17) {
+        if s.crateExists && s.crate.position.y>0 && (s.crate.position.x<7 || s.crate.position.x>17) {
             details.ellipse(center:V3(s.crate.position.x,0.12,0.82),rx:0.78,ry:0.09,color:tint(0x25443c,0.21))
         }
         if s.landingAge<0.45 {
@@ -107,23 +126,42 @@ final class Renderer: NSObject, MTKViewDelegate {
             details.ellipse(center:V3(pos.x,pos.y-0.38,0.65),rx:0.13,ry:0.018,color:tint(0xdcffdd,0.4))
         }
         for particle in s.particles {
-            let color:[C4]=[tint(0xe4deba),tint(0xb8f5ee),tint(0xc2f9ff),tint(0xfaf0b4)]
+            let color:[C4]=[tint(0xe4deba),tint(0xb8f5ee),tint(0xc2f9ff),tint(0xfaf0b4),tint(0xffab4d),tint(0xdfece5,0.55)]
             details.ellipse(center:V3(particle.position.x,particle.position.y,0.9),rx:0.035,ry:0.035,color:color[particle.kind]*SIMD4(1,1,1,min(1,particle.life*2)),segments:6)
         }
+        if !s.deepRelic {
+            details.diamond(V3(12,-3.35,0.85),size:0.22,color:tint(0xebc77d))
+        }
+        for patch in s.patches where patch.fuel<0.99 || patch.frost>0.05 {
+            guard patch.x<7 || patch.x>17 else { continue }
+            details.box(center:V3(patch.x,0.1,0.35),size:V3(0.5,0.035,1.2),color:mix(tint(0x34332e,1-patch.fuel),tint(0xd6f6ff,patch.frost),patch.frost))
+        }
+        for mark in s.frostMarks where mark.cold>0.08 {
+            details.ellipse(center:V3(mark.position.x,mark.position.y,0.85),rx:0.18,ry:0.045,color:tint(0xdcf8ff,mark.cold*0.8),segments:8)
+        }
+        if s.form == .air && s.passiveWorking {
+            for i in 0..<3 {
+                let phase=(s.time*0.8+Float(i)*0.3).truncatingRemainder(dividingBy:1)
+                details.line(V3(p.x-0.4-phase*0.5,p.y-0.45-Float(i)*0.08,0.8),V3(p.x+0.45-phase*0.5,p.y-0.45-Float(i)*0.08,0.8),width:0.012,color:tint(0xd8ffeb,(1-phase)*0.6))
+            }
+        }
         drawMesh(details)
-        drawBuffer(crate,crateCount,translation(V3(s.crate.position.x,s.crate.position.y,0.4))*rotationZ(s.crate.angle)*rotationY(0.06))
-        let compression=s.squash+(session.aiming && s.cube.grounded ? 0.12 : 0)
-        let breathing=sin(s.time*2.7)*0.012
-        let wiggle=s.shakeTime>0 ? sin(s.time*43)*0.11 : 0
-        let lean=max(-0.10,min(0.10,-s.cube.velocity.x*0.012))
-        let bodyScale=V3(1+compression*0.5+breathing,1-compression-breathing,1)
-        let model=translation(V3(p.x,p.y,0.55))*rotationZ(s.cube.angle+lean+wiggle)*rotationY(0.12)*scale(bodyScale)
+        if s.crateExists {
+            var box=Geometry.crate()
+            for i in box.vertices.indices { box.vertices[i].color=mix(box.vertices[i].color*SIMD4(0.3+s.crateFuel*0.7,0.3+s.crateFuel*0.7,0.3+s.crateFuel*0.7,1),tint(0xc4edff),s.crateFrost*0.8) }
+            drawMesh(box,translation(V3(s.crate.position.x,s.crate.position.y,0.4))*rotationZ(s.crate.angle)*rotationY(0.06))
+        } else {
+            var ash=Mesh();ash.box(center:V3(s.crate.position.x,s.crate.position.y-0.5,0.65),size:V3(0.9,0.12,0.7),color:tint(0x383936));drawMesh(ash)
+        }
+        let model=translation(V3(p.x,p.y,0.55))*rotationZ(s.bodyAngle)*rotationY(0.12)*scale(s.bodyStretch)
         drawBuffer(cube,cubeCount,model,character:true)
+        drawMesh(Geometry.fur(s.fur,form:s.form))
+        if s.form == .fire && !s.dead { drawMesh(Geometry.flames(time:s.time,active:s.passiveWorking),model) }
         let blinkPhase=s.time.truncatingRemainder(dividingBy:4.7)
         let mood:Mood=session.aiming ? .focused : (s.won ? .delighted : s.mood)
         let gaze=session.aiming ? session.aimImpulse.x*0.004 : s.cube.velocity.x*0.006
         drawMesh(Geometry.face(blink:blinkPhase>4.5 ? 0.12 : 1,mood:mood,look:gaze,wet:s.wetness),model,character:true)
-        if s.wetness>0.15 {
+        if s.form.hasFur && s.wetness>0.15 {
             var drips=Mesh()
             for i in 0..<5 {
                 let phase=(s.time*0.9+Float(i)*0.21).truncatingRemainder(dividingBy:1)
@@ -151,8 +189,9 @@ final class Renderer: NSObject, MTKViewDelegate {
         if s.waterEnabled {
             var water=Mesh()
             for i in 0..<80 {
-                let x=7+Float(i)*0.125,x2=x+0.125,y=s.waterLevel+s.wave[i],y2=s.waterLevel+s.wave[i+1]
-                let a=V3(x,-4,1.7),b=V3(x2,-4,1.7),c=V3(x2,y2,1.7),d=V3(x,y,1.7)
+                let x=7+Float(i)*0.125,x2=x+0.125,y=s.waterField.surface(at:x)+s.wave[i]*min(1,s.waterField.volume),y2=s.waterField.surface(at:x2)+s.wave[i+1]*min(1,s.waterField.volume)
+                if y <= s.waterField.floor(at:x)+0.01 { continue }
+                let a=V3(x,s.waterField.floor(at:x),1.7),b=V3(x2,s.waterField.floor(at:x2),1.7),c=V3(x2,y2,1.7),d=V3(x,y,1.7)
                 let deep=tint(0x177e82,0.72),top=tint(0x67c8c3,0.46)
                 let normal=SIMD4<Float>(0,0,1,0)
                 for (p,col) in [(a,deep),(b,deep),(c,top),(a,deep),(c,top),(d,top)] { water.vertices.append(Vertex(position:SIMD4(p,1),normal:normal,color:col)) }
@@ -161,24 +200,20 @@ final class Renderer: NSObject, MTKViewDelegate {
             }
             for i in 0..<12 {
                 let x=7.3+Float(i)*0.8,y = -0.9-Float(i%4)*0.48+sin(s.time*0.8+Float(i))*0.04
+                guard s.waterField.contains(Vec(x,y)) else { continue }
                 water.line(V3(x,y,1.73),V3(x+0.28,y,1.73),width:0.012,color:tint(0xc0ede0,0.2))
             }
             drawMesh(water)
         }
-        if s.iceTime > 0 {
+        if s.waterEnabled {
             var ice=Mesh()
-            let melt=max(0,min(1,(4-s.iceTime)/4)),alpha=1-melt*0.3
-            for segment in s.iceSegments where segment.y-segment.x>0.18 {
-                let start=segment.x,end=segment.y,top=s.waterLevel+0.45
-                ice.box(center:V3((start+end)/2,s.waterLevel+0.225,0.05),size:V3(end-start,0.45,1.8),color:tint(0x7ccfe4,0.96*alpha))
-                ice.line(V3(start,top,0.96),V3(end,top,0.96),width:0.038,color:tint(0xe7fbff,alpha))
-                let count=max(1,Int((end-start)/0.55))
-                for i in 0..<count {
-                    let x=start+Float(i)*0.55,w=min(0.55,end-x)
-                    ice.triangle(V3(x,top,0.97),V3(x+w,top-0.06,0.97),V3(x+w*0.4,top-0.32,0.97),tint(i%2==0 ? 0xb8f3ff : 0x59b6dd,0.5*alpha),V3(0,0,1))
-                    ice.line(V3(x+0.12,top-0.02,0.98),V3(x+0.3,top-0.21,0.98),width:0.015,color:tint(0xf1ffff,0.8*alpha))
-                    ice.line(V3(x+0.3,top-0.21,0.98),V3(x+0.45,top-0.34,0.98),width:0.009,color:tint(0xe5fdff,0.7*alpha))
-                    if melt>0.1 { ice.line(V3(x,top-0.29,0.99),V3(x+0.38,top-0.10,0.99),width:0.012,color:tint(0x2489b4,melt)) }
+            for cell in s.waterField.ice where cell.cold>0.08 {
+                let p=cell.center,h=cell.size/2,alpha=cell.solid ? 1 : cell.cold*0.65
+                ice.box(center:V3(p.x,p.y,0.95),size:V3(cell.size*0.98,cell.size*0.98,0.28),color:tint(0x80cde5,alpha))
+                if cell.solid {
+                    ice.line(V3(p.x-h,p.y+h,1.13),V3(p.x+h,p.y+h,1.13),width:0.025,color:tint(0xedfdff))
+                    ice.line(V3(p.x-h*0.65,p.y+h*0.8,1.14),V3(p.x+h*0.1,p.y-h*0.25,1.14),width:0.014,color:tint(0xeaffff))
+                    ice.line(V3(p.x+h*0.1,p.y-h*0.25,1.14),V3(p.x+h,p.y-h*0.65,1.14),width:0.009,color:tint(0xd0faff))
                 }
             }
             drawMesh(ice)
@@ -189,7 +224,7 @@ final class Renderer: NSObject, MTKViewDelegate {
                 for (a,b) in [(V3(x-w/2,y-h/2,2.5),V3(x+w/2,y-h/2,2.5)),(V3(x+w/2,y-h/2,2.5),V3(x+w/2,y+h/2,2.5)),(V3(x+w/2,y+h/2,2.5),V3(x-w/2,y+h/2,2.5)),(V3(x-w/2,y+h/2,2.5),V3(x-w/2,y-h/2,2.5))] { debugMesh.line(a,b,width:0.02,color:tint(0xf0e095)) }
             }
             for platform in s.platforms { outline(Vec(platform.x,platform.y),platform.width,platform.height) }
-            outline(s.cube.position,1.12,1.12);outline(s.crate.position,1.25,1.25)
+            outline(s.cube.position,1.12,1.12);if s.crateExists { outline(s.crate.position,1.25,1.25) }
             debugMesh.line(V3(p.x,p.y,2.5),V3(p.x+s.cube.velocity.x*0.18,p.y+s.cube.velocity.y*0.18,2.5),width:0.035,color:tint(0xf08087))
             drawMesh(debugMesh)
         }

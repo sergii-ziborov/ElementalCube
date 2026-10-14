@@ -15,15 +15,17 @@ final class SimulationTests:XCTestCase {
         XCTAssertGreaterThan(s.wetness,0.9);XCTAssertGreaterThan(s.cube.position.y,-1.6);XCTAssertLessThan(s.cube.position.y,0)
         s.placeCube(Vec(2,1));advance(s,8);XCTAssertLessThan(s.wetness,0.65)
     }
-    func testFreezeCreatesSupportAndExpires() {
-        let s=Simulation();s.placeCube(Vec(6,0.6));advance(s,0.5)
-        XCTAssertTrue(s.frost());XCTAssertLessThan(s.energy,72);XCTAssertFalse(s.frost())
-        s.placeCube(Vec(13.5,0.4));advance(s,1)
-        XCTAssertTrue(s.cube.grounded);XCTAssertGreaterThan(s.cube.position.y,-0.1)
-        advance(s,Simulation.iceDuration+1);XCTAssertEqual(s.iceTime,0);XCTAssertFalse(s.cube.grounded);XCTAssertGreaterThan(s.wetness,0.2)
+    func testPassiveFreezeIsLocalAndThawsAfterUnequipping() {
+        let s=Simulation();s.placeCube(Vec(10,-1));s.equipPassive(true);advance(s,3)
+        XCTAssertFalse(s.iceCells.isEmpty)
+        XCTAssertLessThan(s.iceCells.count,35)
+        XCTAssertTrue(s.iceCells.allSatisfy { abs($0.center.x-10)<2.5 })
+        s.equipPassive(false);s.placeCube(Vec(2,1));advance(s,32)
+        XCTAssertTrue(s.iceCells.isEmpty)
     }
     func testNoRemoteFreezeAndGoal() {
-        let s=Simulation();advance(s,1);XCTAssertFalse(s.frost());XCTAssertEqual(s.energy,100)
+        let s=Simulation();s.equipPassive(true);advance(s,2)
+        XCTAssertTrue(s.iceCells.isEmpty)
         s.placeCube(Vec(23,0.7));advance(s,1);XCTAssertTrue(s.won)
     }
     func testCollectibleAndWall() {
@@ -45,15 +47,11 @@ final class SimulationTests:XCTestCase {
         advance(s,0.25);XCTAssertFalse(s.jump(Vec(-5.5,9),buffered:false))
         advance(s,2);XCTAssertLessThan(s.cube.position.x,7);XCTAssertTrue(s.cube.grounded)
     }
-    func testFreezeWhileImmersedLeavesAnExit() {
-        for x:Float in [9,10.4] {
-            let s=Simulation();s.placeCube(Vec(x,-1));advance(s,1)
-            XCTAssertTrue(s.frost());XCTAssertEqual(s.iceSegments.count,2)
-            XCTAssertGreaterThan(s.iceSegments[1].x-s.iceSegments[0].y,3.5)
-            XCTAssertTrue(s.jump(Vec(-6,9.5),buffered:false));advance(s,2)
-            XCTAssertTrue(s.cube.grounded,"frozen exit from \(x): \(s.cube.position)")
-            XCTAssertGreaterThan(s.cube.position.y,0,"frozen exit from \(x): \(s.cube.position)")
-        }
+    func testPassiveFreezeWhileImmersedLeavesAnExit() {
+        let s=Simulation();s.placeCube(Vec(10,-1));s.equipPassive(true);advance(s,3)
+        XCTAssertTrue(s.canLaunch)
+        XCTAssertTrue(s.jump(Vec(-6,9.5),buffered:false));advance(s,2)
+        XCTAssertTrue(s.cube.grounded);XCTAssertGreaterThan(s.cube.position.y,0)
     }
     func testRollingMovesAndRotatesTheRigidBody() {
         let s=Simulation();advance(s,1);s.movement = -1;advance(s,1)
@@ -65,13 +63,14 @@ final class SimulationTests:XCTestCase {
         s.movement = -1;advance(s,6)
         XCTAssertLessThan(s.cube.position.x,7);XCTAssertTrue(s.cube.grounded)
     }
-    func testIcePreservesMoreMomentumThanGrass() {
-        let grass=Simulation(),ice=Simulation();advance(grass,1)
-        ice.placeCube(Vec(6,0.7));advance(ice,0.5);XCTAssertTrue(ice.frost())
-        ice.placeCube(Vec(13.5,0.8));advance(ice,0.7)
+    func testFrostedGrassPreservesMoreMomentum() {
+        let grass=Simulation(),ice=Simulation()
+        for s in [grass,ice] { s.wind=0;s.placeCube(Vec(-1,0.7)) }
+        ice.equipPassive(true);advance(grass,2);advance(ice,2)
+        XCTAssertEqual(ice.surface,.ice)
         _=grass.jump(Vec(3,4),buffered:false);_=ice.jump(Vec(3,4),buffered:false)
         advance(grass,1);advance(ice,1)
-        XCTAssertGreaterThan(abs(ice.cube.velocity.x),abs(grass.cube.velocity.x)+0.5)
+        XCTAssertGreaterThan(abs(ice.cube.velocity.x),abs(grass.cube.velocity.x)+0.3)
     }
     func testLandingHardnessDependsOnSurface() {
         func impactAt(_ x:Float)->Float {

@@ -29,9 +29,9 @@ final class FeedbackAndSettingsTests: XCTestCase {
         XCTAssertEqual(s.takeFeedback().filter { $0 == .collectedCrystal },[.collectedCrystal])
         s.placeCube(s.shards[0]);s.step()
         XCTAssertFalse(s.takeFeedback().contains(.collectedCrystal))
-        s.placeCube(Vec(6,0.7));advance(s,0.5);_=s.takeFeedback()
-        XCTAssertTrue(s.frost());XCTAssertEqual(s.takeFeedback(),[.frozeWater])
-        XCTAssertFalse(s.frost());XCTAssertTrue(s.takeFeedback().isEmpty)
+        s.placeCube(Vec(10,-1));s.equipPassive(true);advance(s,3)
+        XCTAssertEqual(s.takeFeedback().filter { $0 == .frozeWater },[.frozeWater])
+        advance(s,0.3);XCTAssertFalse(s.takeFeedback().contains(.frozeWater))
     }
     private func withDefaults(_ block:(UserDefaults)->Void) {
         let suite="ElementalCubeTests.\(UUID().uuidString)"

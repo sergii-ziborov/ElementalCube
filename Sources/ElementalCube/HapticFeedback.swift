@@ -25,6 +25,8 @@ final class HapticFeedback {
             case let .enteredWater(strength): soft.impactOccurred(intensity:CGFloat(max(0.25,strength)))
             case .collectedCrystal: soft.impactOccurred(intensity:0.65)
             case .frozeWater: rigid.impactOccurred(intensity:0.5)
+            case .hurt: rigid.impactOccurred(intensity:0.8)
+            case .died: notification.notificationOccurred(.error)
             case .finished: notification.notificationOccurred(.success)
             }
         }

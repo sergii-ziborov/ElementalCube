@@ -1,4 +1,5 @@
 import SwiftUI
+import ElementalCore
 
 @main struct ElementalCubeApp:App {
     @StateObject var session=GameSession()
@@ -29,19 +30,12 @@ struct GameView:View {
     @State private var dismissVictory=false
     var controlHint:String {
         #if os(macOS)
-        return "← → — катиться / плыть    ПРОБЕЛ — прыжок    F — дыхание    R — заново"
+        return "← → — катиться / плыть    ПРОБЕЛ — прыжок    F — способность    R — заново"
         #else
         return session.inverted ? "Удерживай ← →. Для прыжка потяни назад и отпусти." : "Удерживай ← →. Для прыжка потяни к цели и отпусти."
         #endif
     }
-    var abilityCaption:String {
-        if session.iceTime>0 { return "\(Int(ceil(session.iceTime))) с" }
-        #if os(macOS)
-        return "F · 30"
-        #else
-        return "30 ⚡"
-        #endif
-    }
+    var abilityCaption:String { session.passiveEquipped ? "СЛОТ 1 / 1" : "СЛОТ 0 / 1" }
     var body:some View {
         GeometryReader { geo in
             let short=geo.size.height<550
@@ -57,6 +51,13 @@ struct GameView:View {
                             HStack(spacing:7) {
                                 ForEach(0..<3) { i in Image(systemName:"diamond.fill").foregroundStyle(i<session.shards ? ink : ink.opacity(0.18)) }
                                 Text("\(session.shards) / 3 кристалла").font(.system(size:11)).opacity(0.7)
+                                if session.deepRelic { Image(systemName:"seal.fill").foregroundStyle(.orange).accessibilityLabel("Глубинная реликвия найдена") }
+                            }
+                            if compact {
+                                HStack(spacing:5) {
+                                    Circle().fill(session.passiveWorking ? Color.green.opacity(0.65) : ink.opacity(0.25)).frame(width:5,height:5)
+                                    Text(session.form.name + (session.form.hasFur && session.wetness>0.2 ? " · шерсть \(Int(session.wetness*100))%" : (session.passiveEquipped ? " · пассивная" : " · слот свободен"))).font(.system(size:10)).opacity(0.7)
+                                }
                             }
                         }.padding(short ? 10 : 18).background(cream.opacity(0.75),in:RoundedRectangle(cornerRadius:short ? 12 : 18))
                         Spacer()
@@ -72,6 +73,14 @@ struct GameView:View {
                         Text("Небольшая пауза").font(.system(size:28,design:.serif))
                         Button("Продолжить") { session.paused=false }.buttonStyle(PillButton())
                     }.padding(40).background(cream,in:RoundedRectangle(cornerRadius:24)).foregroundStyle(ink)
+                }
+                if session.dead {
+                    VStack(spacing:16) {
+                        Image(systemName:session.form.symbol).font(.system(size:36))
+                        Text("Нужна новая попытка").font(.system(size:24,design:.serif))
+                        Text("Здоровье закончилось. Огонь теряет его в воде; жёсткие падения тоже оставляют след.").font(.system(size:13)).multilineTextAlignment(.center).frame(maxWidth:280)
+                        Button("Вернуться на берег") { session.reset() }.buttonStyle(PillButton())
+                    }.padding(30).background(cream,in:RoundedRectangle(cornerRadius:24)).foregroundStyle(ink)
                 }
                 if session.won && !dismissVictory {
                     ZStack {
@@ -89,6 +98,10 @@ struct GameView:View {
                 }
             }
             .sheet(isPresented:$session.settings) { settingsPanel }
+            .sheet(isPresented:$session.abilityInfo) { abilityPanel }
+            .sheet(isPresented:$session.forms) { formsPanel }
+            .onChange(of:session.abilityInfo) { _ in session.cancelAim() }
+            .onChange(of:session.forms) { _ in session.cancelAim() }
             .onChange(of:session.settings) { _ in session.cancelAim() }
             .onChange(of:session.won) { won in if !won { dismissVictory=false } }
             .onReceive(NotificationCenter.default.publisher(for:appInactiveNotification)) { _ in session.cancelAim();session.paused=true }
@@ -101,51 +114,66 @@ struct GameView:View {
         UIApplication.willResignActiveNotification
         #endif
     }
+    func resource(_ label:String,_ symbol:String,value:Float,color:Color)->some View {
+        VStack(spacing:4) {
+            HStack(spacing:5) { Image(systemName:symbol);Text(label);Spacer(minLength:0);Text("\(Int(ceil(value))) / 100").monospacedDigit() }.font(.system(size:9,weight:.semibold))
+            GeometryReader { g in
+                ZStack(alignment:.leading) { Capsule().fill(ink.opacity(0.12));Capsule().fill(color).frame(width:g.size.width*CGFloat(max(0,min(1,value/100)))) }
+            }.frame(height:5)
+        }.accessibilityElement(children:.ignore).accessibilityLabel("\(label): \(Int(value)) из 100")
+    }
     func header(compact:Bool)->some View {
-        HStack(alignment:.center,spacing:14) {
-            HStack(spacing:10) {
-                ZStack { RoundedRectangle(cornerRadius:13).fill(cream.opacity(0.8)).frame(width:44,height:44);Image(systemName:"cube.transparent.fill").font(.system(size:27,weight:.light)).foregroundStyle(ink) }
+        VStack(spacing:9) {
+            HStack(spacing:compact ? 8 : 14) {
                 VStack(alignment:.leading,spacing:3) {
                     Text("ElementalCube").font(.system(size:compact ? 20 : 28,weight:.medium,design:.serif))
-                    Text(compact ? "ЛЬДИНКА • ЭНЕРГИЯ \(Int(session.energy))" : "МАЛЕНЬКИЙ КУБ. БОЛЬШОЙ МИР.").font(.system(size:8,weight:.medium)).tracking(compact ? 1 : 1.55).opacity(0.65)
+                    if !compact { Text("МАЛЕНЬКИЙ КУБ. БОЛЬШОЙ МИР.").font(.system(size:8,weight:.medium)).tracking(1.55).opacity(0.65) }
                 }
+                Spacer(minLength:4)
+                Button { session.forms=true } label: {
+                    HStack(spacing:5) { Image(systemName:session.form.symbol);if !compact { Text(session.form.name) };Image(systemName:"chevron.down").font(.system(size:8)) }.font(.system(size:13,weight:.medium)).padding(10).background(cream.opacity(0.65),in:Capsule())
+                }.buttonStyle(.plain).accessibilityLabel("Выбрать форму: \(session.form.name)")
+                if !compact {
+                    VStack(spacing:8) {
+                        resource("ЗДОРОВЬЕ","heart.fill",value:session.health,color:Color(red:0.76,green:0.33,blue:0.31))
+                        resource("МАНА","drop.fill",value:session.energy,color:Color(red:0.2,green:0.56,blue:0.67))
+                    }.frame(width:170).padding(.horizontal,12)
+                }
+                Button { session.reset() } label: { Image(systemName:"arrow.counterclockwise").frame(width:35,height:35) }.buttonStyle(GlassButton()).help("Начать заново · R")
+                Button { session.settings=true } label: { Image(systemName:"slider.horizontal.3").frame(width:35,height:35) }.buttonStyle(GlassButton()).help("Настройки прототипа")
             }
-            Spacer()
-            if !compact {
-                HStack(spacing:8) { Image(systemName:"leaf");Text("Тихий берег").font(.system(size:13,weight:.medium)) }.padding(.horizontal,18).padding(.vertical,12).background(cream.opacity(0.46),in:Capsule())
-                Spacer()
-                VStack(alignment:.leading,spacing:5) {
-                    HStack { Image(systemName:"bolt.fill").font(.system(size:10));Text("ЭНЕРГИЯ").font(.system(size:9,weight:.semibold)).tracking(1.2);Spacer();Text("\(Int(session.energy))").font(.system(size:11,weight:.medium,design:.monospaced)) }
-                    GeometryReader { g in ZStack(alignment:.leading) { Capsule().fill(ink.opacity(0.13));Capsule().fill(ink.opacity(0.7)).frame(width:g.size.width*CGFloat(session.energy/100)) } }.frame(height:4)
-                }.frame(width:137).padding(.horizontal,6)
+            if compact {
+                HStack(spacing:18) {
+                    resource("ЗДОРОВЬЕ","heart.fill",value:session.health,color:Color(red:0.76,green:0.33,blue:0.31))
+                    resource("МАНА","drop.fill",value:session.energy,color:Color(red:0.2,green:0.56,blue:0.67))
+                }.padding(.horizontal,10).padding(.vertical,8).background(cream.opacity(0.6),in:RoundedRectangle(cornerRadius:12))
             }
-            Button { session.reset() } label: { Image(systemName:"arrow.counterclockwise").frame(width:39,height:39) }.buttonStyle(GlassButton()).help("Начать заново · R")
-            Button { session.settings=true } label: { Image(systemName:"slider.horizontal.3").frame(width:39,height:39) }.buttonStyle(GlassButton()).help("Настройки прототипа")
         }
     }
     func controls(compact:Bool,short:Bool)->some View {
         VStack(spacing:short ? 8 : 18) {
             HStack(alignment:.bottom,spacing:compact ? 10 : 20) {
                 VStack(alignment:.leading,spacing:8) {
-                    Text(session.inWater ? "ПЛЫВИ К БЕРЕГУ" : "КАТИСЬ").font(.system(size:9,weight:.semibold)).tracking(1.5).foregroundStyle(cream.opacity(0.65))
+                    Text(session.form == .air ? "СКОЛЬЗИ" : (session.form == .stone && session.inWater ? "ПО ДНУ" : (session.inWater ? "ПЛЫВИ" : "КАТИСЬ"))).font(.system(size:9,weight:.semibold)).tracking(1.5).foregroundStyle(cream.opacity(0.65))
                     HStack(spacing:7) { movementButton(-1,compact:compact);movementButton(1,compact:compact) }
                 }
                 VStack(alignment:.leading,spacing:9) {
-                    if !compact { Text("УМЕНИЕ ЛЬДИНКИ").font(.system(size:9,weight:.semibold)).tracking(1.7).foregroundStyle(cream.opacity(0.65)) }
+                    if !compact { Text("ПАССИВНАЯ СПОСОБНОСТЬ").font(.system(size:9,weight:.semibold)).tracking(1.7).foregroundStyle(cream.opacity(0.65)) }
                     HStack(spacing:13) {
-                        Button { session.frost() } label: {
+                        Button { session.showAbility() } label: {
                             VStack(spacing:5) {
-                                Image(systemName:"snowflake").font(.system(size:compact ? 26 : 34,weight:.ultraLight))
-                                Text(abilityCaption).font(.system(size:10,weight:.semibold,design:.monospaced))
+                                Image(systemName:session.form.symbol).font(.system(size:compact ? 26 : 34,weight:.ultraLight))
+                                if compact { Text(session.form.ability).font(.system(size:8,weight:.medium)).lineLimit(1).minimumScaleFactor(0.7) }
+                                Text(abilityCaption).font(.system(size:compact ? 8 : 10,weight:.semibold,design:.monospaced))
                             }.foregroundStyle(cream).frame(width:compact ? 62 : 82,height:compact ? 64 : 82)
                                 .background(ink.opacity(0.65),in:RoundedRectangle(cornerRadius:19))
-                                .overlay(RoundedRectangle(cornerRadius:19).stroke(mint.opacity(0.6),lineWidth:1))
-                        }.buttonStyle(.plain).accessibilityLabel("Морозное дыхание")
+                                .overlay(RoundedRectangle(cornerRadius:19).stroke(session.passiveEquipped ? mint : cream.opacity(0.35),lineWidth:session.passiveEquipped ? 2 : 1))
+                        }.buttonStyle(.plain).accessibilityLabel(session.form.ability+", пассивная способность. Открыть описание")
                         if !compact {
-                            VStack(alignment:.leading,spacing:6) {
-                                Text("Морозное дыхание").font(.system(size:16,weight:.medium,design:.serif)).foregroundStyle(cream)
-                                Text("Заморозь поверхность воды.\nЛёд держится 25 секунд.").font(.system(size:11)).foregroundStyle(cream.opacity(0.7)).lineSpacing(3)
-                            }
+                            Button { session.showAbility() } label: { VStack(alignment:.leading,spacing:6) {
+                                Text(session.form.ability).font(.system(size:16,weight:.medium,design:.serif)).foregroundStyle(cream)
+                                Text(session.passiveEquipped ? (session.passiveWorking ? "Действует автоматически.\nНажми, чтобы узнать больше." : "Мана восстанавливается.\nСпособность скоро вернётся.") : "Нажми и экипируй.\nЗанимает один слот.").font(.system(size:11)).foregroundStyle(cream.opacity(0.7)).lineSpacing(3)
+                            } }.buttonStyle(.plain)
                         }
                     }
                 }
@@ -154,12 +182,12 @@ struct GameView:View {
                     VStack(spacing:8) {
                         HStack(spacing:7) { Circle().fill(session.grounded || session.inWater ? mint : Color.orange.opacity(0.8)).frame(width:5,height:5);Text(session.grounded ? "НА ОПОРЕ" : (session.inWater ? "В ВОДЕ · МОЖНО ОТТОЛКНУТЬСЯ" : "В ПОЛЁТЕ")).tracking(1.3) }
                             .font(.system(size:9,weight:.medium)).foregroundStyle(cream.opacity(0.7))
-                        Text(session.wetness>0.2 ? "Мокрая шерсть · \(Int(session.wetness*100))%" : "Льдинка • готова исследовать").font(.system(size:13,design:.serif)).foregroundStyle(cream)
+                        Text(session.form.hasFur && session.wetness>0.2 ? "Мокрая шерсть · \(Int(session.wetness*100))%" : session.form.name+" • готов исследовать").font(.system(size:13,design:.serif)).foregroundStyle(cream)
                     }.padding(.bottom,14)
                     Spacer(minLength:0)
                 }
                 VStack(alignment:.trailing,spacing:10) {
-                    Text(session.aiming ? "ОТПУСТИ" : (session.inWater ? "ТОЛЧОК ИЗ ВОДЫ" : "ПРЫЖОК")).font(.system(size:9,weight:.semibold)).tracking(1.6).foregroundStyle(cream.opacity(0.75))
+                    Text(session.aiming ? "ОТПУСТИ" : (session.form == .stone && session.inWater ? "ПРЫЖОК СО ДНА" : (session.inWater ? "ТОЛЧОК ИЗ ВОДЫ" : "ПРЫЖОК"))).font(.system(size:9,weight:.semibold)).tracking(1.6).foregroundStyle(cream.opacity(0.75))
                     ZStack {
                         Circle().fill(cream.opacity(session.aiming ? 0.22 : 0.12))
                         Circle().stroke(cream.opacity(0.5),lineWidth:1)
@@ -198,6 +226,37 @@ struct GameView:View {
                 .onEnded { _ in session.setMovement(source:direction<0 ? "touch-left" : "touch-right",direction:direction,pressed:false) })
             .accessibilityLabel(direction<0 ? "Катиться или плыть влево" : "Катиться или плыть вправо")
     }
+    var abilityPanel:some View {
+        ScrollView {
+            VStack(alignment:.leading,spacing:22) {
+                HStack { Label(session.form.ability,systemImage:session.form.symbol).font(.system(size:25,design:.serif));Spacer();Button { session.abilityInfo=false } label:{ Image(systemName:"xmark") }.buttonStyle(.plain) }
+                Text("ПАССИВНАЯ · НАЧАЛЬНАЯ · 1 СЛОТ").font(.system(size:10,weight:.bold)).tracking(1.3).opacity(0.6)
+                Text(session.form.explanation).font(.system(size:15)).lineSpacing(6)
+                Text(String(format:"Расход: %.1f маны/с. Без экипированной способности мана восстанавливается: 4/с. При истощении — пауза до 20 маны. Здоровье восстанавливается при новой попытке.",session.form.manaCost)).font(.system(size:12)).lineSpacing(4).opacity(0.7)
+                Toggle("Экипировать пассивную способность",isOn:Binding(get:{session.passiveEquipped},set:{session.equipPassive($0)})).tint(ink)
+                Text(session.passiveEquipped ? "Слот 1 / 1 занят. Способность действует при движении и контакте с миром, без повторных нажатий." : "Слот 0 / 1. Включи способность здесь, затем вернись в игру.").font(.system(size:12)).lineSpacing(4).opacity(0.7)
+                Button("В игру") { session.abilityInfo=false }.buttonStyle(PillButton())
+            }.padding(28).frame(maxWidth:540).foregroundStyle(ink)
+        }.frame(maxWidth:.infinity).background(cream)
+    }
+    var formsPanel:some View {
+        ScrollView {
+            VStack(alignment:.leading,spacing:16) {
+                HStack { Text("Пять характеров стихии").font(.system(size:25,design:.serif));Spacer();Button { session.forms=false } label:{ Image(systemName:"xmark") }.buttonStyle(.plain) }
+                Text("Смена формы начинает новую попытку и восстанавливает мир. У каждой формы своё тело и одна начальная пассивная способность. Экипируй её в слоте.").font(.system(size:13)).lineSpacing(4).opacity(0.7)
+                ForEach(ElementForm.allCases) { form in
+                    Button { session.selectForm(form) } label: {
+                        HStack(alignment:.top,spacing:14) {
+                            Image(systemName:form.symbol).font(.system(size:26)).frame(width:32)
+                            VStack(alignment:.leading,spacing:5) { Text(form.name).font(.system(size:19,design:.serif));Text(form.ability).font(.system(size:12));Text(form.explanation).font(.system(size:11)).lineSpacing(3).opacity(0.65) }
+                            Spacer(minLength:0)
+                            if form==session.form { Image(systemName:"checkmark.circle.fill") }
+                        }.padding(16).background(ink.opacity(form==session.form ? 0.1 : 0.04),in:RoundedRectangle(cornerRadius:16))
+                    }.buttonStyle(.plain)
+                }
+            }.padding(26).frame(maxWidth:580).foregroundStyle(ink)
+        }.frame(maxWidth:.infinity).background(cream)
+    }
     var settingsPanel:some View {
         ScrollView { settingsContents }.background(cream)
     }
@@ -208,6 +267,7 @@ struct GameView:View {
             VStack(alignment:.leading,spacing:8) { HStack { Text("Гравитация");Spacer();Text(String(format:"%0.0f м/с²",session.gravity)).monospacedDigit() };Slider(value:$session.gravity,in:10...26,step:1) }
             VStack(alignment:.leading,spacing:8) { HStack { Text("Сила прыжка");Spacer();Text(String(format:"× %0.2f",session.power)).monospacedDigit() };Slider(value:$session.power,in:0.7...1.3,step:0.05) }
             VStack(alignment:.leading,spacing:8) { HStack { Text("Масштаб камеры");Spacer();Text(String(format:"× %.2f",session.zoom)).monospacedDigit() };Slider(value:$session.zoom,in:0.85...1.6,step:0.05) }
+            VStack(alignment:.leading,spacing:8) { HStack { Text("Ветер");Spacer();Text(String(format:"%+.1f",session.wind)).monospacedDigit() };Slider(value:$session.wind,in:-3...3,step:0.25) }
             Toggle("Вода и плавучесть",isOn:$session.water)
             Toggle("Прыжок как рогатка: тяни в обратную сторону",isOn:$session.inverted)
             Toggle("Показать столкновения и скорость",isOn:$session.debug)

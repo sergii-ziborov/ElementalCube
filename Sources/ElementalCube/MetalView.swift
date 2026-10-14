@@ -18,7 +18,7 @@ final class InteractiveMetalView: MTKView {
     override func keyDown(with event:NSEvent) {
         switch event.keyCode {
         case 49: if !event.isARepeat { session.tapJump() }
-        case 3: if !event.isARepeat { session.frost() }
+        case 3: if !event.isARepeat { session.showAbility() }
         case 15: if !event.isARepeat { session.reset() }
         case 123,0: session.setMovement(source:"key:\(event.keyCode)",direction:-1,pressed:true)
         case 124,2: session.setMovement(source:"key:\(event.keyCode)",direction:1,pressed:true)

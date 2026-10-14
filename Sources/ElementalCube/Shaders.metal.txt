@@ -5,20 +5,7 @@ struct Uniforms { float4x4 projection; float4x4 model; float4 animation; float4 
 struct Varying { float4 position [[position]]; float4 color; float3 normal; float3 world; };
 vertex Varying scene_vertex(const device Vertex *v [[buffer(0)]], constant Uniforms &u [[buffer(1)]], uint id [[vertex_id]]) {
     Vertex a=v[id]; float3 p=a.position.xyz;
-    float hair=a.normal.w;
-    if(hair>0) {
-        float phase=p.x*18+p.y*24+p.z*21;
-        p -= a.normal.xyz*hair*u.animation.y*.09;
-        p.y -= hair*u.animation.y*.075;
-        p.xy += (round(p.xy*12)/12-p.xy)*hair*u.animation.y*.85;
-        p.x += hair*(sin(u.animation.x*3+phase)*.018-u.animation.w*.012)*(1-u.animation.y*.5);
-        p.y += hair*cos(u.animation.x*2.1+phase)*.012;
-    }
     float4 world=u.model*float4(p,1);
-    if(hair>0 && u.support.x>0.5) {
-        float floor=u.support.y+(world.x-u.support.w)*u.support.z;
-        world.y=max(world.y,floor+.003);
-    }
     Varying o; o.position=u.projection*world; o.world=world.xyz;
     o.normal=normalize((u.model*float4(a.normal.xyz,0)).xyz);
     o.color=a.color; return o;

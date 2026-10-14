@@ -13,6 +13,8 @@ void ec_force(ECWorld *w, int id, float fx, float fy);
 void ec_teleport(ECWorld *w, int id, float x, float y);
 void ec_gravity(ECWorld *w, float gravity);
 void ec_material(ECWorld *w, int id, float friction, float restitution);
+void ec_density(ECWorld *w, int id, float density);
 void ec_drive(ECWorld *w, int id, float input, float grip, bool swimming);
 int ec_slope(ECWorld *w, float start, float end, bool right);
 bool ec_blocked(ECWorld *w, int id, float x, float y);
+bool ec_space_clear(ECWorld *w, float x, float y, float width, float height);
