@@ -1,0 +1,38 @@
+name: ElementalCube
+options:
+  bundleIdPrefix: local.elementalcube
+  deploymentTarget:
+    iOS: '16.0'
+packages:
+  ElementalCube:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+targets:
+  ElementalCube-iOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/ElementalCube
+        excludes: [Shaders.metal.txt]
+      - path: Sources/ElementalCube/Shaders.metal.txt
+        buildPhase: resources
+    dependencies:
+      - package: ElementalCube
+        product: ElementalCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: local.elementalcube.playground.ios
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UIRequiresFullScreen: YES
+        TARGETED_DEVICE_FAMILY: '1,2'
+        CODE_SIGN_STYLE: Automatic
+schemes:
+  ElementalCube-iOS:
+    build:
+      targets:
+        ElementalCube-iOS: all

@@ -1,0 +1,5 @@
+Box2D 3.1.1
+Source: https://github.com/erincatto/box2d/releases/tag/v3.1.1
+Archive: https://github.com/erincatto/box2d/archive/refs/tags/v3.1.1.tar.gz
+Only src/, include/, README.md and LICENSE are vendored. Numerical source is unmodified.
+Archive SHA-256: fb6ef914b50f4312d7d921a600eabc12318bb3c55a0b8c0b90608fa4488ef2e4

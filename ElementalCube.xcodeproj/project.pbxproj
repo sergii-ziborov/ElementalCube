@@ -1,0 +1,366 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0128FC69150A325DBEBC0B88 /* GameSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACD70767405358A8EC3E4192 /* GameSession.swift */; };
+		3CBA114B3AEB50B9C91AE17D /* MetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 827340D774BED81ABE7C2E5D /* MetalView.swift */; };
+		821A39A544EF4D8151CD918C /* Shaders.metal.txt in Resources */ = {isa = PBXBuildFile; fileRef = 97261F415D73C9626802614D /* Shaders.metal.txt */; };
+		889D5A0ED68D0E9649667918 /* Geometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC396B4A3B7C80D027BB9ACF /* Geometry.swift */; };
+		937F6D090A9349ACAC0090C7 /* Renderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CFD35AE5C340B06920CFE10 /* Renderer.swift */; };
+		9A2AEC224003DCC828E6660E /* ElementalCubeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 655FEDACA00A1414E978902E /* ElementalCubeApp.swift */; };
+		CE09702B7CEFC681ADF56B34 /* ElementalCore in Frameworks */ = {isa = PBXBuildFile; productRef = FB5057996CF37D2F9733E2B8 /* ElementalCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1548F9D511700BF8A3E44CF7 /* ElementalCube-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "ElementalCube-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3CFD35AE5C340B06920CFE10 /* Renderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Renderer.swift; sourceTree = "<group>"; };
+		559760D922550D363782D9BA /* ElementalCube */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ElementalCube; path = .; sourceTree = SOURCE_ROOT; };
+		655FEDACA00A1414E978902E /* ElementalCubeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElementalCubeApp.swift; sourceTree = "<group>"; };
+		827340D774BED81ABE7C2E5D /* MetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalView.swift; sourceTree = "<group>"; };
+		97261F415D73C9626802614D /* Shaders.metal.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Shaders.metal.txt; sourceTree = "<group>"; };
+		ACD70767405358A8EC3E4192 /* GameSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSession.swift; sourceTree = "<group>"; };
+		EC396B4A3B7C80D027BB9ACF /* Geometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Geometry.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		8F904C856151B53B96A7E98D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CE09702B7CEFC681ADF56B34 /* ElementalCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		86F55CF577B8A624005D2B9B /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				559760D922550D363782D9BA /* ElementalCube */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		90EE29F4F90A8DD00ADBD768 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1548F9D511700BF8A3E44CF7 /* ElementalCube-iOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		CF555BE072E412426A3CB7B9 /* ElementalCube */ = {
+			isa = PBXGroup;
+			children = (
+				655FEDACA00A1414E978902E /* ElementalCubeApp.swift */,
+				ACD70767405358A8EC3E4192 /* GameSession.swift */,
+				EC396B4A3B7C80D027BB9ACF /* Geometry.swift */,
+				827340D774BED81ABE7C2E5D /* MetalView.swift */,
+				3CFD35AE5C340B06920CFE10 /* Renderer.swift */,
+				97261F415D73C9626802614D /* Shaders.metal.txt */,
+			);
+			name = ElementalCube;
+			path = Sources/ElementalCube;
+			sourceTree = "<group>";
+		};
+		D89B17027A391946FD12BAE0 = {
+			isa = PBXGroup;
+			children = (
+				CF555BE072E412426A3CB7B9 /* ElementalCube */,
+				86F55CF577B8A624005D2B9B /* Packages */,
+				90EE29F4F90A8DD00ADBD768 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8C6F9A673674FF7D4EE4062C /* ElementalCube-iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 639E68059682431CC385054A /* Build configuration list for PBXNativeTarget "ElementalCube-iOS" */;
+			buildPhases = (
+				1E15B9989FB86B85EA0B5701 /* Sources */,
+				4659197FED438AAEB63D6AEF /* Resources */,
+				8F904C856151B53B96A7E98D /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "ElementalCube-iOS";
+			packageProductDependencies = (
+				FB5057996CF37D2F9733E2B8 /* ElementalCore */,
+			);
+			productName = "ElementalCube-iOS";
+			productReference = 1548F9D511700BF8A3E44CF7 /* ElementalCube-iOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		ACBF34952CEC567B9FEC83DE /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					8C6F9A673674FF7D4EE4062C = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = B8EAEFD820026DB0F857ED88 /* Build configuration list for PBXProject "ElementalCube" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = D89B17027A391946FD12BAE0;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				DB235B3D7C2F84CBD557D543 /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 90EE29F4F90A8DD00ADBD768 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8C6F9A673674FF7D4EE4062C /* ElementalCube-iOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		4659197FED438AAEB63D6AEF /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				821A39A544EF4D8151CD918C /* Shaders.metal.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1E15B9989FB86B85EA0B5701 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9A2AEC224003DCC828E6660E /* ElementalCubeApp.swift in Sources */,
+				0128FC69150A325DBEBC0B88 /* GameSession.swift in Sources */,
+				889D5A0ED68D0E9649667918 /* Geometry.swift in Sources */,
+				3CBA114B3AEB50B9C91AE17D /* MetalView.swift in Sources */,
+				937F6D090A9349ACAC0090C7 /* Renderer.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0DD49BF9AFE2170E8A9988D2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		865563DAEECB24AA34B6734A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		C057364146551B7578802912 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = local.elementalcube.playground.ios;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		ED23B7C4EC463A0B749DEF6B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = local.elementalcube.playground.ios;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		639E68059682431CC385054A /* Build configuration list for PBXNativeTarget "ElementalCube-iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C057364146551B7578802912 /* Debug */,
+				ED23B7C4EC463A0B749DEF6B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B8EAEFD820026DB0F857ED88 /* Build configuration list for PBXProject "ElementalCube" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				865563DAEECB24AA34B6734A /* Debug */,
+				0DD49BF9AFE2170E8A9988D2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		DB235B3D7C2F84CBD557D543 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		FB5057996CF37D2F9733E2B8 /* ElementalCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ElementalCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = ACBF34952CEC567B9FEC83DE /* Project object */;
+}
