@@ -9,9 +9,11 @@
 /* Begin PBXBuildFile section */
 		0128FC69150A325DBEBC0B88 /* GameSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACD70767405358A8EC3E4192 /* GameSession.swift */; };
 		3CBA114B3AEB50B9C91AE17D /* MetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 827340D774BED81ABE7C2E5D /* MetalView.swift */; };
+		46B2D0008C4E2CB113E37EDD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = DCA21A3F0F39D6F8AF5FB880 /* PrivacyInfo.xcprivacy */; };
 		821A39A544EF4D8151CD918C /* Shaders.metal.txt in Resources */ = {isa = PBXBuildFile; fileRef = 97261F415D73C9626802614D /* Shaders.metal.txt */; };
 		889D5A0ED68D0E9649667918 /* Geometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC396B4A3B7C80D027BB9ACF /* Geometry.swift */; };
 		937F6D090A9349ACAC0090C7 /* Renderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CFD35AE5C340B06920CFE10 /* Renderer.swift */; };
+		9816454E36CBDAFFECA4A511 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 438C0E63FC590D7D069405AD /* Assets.xcassets */; };
 		9A2AEC224003DCC828E6660E /* ElementalCubeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 655FEDACA00A1414E978902E /* ElementalCubeApp.swift */; };
 		CE09702B7CEFC681ADF56B34 /* ElementalCore in Frameworks */ = {isa = PBXBuildFile; productRef = FB5057996CF37D2F9733E2B8 /* ElementalCore */; };
 /* End PBXBuildFile section */
@@ -19,11 +21,13 @@
 /* Begin PBXFileReference section */
 		1548F9D511700BF8A3E44CF7 /* ElementalCube-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "ElementalCube-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3CFD35AE5C340B06920CFE10 /* Renderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Renderer.swift; sourceTree = "<group>"; };
+		438C0E63FC590D7D069405AD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		559760D922550D363782D9BA /* ElementalCube */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ElementalCube; path = .; sourceTree = SOURCE_ROOT; };
 		655FEDACA00A1414E978902E /* ElementalCubeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElementalCubeApp.swift; sourceTree = "<group>"; };
 		827340D774BED81ABE7C2E5D /* MetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalView.swift; sourceTree = "<group>"; };
 		97261F415D73C9626802614D /* Shaders.metal.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Shaders.metal.txt; sourceTree = "<group>"; };
 		ACD70767405358A8EC3E4192 /* GameSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSession.swift; sourceTree = "<group>"; };
+		DCA21A3F0F39D6F8AF5FB880 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		EC396B4A3B7C80D027BB9ACF /* Geometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Geometry.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -55,6 +59,15 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		B5ACB544096A1E19FE4662C9 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				438C0E63FC590D7D069405AD /* Assets.xcassets */,
+				DCA21A3F0F39D6F8AF5FB880 /* PrivacyInfo.xcprivacy */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
 		CF555BE072E412426A3CB7B9 /* ElementalCube */ = {
 			isa = PBXGroup;
 			children = (
@@ -74,6 +87,7 @@
 			children = (
 				CF555BE072E412426A3CB7B9 /* ElementalCube */,
 				86F55CF577B8A624005D2B9B /* Packages */,
+				B5ACB544096A1E19FE4662C9 /* Resources */,
 				90EE29F4F90A8DD00ADBD768 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -111,6 +125,7 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					8C6F9A673674FF7D4EE4062C = {
+						DevelopmentTeam = XMS5ZC28UJ;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -142,6 +157,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9816454E36CBDAFFECA4A511 /* Assets.xcassets in Resources */,
+				46B2D0008C4E2CB113E37EDD /* PrivacyInfo.xcprivacy in Resources */,
 				821A39A544EF4D8151CD918C /* Shaders.metal.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -289,7 +306,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XMS5ZC28UJ;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ElementalCube;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
@@ -298,7 +319,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = local.elementalcube.playground.ios;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.weavatrix.elementalcube;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -310,7 +332,11 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XMS5ZC28UJ;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ElementalCube;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
@@ -319,7 +345,8 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = local.elementalcube.playground.ios;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.weavatrix.elementalcube;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

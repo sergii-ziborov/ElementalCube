@@ -3,3 +3,6 @@ build/
 .DS_Store
 *.xcuserstate
 xcuserdata/
+*.mobileprovision
+*.p8
+.env*

@@ -46,6 +46,8 @@ xcodebuild -project ElementalCube.xcodeproj -scheme ElementalCube-iOS \
 
 ## Проверки
 
+Альфа для iPhone/iPad собирается и загружается вручную: [TestFlight](docs/TESTFLIGHT.md). Политика конфиденциальности: [PRIVACY.md](docs/PRIVACY.md).
+
 ```sh
 swift test
 ```
