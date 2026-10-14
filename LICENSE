@@ -1,0 +1,23 @@
+ElementalCube Proprietary License
+
+Copyright (c) 2026 Sergii Ziborov. All rights reserved.
+
+Except for separately licensed third-party components, the source code,
+artwork, assets, documentation, and other original content in this repository
+are proprietary.
+
+No permission is granted to use, copy, modify, distribute, sublicense, or sell
+this content without prior written authorization from the copyright holder.
+Public availability of the repository does not make this project open source
+or grant permission for reuse.
+
+Nothing in this notice limits rights required by applicable law or rights
+granted under GitHub's Terms of Service, including viewing and forking the
+public repository within the GitHub service.
+
+Third-party components remain subject to their own licenses. In particular,
+Vendor/Box2D is licensed under the MIT License in Vendor/Box2D/LICENSE and is
+not subject to the proprietary restrictions above. See THIRD_PARTY_NOTICES.md.
+
+THE CONTENT IS PROVIDED "AS IS", WITHOUT WARRANTIES OF ANY KIND, EXPRESS OR
+IMPLIED, TO THE EXTENT PERMITTED BY APPLICABLE LAW.
