@@ -1,12 +1,13 @@
 # ElementalCube — материалы карточки Apple
 
-Версия альфы: **0.1.0 (4)**. Одно приложение для iPhone и iPad. На этапе создания достаточно имени, платформы, языка, Bundle ID и SKU; остальные тексты заполняются в карточке и TestFlight.
+Версия альфы: **0.1.0 (4)**. Одно приложение для iPhone и iPad. Карточка [App Store Connect](https://appstoreconnect.apple.com/apps/6822921592/testflight) заполнена на русском и английском, включая задания тестерам и 12 снимков экрана. Внутреннее тестирование запущено 15 октября 2026; [внешняя альфа](https://testflight.apple.com/join/snm99FQh) ожидает проверки Apple.
 
 ## Данные приложения
 
 | Поле | Значение |
 | --- | --- |
 | Name | ElementalCube |
+| Apple ID | `6822921592` |
 | Bundle ID | `com.weavatrix.elementalcube` |
 | SKU | `ElementalCube-iOS` |
 | Primary language | Russian |
