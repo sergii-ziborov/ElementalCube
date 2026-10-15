@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate native screenshots; --apply uploads them to the editable Apple card.
 
-Manual helper, without CI/CD. Existing assets are retained unless --replace-earlier removes our older alpha 4 set after successful delivery.
+Manual helper, without CI/CD. Existing assets are retained unless --replace-earlier removes known older assets for the same display after successful delivery.
 Credentials and temporary upload URLs are never printed or saved.
 """
 import argparse

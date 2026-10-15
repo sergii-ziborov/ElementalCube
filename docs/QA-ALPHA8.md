@@ -16,3 +16,9 @@
 Просмотрены нативные снимки iPhone в портрете и iPad 11″: две цветные ветви, три уровня, статусы узлов и прокрутка. На iPhone все шесть узлов видны; iPad использует прокручиваемую карточку. Карточка навыка и настоящие эффекты изучения проверены XCTest. Голосовые подписи сохранены, декор исключён из доступности.
 
 Снимки: `Previews/skills8`. Физический iPhone/iPad, тактильный отклик и производительность на устройстве требуют проверки в TestFlight. Повторный полный прогон неизменённой физики не выполнялся; проверки воды, льда и карты описаны в QA альфы 7.
+
+## Подписанный выпуск
+
+Исходники: `65cc01b59f3f341b45e7ab2fc9953e407f930e4a`, тег `v0.1.0-alpha.8`. IPA: `build/alpha8/Export/ElementalCube-iOS.ipa`; архив: `build/alpha8/ElementalCube.xcarchive`. Версия 0.1.0 (8), bundle `com.weavatrix.elementalcube`, iOS 16+, iPhone/iPad `[1, 2]`. Строгая проверка подписи прошла. SHA-256: `e24a39554dbd030016442da17adbd7efa253d987bfff91654810b0da48923149`.
+
+Apple: `VERIFY SUCCEEDED with no errors`, затем `UPLOAD SUCCEEDED with no errors`. Первая проверка получила временную HTTP 500; загрузчик восстановился, повторная проверка также успешна. Логи: `build/alpha8-validate.log`, `build/alpha8-validate-retry.log`, `build/alpha8-upload.log`. Статус обработки и доступности хранится отдельно в TESTFLIGHT.md.

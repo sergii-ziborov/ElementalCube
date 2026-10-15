@@ -1,6 +1,6 @@
 # ElementalCube — материалы карточки Apple
 
-Альфа **0.1.0 (8)** для iPhone и iPad. Актуальное состояние загрузки и проверки: [TestFlight](TESTFLIGHT.md). [Нативные снимки](../Previews/gestures7).
+Альфа **0.1.0 (8)** для iPhone и iPad. Актуальное состояние загрузки и проверки: [TestFlight](TESTFLIGHT.md). [Новые снимки](../Previews/skills8).
 
 Apple ID `6822921592` · Bundle ID `com.weavatrix.elementalcube` · версия 0.1.0 · Games / Puzzle / Adventure.
 
@@ -137,3 +137,5 @@ Alpha 0.1.0 (8): redesigned skill tree and ordinary jump.
 
 Include device model, cube type and location.
 ```
+
+Снимки Apple: четыре iPhone из сборки 8 на каждом языке; для iPad 13″ сохранён снимок ледяной физики из сборки 7. Прежний снимок дерева с прямоугольными карточками удалён. Новые нативные снимки iPad 11″ находятся в репозитории.
