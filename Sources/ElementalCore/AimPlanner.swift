@@ -1,6 +1,14 @@
 import Foundation
 
 public enum AimPlanner {
+    public static func directImpulse(dx:Float,dy:Float,maximumSpeed:Float,sensitivity:Float=1)->Vec {
+        guard dx.isFinite,dy.isFinite,maximumSpeed.isFinite,sensitivity.isFinite else { return Vec(0,0) }
+        let radius=hypot(dx,dy)
+        guard radius>=8 else { return Vec(0,0) }
+        let power=min(maximumSpeed,(radius-8)*max(0.1,sensitivity)*0.11)
+        return Vec(dx/radius*power,-dy/radius*power)
+    }
+
     public static func impulse(dx:Float,dy:Float,direction:Float=1,inverted:Bool=true)->Vec {
         let radius=hypot(dx,dy)
         if radius < 8 { return Vec(0,7.2) }

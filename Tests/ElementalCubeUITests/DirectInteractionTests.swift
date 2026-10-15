@@ -1,0 +1,53 @@
+import XCTest
+
+final class DirectInteractionTests:XCTestCase {
+    var app:XCUIApplication!
+    override func setUpWithError() throws {
+        continueAfterFailure=false;XCUIDevice.shared.orientation = .portrait
+        app=XCUIApplication();app.launchArguments=["--ui-testing"];app.launch()
+        XCTAssertTrue(app.otherElements["game.cube"].waitForExistence(timeout:15))
+        sleep(2)
+    }
+    private var cube:XCUIElement { app.otherElements["game.cube"] }
+    private var world:XCUIElement { app.otherElements["game.world"] }
+    private func value(_ key:String)->String {
+        let raw=world.value as? String ?? ""
+        return raw.split(separator:";").first { $0.hasPrefix(key+"=") }.map { String($0.dropFirst(key.count+1)) } ?? ""
+    }
+    private func coordinate(_ offset:CGVector)->XCUICoordinate { cube.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).withOffset(offset) }
+    func testMapTapMovesAndReversesWithoutJump() {
+        let start=Double(value("x"))!
+        coordinate(CGVector(dx:115,dy:-20)).tap();sleep(1)
+        XCTAssertGreaterThan(Double(value("x"))!,start+0.6);XCTAssertEqual(value("jumps"),"0")
+        let right=Double(value("x"))!
+        coordinate(CGVector(dx:-115,dy:-20)).tap();sleep(1)
+        XCTAssertLessThan(Double(value("x"))!,right-0.6);XCTAssertEqual(value("jumps"),"0")
+        cube.tap();XCTAssertEqual(value("jumps"),"0")
+    }
+    func testDragCubeJumpsInTheDraggedDirectionAndRotates() {
+        let start=Double(value("x"))!
+        coordinate(.zero).press(forDuration:0.1,thenDragTo:coordinate(CGVector(dx:75,dy:-125)))
+        XCTAssertEqual(value("jumps"),"1")
+        sleep(1);XCTAssertGreaterThan(Double(value("x"))!,start+0.5)
+        XCUIDevice.shared.orientation = .landscapeLeft;sleep(1)
+        XCTAssertEqual(value("aiming"),"0")
+        XCTAssertTrue(cube.exists)
+        let image=XCTAttachment(screenshot:app.screenshot());image.name="iPhone landscape direct controls";image.lifetime = .keepAlways;add(image)
+    }
+    func testPersonalTreeAndEquipmentChangeTheSelectedMonster() {
+        app.buttons["inventory.open"].tap()
+        XCTAssertTrue(app.buttons["skill.mastery"].waitForExistence(timeout:5))
+        app.swipeUp()
+        app.buttons["skill.mastery"].tap()
+        let learn=app.buttons["Изучить · 1 очк."]
+        if !learn.isHittable { app.swipeUp() }
+        XCTAssertTrue(learn.waitForExistence(timeout:3));learn.tap()
+        app.swipeDown();app.swipeDown()
+        app.segmentedControls.buttons["Снаряжение"].tap()
+        let equip=app.buttons["equip.travelerCharm"]
+        if !equip.isHittable { app.swipeUp() };equip.tap()
+        let image=XCTAttachment(screenshot:app.screenshot());image.name="iPhone monster inventory";image.lifetime = .keepAlways;add(image)
+        app.swipeDown();app.buttons["Закрыть инвентарь"].tap()
+        XCTAssertEqual(value("cold"),"1.25");XCTAssertEqual(value("charm"),"travelerCharm")
+    }
+}

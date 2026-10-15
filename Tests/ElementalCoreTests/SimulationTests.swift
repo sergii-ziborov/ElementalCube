@@ -26,12 +26,12 @@ final class SimulationTests:XCTestCase {
     func testNoRemoteFreezeAndGoal() {
         let s=Simulation();s.equipPassive(true);advance(s,2)
         XCTAssertTrue(s.iceCells.isEmpty)
-        s.placeCube(Vec(23,0.7));advance(s,1);XCTAssertTrue(s.won)
+        s.placeCube(Vec(WorldLayout.goal.x,WorldLayout.goal.y+0.7));advance(s,1);XCTAssertTrue(s.won)
     }
     func testCollectibleAndWall() {
         let s=Simulation();s.placeCube(s.shards[0]);advance(s,0.1);XCTAssertTrue(s.collected.contains(0))
-        s.placeCube(Vec(24.4,1));advance(s,0.5);_ = s.jump(Vec(8,4),buffered:false);advance(s,1)
-        XCTAssertLessThan(s.cube.position.x,25);XCTAssertTrue(s.cube.position.x.isFinite)
+        s.placeCube(Vec(WorldLayout.bounds.maxX-0.6,WorldLayout.floorHeight+1));advance(s,0.5);_ = s.jump(Vec(8,4),buffered:false);advance(s,1)
+        XCTAssertLessThan(s.cube.position.x,WorldLayout.bounds.maxX);XCTAssertTrue(s.cube.position.x.isFinite)
     }
     func testLargeImpulseIsClampedAndSimulationRepeatable() {
         let a=Simulation(),b=Simulation();advance(a,1);advance(b,1)
@@ -125,7 +125,7 @@ final class SimulationTests:XCTestCase {
             let vertical:Float=8.5
             let flight=(vertical+sqrt(vertical*vertical-2*s.gravity*(target.y-s.cube.position.y)))/s.gravity
             let impulse=Vec((target.x-s.cube.position.x)/flight-s.cube.velocity.x,vertical-s.cube.velocity.y)
-            XCTAssertTrue(s.jump(impulse,buffered:false));advance(s,0.2)
+            XCTAssertTrue(s.jump(impulse,buffered:false),"from \(s.cube.position) to \(target), grounded=\(s.cube.grounded), water=\(s.inWater), velocity=\(s.cube.velocity)");advance(s,0.2)
             for _ in 0..<300 { s.step();if s.cube.grounded { return } }
             XCTFail("Did not land at x=\(s.cube.position.x), y=\(s.cube.position.y)")
         }
@@ -136,6 +136,6 @@ final class SimulationTests:XCTestCase {
         advance(s,0.2);landAt(Vec(18.2,0.56))
         s.movement=1;advance(s,1.5);s.movement=0;XCTAssertGreaterThan(s.cube.position.x,17)
         advance(s,0.2);landAt(Vec(23,0.56));advance(s,0.3)
-        XCTAssertTrue(s.won)
+        XCTAssertFalse(s.won) // The old shore is now only the first leg.
     }
 }

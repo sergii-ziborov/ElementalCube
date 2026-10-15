@@ -42,10 +42,18 @@ final class InputAndCameraTests: XCTestCase {
         XCTAssertLessThan(left,12);XCTAssertEqual(vertical,12,accuracy:0.001)
     }
     func testCameraKeepsWorldEdgesVisibleAndCentersOversizedViewport() {
-        let nearLeft=CameraFraming.target(cubeX:-1,velocityX:-5,movement:-1,facing:-1,aimVelocityX:nil,worldWidth:10)
-        let nearRight=CameraFraming.target(cubeX:24,velocityX:5,movement:1,facing:1,aimVelocityX:nil,worldWidth:10)
-        XCTAssertGreaterThanOrEqual(nearLeft-5,-2.7);XCTAssertLessThanOrEqual(nearRight+5,25)
-        let wide=CameraFraming.target(cubeX:24,velocityX:5,movement:1,facing:1,aimVelocityX:nil,worldWidth:40)
-        XCTAssertEqual(wide,11.15,accuracy:0.001)
+        let nearLeft=CameraFraming.target(cubeX:WorldLayout.bounds.minX+1,velocityX:-5,movement:-1,facing:-1,aimVelocityX:nil,worldWidth:10)
+        let nearRight=CameraFraming.target(cubeX:WorldLayout.bounds.maxX-1,velocityX:5,movement:1,facing:1,aimVelocityX:nil,worldWidth:10)
+        XCTAssertGreaterThanOrEqual(nearLeft-5,WorldLayout.bounds.minX);XCTAssertLessThanOrEqual(nearRight+5,WorldLayout.bounds.maxX)
+        let wide=CameraFraming.target(cubeX:WorldLayout.bounds.maxX-1,velocityX:5,movement:1,facing:1,aimVelocityX:nil,worldWidth:130)
+        XCTAssertEqual(wide,WorldLayout.bounds.center.x,accuracy:0.001)
     }
+    func testVerticalCameraKeepsCubeClearOfPhoneHUDAtBothWorldExtremes() {
+        for (y,velocity):(Float,Float) in [(22.56,0),(-22.34,0),(22.56,-12),(-22.34,-12)] {
+            let height:Float=18,center=CameraFraming.verticalTarget(cubeY:y,velocityY:velocity,aimVelocityY:nil,worldHeight:height)
+            let screenFraction=0.5-(y+0.34-center)/height
+            XCTAssertGreaterThan(screenFraction,0.4);XCTAssertLessThan(screenFraction,0.8)
+        }
+    }
+
 }

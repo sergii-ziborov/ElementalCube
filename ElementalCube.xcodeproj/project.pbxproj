@@ -17,18 +17,33 @@
 		9816454E36CBDAFFECA4A511 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 438C0E63FC590D7D069405AD /* Assets.xcassets */; };
 		9A2AEC224003DCC828E6660E /* ElementalCubeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 655FEDACA00A1414E978902E /* ElementalCubeApp.swift */; };
 		CE09702B7CEFC681ADF56B34 /* ElementalCore in Frameworks */ = {isa = PBXBuildFile; productRef = FB5057996CF37D2F9733E2B8 /* ElementalCore */; };
+		D7A6B962EA6F8411A6046CB4 /* MonsterInventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45FDB19C14061EC60CA49FFE /* MonsterInventoryView.swift */; };
+		F2A6F9FCD391A1960ACCF7A7 /* DirectInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32855687569320763186F2E9 /* DirectInteractionTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		3C654E3E2A15EF8C53329E9F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = ACBF34952CEC567B9FEC83DE /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8C6F9A673674FF7D4EE4062C;
+			remoteInfo = "ElementalCube-iOS";
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		1548F9D511700BF8A3E44CF7 /* ElementalCube-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "ElementalCube-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		32855687569320763186F2E9 /* DirectInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectInteractionTests.swift; sourceTree = "<group>"; };
 		3CFD35AE5C340B06920CFE10 /* Renderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Renderer.swift; sourceTree = "<group>"; };
 		438C0E63FC590D7D069405AD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		45FDB19C14061EC60CA49FFE /* MonsterInventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonsterInventoryView.swift; sourceTree = "<group>"; };
 		559760D922550D363782D9BA /* ElementalCube */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ElementalCube; path = .; sourceTree = SOURCE_ROOT; };
 		655FEDACA00A1414E978902E /* ElementalCubeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElementalCubeApp.swift; sourceTree = "<group>"; };
 		827340D774BED81ABE7C2E5D /* MetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalView.swift; sourceTree = "<group>"; };
 		97261F415D73C9626802614D /* Shaders.metal.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Shaders.metal.txt; sourceTree = "<group>"; };
 		ACD70767405358A8EC3E4192 /* GameSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSession.swift; sourceTree = "<group>"; };
 		B173F3C3F688479006701C5F /* HapticFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticFeedback.swift; sourceTree = "<group>"; };
+		D5F1E319E38C847D565F9C10 /* ElementalCube-UITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "ElementalCube-UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DCA21A3F0F39D6F8AF5FB880 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		EC396B4A3B7C80D027BB9ACF /* Geometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Geometry.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -45,6 +60,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		79019832A5238C7C5C687700 /* ElementalCubeUITests */ = {
+			isa = PBXGroup;
+			children = (
+				32855687569320763186F2E9 /* DirectInteractionTests.swift */,
+			);
+			name = ElementalCubeUITests;
+			path = Tests/ElementalCubeUITests;
+			sourceTree = "<group>";
+		};
 		86F55CF577B8A624005D2B9B /* Packages */ = {
 			isa = PBXGroup;
 			children = (
@@ -57,6 +81,7 @@
 			isa = PBXGroup;
 			children = (
 				1548F9D511700BF8A3E44CF7 /* ElementalCube-iOS.app */,
+				D5F1E319E38C847D565F9C10 /* ElementalCube-UITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -78,6 +103,7 @@
 				EC396B4A3B7C80D027BB9ACF /* Geometry.swift */,
 				B173F3C3F688479006701C5F /* HapticFeedback.swift */,
 				827340D774BED81ABE7C2E5D /* MetalView.swift */,
+				45FDB19C14061EC60CA49FFE /* MonsterInventoryView.swift */,
 				3CFD35AE5C340B06920CFE10 /* Renderer.swift */,
 				97261F415D73C9626802614D /* Shaders.metal.txt */,
 			);
@@ -89,6 +115,7 @@
 			isa = PBXGroup;
 			children = (
 				CF555BE072E412426A3CB7B9 /* ElementalCube */,
+				79019832A5238C7C5C687700 /* ElementalCubeUITests */,
 				86F55CF577B8A624005D2B9B /* Packages */,
 				B5ACB544096A1E19FE4662C9 /* Resources */,
 				90EE29F4F90A8DD00ADBD768 /* Products */,
@@ -98,6 +125,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		47404C7531442F389A7508F4 /* ElementalCube-UITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2A61060DED8CFA6FF5C1CEAE /* Build configuration list for PBXNativeTarget "ElementalCube-UITests" */;
+			buildPhases = (
+				FBB82EF24FA65A5C38D71E0C /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5FF9EBACD78E3D84F5C1255C /* PBXTargetDependency */,
+			);
+			name = "ElementalCube-UITests";
+			packageProductDependencies = (
+			);
+			productName = "ElementalCube-UITests";
+			productReference = D5F1E319E38C847D565F9C10 /* ElementalCube-UITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		8C6F9A673674FF7D4EE4062C /* ElementalCube-iOS */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 639E68059682431CC385054A /* Build configuration list for PBXNativeTarget "ElementalCube-iOS" */;
@@ -127,6 +172,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					47404C7531442F389A7508F4 = {
+						TestTargetID = 8C6F9A673674FF7D4EE4062C;
+					};
 					8C6F9A673674FF7D4EE4062C = {
 						DevelopmentTeam = XMS5ZC28UJ;
 						ProvisioningStyle = Automatic;
@@ -151,6 +199,7 @@
 			projectRoot = "";
 			targets = (
 				8C6F9A673674FF7D4EE4062C /* ElementalCube-iOS */,
+				47404C7531442F389A7508F4 /* ElementalCube-UITests */,
 			);
 		};
 /* End PBXProject section */
@@ -178,11 +227,28 @@
 				889D5A0ED68D0E9649667918 /* Geometry.swift in Sources */,
 				0B68F27132DD33DE57F4C35E /* HapticFeedback.swift in Sources */,
 				3CBA114B3AEB50B9C91AE17D /* MetalView.swift in Sources */,
+				D7A6B962EA6F8411A6046CB4 /* MonsterInventoryView.swift in Sources */,
 				937F6D090A9349ACAC0090C7 /* Renderer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FBB82EF24FA65A5C38D71E0C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F2A6F9FCD391A1960ACCF7A7 /* DirectInteractionTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5FF9EBACD78E3D84F5C1255C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8C6F9A673674FF7D4EE4062C /* ElementalCube-iOS */;
+			targetProxy = 3C654E3E2A15EF8C53329E9F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0DD49BF9AFE2170E8A9988D2 /* Release */ = {
@@ -310,7 +376,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = XMS5ZC28UJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ElementalCube;
@@ -330,13 +396,49 @@
 			};
 			name = Debug;
 		};
+		CCFD533E2E8CCB23B8164DBB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.weavatrix.elementalcube.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "ElementalCube-iOS";
+			};
+			name = Debug;
+		};
+		EBB0D37BA9C6F5736EFA8427 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.weavatrix.elementalcube.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "ElementalCube-iOS";
+			};
+			name = Release;
+		};
 		ED23B7C4EC463A0B749DEF6B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = XMS5ZC28UJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ElementalCube;
@@ -359,6 +461,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		2A61060DED8CFA6FF5C1CEAE /* Build configuration list for PBXNativeTarget "ElementalCube-UITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CCFD533E2E8CCB23B8164DBB /* Debug */,
+				EBB0D37BA9C6F5736EFA8427 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		639E68059682431CC385054A /* Build configuration list for PBXNativeTarget "ElementalCube-iOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

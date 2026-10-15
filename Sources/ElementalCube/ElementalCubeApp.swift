@@ -28,13 +28,7 @@ let mint=Color(red:0.68,green:0.92,blue:0.84)
 struct GameView:View {
     @ObservedObject var session:GameSession
     @State private var dismissVictory=false
-    var controlHint:String {
-        #if os(macOS)
-        return "← → — катиться / плыть    ПРОБЕЛ — прыжок    F — способность    R — заново"
-        #else
-        return session.inverted ? "Удерживай ← →. Для прыжка потяни назад и отпусти." : "Удерживай ← →. Для прыжка потяни к цели и отпусти."
-        #endif
-    }
+    var controlHint:String { "Карта — движение · Потяни кубика к цели — прыжок" }
     var body:some View {
         GeometryReader { geo in
             let short=geo.size.height<550
@@ -48,8 +42,8 @@ struct GameView:View {
                             if !short { Label("ПЕРВАЯ ПРОГУЛКА",systemImage:"sparkle").font(.system(size:10,weight:.bold)).tracking(2).opacity(0.6) }
                             Text(session.won ? "Берег пройден!" : "Доберись до флага").font(.system(size:short ? 14 : (compact ? 18 : 22),weight:.medium,design:.serif))
                             HStack(spacing:7) {
-                                ForEach(0..<3) { i in Image(systemName:"diamond.fill").foregroundStyle(i<session.shards ? ink : ink.opacity(0.18)) }
-                                Text("\(session.shards) / 3 кристалла").font(.system(size:11)).opacity(0.7)
+                                Image(systemName:"diamond.fill")
+                                Text("\(session.shards) / \(WorldLayout.shards.count) кристаллов").font(.system(size:11)).opacity(0.7)
                                 if session.deepRelic { Image(systemName:"seal.fill").foregroundStyle(.orange).accessibilityLabel("Глубинная реликвия найдена") }
                             }
                             if compact {
@@ -63,7 +57,7 @@ struct GameView:View {
                         if !compact {
                             HStack(spacing:7) { Circle().fill(Color(red:0.32,green:0.56,blue:0.4)).frame(width:5,height:5);Text("ТЕСТОВЫЙ МИР • 01").font(.system(size:10,weight:.medium)).tracking(1.4) }.padding(.top,14).opacity(0.7)
                         }
-                    }.padding(.top,short ? 8 : 25)
+                    }.padding(.top,short ? 8 : 25).allowsHitTesting(false)
                     Spacer()
                     controls(compact:compact,short:short)
                 }.padding(.horizontal,compact ? 16 : 38).padding(.bottom,short ? 7 : (compact ? 20 : 25)).foregroundStyle(ink)
@@ -87,7 +81,7 @@ struct GameView:View {
                         VStack(spacing:17) {
                             Image(systemName:"flag.checkered").font(.system(size:34)).foregroundStyle(Color(red:0.64,green:0.54,blue:0.27))
                             Text("Маленький куб.\nПервое приключение.").font(.system(size:30,weight:.medium,design:.serif)).multilineTextAlignment(.center)
-                            Text("Берег пройден за \(session.jumps) прыжков.\nСобрано кристаллов: \(session.shards) из 3.").font(.system(size:14)).lineSpacing(5).opacity(0.7).multilineTextAlignment(.center)
+                            Text("Берег пройден за \(session.jumps) прыжков.\nСобрано кристаллов: \(session.shards) из \(WorldLayout.shards.count).").font(.system(size:14)).lineSpacing(5).opacity(0.7).multilineTextAlignment(.center)
                             HStack(spacing:10) {
                                 Button("Ещё раз") { dismissVictory=false;session.reset() }.buttonStyle(PillButton())
                                 Button("Исследовать") { dismissVictory=true }.buttonStyle(PillButton(filled:false))
@@ -98,12 +92,12 @@ struct GameView:View {
             }
             .sheet(isPresented:$session.settings) { settingsPanel }
             .sheet(isPresented:$session.abilityInfo) { abilityPanel }
-            .sheet(isPresented:$session.forms) { formsPanel }
+            .sheet(isPresented:$session.forms) { MonsterInventoryView(session:session) }
             .onChange(of:session.abilityInfo) { _ in session.cancelAim() }
             .onChange(of:session.forms) { _ in session.cancelAim() }
             .onChange(of:session.settings) { _ in session.cancelAim() }
             .onChange(of:session.won) { won in if !won { dismissVictory=false } }
-            .onReceive(NotificationCenter.default.publisher(for:appInactiveNotification)) { _ in session.cancelAim();session.paused=true }
+            .onReceive(NotificationCenter.default.publisher(for:appInactiveNotification)) { _ in session.cancelAim();session.saveInventory();session.paused=true }
         }
     }
     var appInactiveNotification:Notification.Name {
@@ -125,13 +119,13 @@ struct GameView:View {
         VStack(spacing:9) {
             HStack(spacing:compact ? 8 : 14) {
                 VStack(alignment:.leading,spacing:3) {
-                    Text("ElementalCube").font(.system(size:compact ? 20 : 28,weight:.medium,design:.serif))
+                    Text("ElementalCube").font(.system(size:compact ? 20 : 28,weight:.medium,design:.serif)).padding(6).background(cream.opacity(0.72),in:RoundedRectangle(cornerRadius:10))
                     if !compact { Text("МАЛЕНЬКИЙ КУБ. БОЛЬШОЙ МИР.").font(.system(size:8,weight:.medium)).tracking(1.55).opacity(0.65) }
                 }
                 Spacer(minLength:4)
                 Button { session.forms=true } label: {
                     HStack(spacing:5) { Image(systemName:session.form.symbol);if !compact { Text(session.form.name) };Image(systemName:"chevron.down").font(.system(size:8)) }.font(.system(size:13,weight:.medium)).padding(10).background(cream.opacity(0.65),in:Capsule())
-                }.buttonStyle(.plain).accessibilityLabel("Выбрать форму: \(session.form.name)")
+                }.buttonStyle(.plain).accessibilityLabel("Инвентарь монстра: \(session.form.name)").accessibilityIdentifier("inventory.open")
                 if !compact {
                     VStack(spacing:8) {
                         resource("ЗДОРОВЬЕ","heart.fill",value:session.health,color:Color(red:0.76,green:0.33,blue:0.31))
@@ -150,69 +144,26 @@ struct GameView:View {
         }
     }
     func controls(compact:Bool,short:Bool)->some View {
-        VStack(spacing:short ? 8 : 18) {
-            HStack(alignment:.bottom,spacing:compact ? 10 : 20) {
-                VStack(alignment:.leading,spacing:8) {
-                    Text(session.form == .air ? "СКОЛЬЗИ" : (session.form == .stone && session.inWater ? "ПО ДНУ" : (session.inWater ? "ПЛЫВИ" : "КАТИСЬ"))).font(.system(size:9,weight:.semibold)).tracking(1.5).foregroundStyle(cream.opacity(0.65))
-                    HStack(spacing:7) { movementButton(-1,compact:compact);movementButton(1,compact:compact) }
-                }
-                Button { session.showAbility() } label: {
-                    VStack(alignment:.leading,spacing:7) {
-                        Label("ПАССИВНАЯ",systemImage:session.form.symbol)
-                            .font(.system(size:compact ? 8 : 9,weight:.medium)).tracking(0.5).foregroundStyle(cream.opacity(0.65))
-                        Text(session.form.ability).font(.system(size:compact ? 13 : 18,weight:.medium,design:.serif))
-                            .foregroundStyle(cream).lineLimit(2).multilineTextAlignment(.leading)
-                        if !compact { Text("Описание способности").font(.system(size:11)).foregroundStyle(cream.opacity(0.6)) }
-                    }.frame(maxWidth:compact ? 100 : 250,alignment:.leading).padding(.vertical,9).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityLabel(session.form.ability+", пассивная способность. Открыть описание")
-                Spacer(minLength:0)
-                if !compact {
-                    VStack(spacing:8) {
-                        HStack(spacing:7) { Circle().fill(session.grounded || session.inWater ? mint : Color.orange.opacity(0.8)).frame(width:5,height:5);Text(session.grounded ? "НА ОПОРЕ" : (session.inWater ? "В ВОДЕ · МОЖНО ОТТОЛКНУТЬСЯ" : "В ПОЛЁТЕ")).tracking(1.3) }
-                            .font(.system(size:9,weight:.medium)).foregroundStyle(cream.opacity(0.7))
-                        Text(session.form.hasFur && session.wetness>0.2 ? "Мокрая шерсть · \(Int(session.wetness*100))%" : session.form.name+" • готов исследовать").font(.system(size:13,design:.serif)).foregroundStyle(cream)
-                    }.padding(.bottom,14)
-                    Spacer(minLength:0)
-                }
-                VStack(alignment:.trailing,spacing:10) {
-                    Text(session.aiming ? "ОТПУСТИ" : (session.form == .stone && session.inWater ? "ПРЫЖОК СО ДНА" : (session.inWater ? "ТОЛЧОК ИЗ ВОДЫ" : "ПРЫЖОК"))).font(.system(size:9,weight:.semibold)).tracking(1.6).foregroundStyle(cream.opacity(0.75))
-                    ZStack {
-                        Circle().fill(cream.opacity(session.aiming ? 0.22 : 0.12))
-                        Circle().stroke(cream.opacity(0.5),lineWidth:1)
-                        Circle().stroke(cream.opacity(0.13),lineWidth:1).padding(7)
-                        Image(systemName:"arrow.up").font(.system(size:35,weight:.ultraLight)).foregroundStyle(cream)
-                            .rotationEffect(.radians(Double(atan2(session.launchVelocity.x,session.launchVelocity.y))))
-                    }.frame(width:short ? 76 : (compact ? 88 : 111),height:short ? 76 : (compact ? 88 : 111))
-                        .contentShape(Circle())
-                        .gesture(DragGesture(minimumDistance:0).onChanged { value in session.beginAim();session.updateAim(value.translation) }.onEnded { _ in session.releaseAim() })
-                        .accessibilityLabel("Прыжок: потяни и отпусти")
-                }
-            }
-            HStack {
-                Text(controlHint).font(.system(size:compact ? 9 : 10)).foregroundStyle(cream.opacity(0.65))
-                Spacer()
-                if !compact { Text("ПРИРОДА ПОМНИТ. КУБ МЕНЯЕТ МИР.").font(.system(size:8,weight:.medium)).tracking(1.8).foregroundStyle(cream.opacity(0.5)) }
-            }.padding(.top,6).overlay(alignment:.top) { Rectangle().fill(cream.opacity(0.16)).frame(height:1) }
-        }.padding(.top,short ? 12 : 35).background {
-            LinearGradient(colors:[ink.opacity(0),ink.opacity(0.78)],startPoint:.top,endPoint:.bottom).padding(.horizontal,-50).padding(.bottom,-35).padding(.top,-45).allowsHitTesting(false)
-        }
-        .overlay(alignment:.top) {
+        HStack(alignment:.bottom,spacing:18) {
+            Button { session.showAbility() } label: {
+                VStack(alignment:.leading,spacing:5) {
+                    Label("ПАССИВНАЯ",systemImage:session.form.symbol).font(.system(size:9,weight:.medium)).tracking(1).opacity(0.65)
+                    Text(session.form.ability).font(.system(size:compact ? 15 : 19,design:.serif))
+                }.foregroundStyle(cream).padding(.vertical,12).contentShape(Rectangle())
+            }.buttonStyle(.plain).accessibilityLabel(session.form.ability+", описание пассивной способности")
+            Spacer(minLength:0)
+            VStack(alignment:.trailing,spacing:6) {
+                Text(session.aiming ? "ОТПУСТИ, ЧТОБЫ ПРЫГНУТЬ" : (session.grounded ? "НА ОПОРЕ" : (session.inWater ? "В ВОДЕ" : "В ПОЛЁТЕ")))
+                    .font(.system(size:9,weight:.medium)).tracking(1).opacity(0.7)
+                if !short { Text(controlHint).font(.system(size:compact ? 10 : 12)) }
+            }.foregroundStyle(cream).padding(.vertical,12).allowsHitTesting(false)
+        }.padding(.top,8).background {
+            LinearGradient(colors:[ink.opacity(0),ink.opacity(0.75)],startPoint:.top,endPoint:.bottom).padding(.horizontal,-50).padding(.bottom,-35).padding(.top,-30).allowsHitTesting(false)
+        }.overlay(alignment:.top) {
             if session.simulation.time<session.hintUntil {
-                Text(session.hint).font(.system(size:11)).foregroundStyle(cream.opacity(0.9)).padding(.horizontal,16).padding(.vertical,9).background(ink.opacity(0.55),in:Capsule()).offset(y:-22).allowsHitTesting(false)
+                Text(session.hint).font(.system(size:11)).foregroundStyle(cream).multilineTextAlignment(.center).padding(12).background(ink.opacity(0.7),in:RoundedRectangle(cornerRadius:16)).offset(y:-55).allowsHitTesting(false)
             }
         }
-    }
-    func movementButton(_ direction:Float,compact:Bool)->some View {
-        Image(systemName:direction<0 ? "arrow.left" : "arrow.right")
-            .font(.system(size:compact ? 22 : 25,weight:.light)).foregroundStyle(cream)
-            .frame(width:compact ? 47 : 58,height:compact ? 56 : 66)
-            .background(cream.opacity(session.moving==direction ? 0.26 : 0.11),in:RoundedRectangle(cornerRadius:16))
-            .overlay(RoundedRectangle(cornerRadius:16).stroke(cream.opacity(0.4),lineWidth:1))
-            .contentShape(RoundedRectangle(cornerRadius:16))
-            .gesture(DragGesture(minimumDistance:0)
-                .onChanged { _ in session.setMovement(source:direction<0 ? "touch-left" : "touch-right",direction:direction,pressed:true) }
-                .onEnded { _ in session.setMovement(source:direction<0 ? "touch-left" : "touch-right",direction:direction,pressed:false) })
-            .accessibilityLabel(direction<0 ? "Катиться или плыть влево" : "Катиться или плыть вправо")
     }
     var abilityPanel:some View {
         ScrollView {
@@ -226,24 +177,6 @@ struct GameView:View {
             }.padding(28).frame(maxWidth:540).foregroundStyle(ink)
         }.frame(maxWidth:.infinity).background(cream)
     }
-    var formsPanel:some View {
-        ScrollView {
-            VStack(alignment:.leading,spacing:16) {
-                HStack { Text("Пять характеров стихии").font(.system(size:25,design:.serif));Spacer();Button { session.forms=false } label:{ Image(systemName:"xmark") }.buttonStyle(.plain) }
-                Text("Смена формы начинает новую попытку и восстанавливает мир. У каждой формы своё тело и уже назначенная начальная пассивная способность.").font(.system(size:13)).lineSpacing(4).opacity(0.7)
-                ForEach(ElementForm.allCases) { form in
-                    Button { session.selectForm(form) } label: {
-                        HStack(alignment:.top,spacing:14) {
-                            Image(systemName:form.symbol).font(.system(size:26)).frame(width:32)
-                            VStack(alignment:.leading,spacing:5) { Text(form.name).font(.system(size:19,design:.serif));Text(form.ability).font(.system(size:12));Text(form.explanation).font(.system(size:11)).lineSpacing(3).opacity(0.65) }
-                            Spacer(minLength:0)
-                            if form==session.form { Image(systemName:"checkmark.circle.fill") }
-                        }.padding(16).background(ink.opacity(form==session.form ? 0.1 : 0.04),in:RoundedRectangle(cornerRadius:16))
-                    }.buttonStyle(.plain)
-                }
-            }.padding(26).frame(maxWidth:580).foregroundStyle(ink)
-        }.frame(maxWidth:.infinity).background(cream)
-    }
     var settingsPanel:some View {
         ScrollView { settingsContents }.background(cream)
     }
@@ -252,11 +185,10 @@ struct GameView:View {
             HStack { Text("Почувствуй физику").font(.system(size:26,design:.serif));Spacer();Button { session.settings=false } label:{ Image(systemName:"xmark") }.buttonStyle(.plain) }
             Text("Настройки тестовой площадки. Мир приостановлен, пока открыта эта панель.").font(.system(size:13)).foregroundStyle(ink.opacity(0.65))
             VStack(alignment:.leading,spacing:8) { HStack { Text("Гравитация");Spacer();Text(String(format:"%0.0f м/с²",session.gravity)).monospacedDigit() };Slider(value:$session.gravity,in:10...26,step:1) }
-            VStack(alignment:.leading,spacing:8) { HStack { Text("Сила прыжка");Spacer();Text(String(format:"× %0.2f",session.power)).monospacedDigit() };Slider(value:$session.power,in:0.7...1.3,step:0.05) }
+            VStack(alignment:.leading,spacing:8) { HStack { Text("Чувствительность жеста");Spacer();Text(String(format:"× %0.2f",session.power)).monospacedDigit() };Slider(value:$session.power,in:0.7...1.3,step:0.05) }
             VStack(alignment:.leading,spacing:8) { HStack { Text("Масштаб камеры");Spacer();Text(String(format:"× %.2f",session.zoom)).monospacedDigit() };Slider(value:$session.zoom,in:0.85...1.6,step:0.05) }
             VStack(alignment:.leading,spacing:8) { HStack { Text("Ветер");Spacer();Text(String(format:"%+.1f",session.wind)).monospacedDigit() };Slider(value:$session.wind,in:-3...3,step:0.25) }
             Toggle("Вода и плавучесть",isOn:$session.water)
-            Toggle("Прыжок как рогатка: тяни в обратную сторону",isOn:$session.inverted)
             Toggle("Показать столкновения и скорость",isOn:$session.debug)
             #if os(iOS)
             Toggle("Отклик вибрацией",isOn:$session.haptics)

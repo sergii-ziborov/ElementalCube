@@ -4,17 +4,17 @@ import MetalKit
 #if os(macOS)
 final class InteractiveMetalView: MTKView {
     var session:GameSession!
-    var origin=CGPoint.zero
+
     override var isFlipped:Bool { true }
     override var acceptsFirstResponder:Bool { true }
     override func mouseDown(with event:NSEvent) {
-        window?.makeFirstResponder(self);origin=convert(event.locationInWindow,from:nil);session.beginAim()
+        window?.makeFirstResponder(self);session.pointerBegan(convert(event.locationInWindow,from:nil))
     }
     override func mouseDragged(with event:NSEvent) {
         let p=convert(event.locationInWindow,from:nil)
-        session.updateAim(CGSize(width:p.x-origin.x,height:p.y-origin.y))
+        session.pointerMoved(p)
     }
-    override func mouseUp(with event:NSEvent) { session.releaseAim() }
+    override func mouseUp(with event:NSEvent) { session.pointerEnded(convert(event.locationInWindow,from:nil)) }
     override func keyDown(with event:NSEvent) {
         switch event.keyCode {
         case 49: if !event.isARepeat { session.tapJump() }
@@ -47,17 +47,32 @@ struct MetalView:NSViewRepresentable {
 }
 #else
 final class InteractiveMetalView:MTKView {
-    var session:GameSession!;var origin=CGPoint.zero;var activeTouch:UITouch?
-    override func touchesBegan(_ touches:Set<UITouch>,with event:UIEvent?) { guard activeTouch == nil,let t=touches.first else { return };activeTouch=t;origin=t.location(in:self);session.beginAim() }
-    override func touchesMoved(_ touches:Set<UITouch>,with event:UIEvent?) { guard let t=activeTouch,touches.contains(t) else { return };let p=t.location(in:self);session.updateAim(CGSize(width:p.x-origin.x,height:p.y-origin.y)) }
-    override func touchesEnded(_ touches:Set<UITouch>,with event:UIEvent?) { guard let t=activeTouch,touches.contains(t) else { return };activeTouch=nil;session.releaseAim() }
+    var session:GameSession!;var activeTouch:UITouch?
+    private lazy var cubeAccessibility=UIAccessibilityElement(accessibilityContainer:self)
+    private lazy var worldAccessibility=UIAccessibilityElement(accessibilityContainer:self)
+    func updateAccessibility() {
+        isAccessibilityElement=false
+        let body=session.simulation.cube!,viewport=session.viewport,p=viewport.project(body.position,depth:1.1)
+        let size=max(44,CGFloat(1.4/viewport.size.x*viewport.screen.x))
+        cubeAccessibility.accessibilityIdentifier="game.cube";cubeAccessibility.accessibilityLabel="Куб: "+session.form.name
+        cubeAccessibility.accessibilityFrameInContainerSpace=CGRect(x:CGFloat(p.x)-size/2,y:CGFloat(p.y)-size/2,width:size,height:size)
+        worldAccessibility.accessibilityIdentifier="game.world";worldAccessibility.accessibilityLabel="Игровой мир"
+        worldAccessibility.accessibilityFrameInContainerSpace=bounds
+        if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+            worldAccessibility.accessibilityValue=String(format:"x=%.3f;y=%.3f;jumps=%d;aiming=%d;cold=%.2f;charm=%@",body.position.x,body.position.y,session.simulation.jumps,session.aiming ? 1 : 0,session.simulation.waterField.conductivity,session.inventory.selected.equippedCharm?.rawValue ?? "none")
+        }
+        accessibilityElements=[cubeAccessibility,worldAccessibility]
+    }
+    override func touchesBegan(_ touches:Set<UITouch>,with event:UIEvent?) { guard activeTouch == nil,let t=touches.first else { return };activeTouch=t;session.pointerBegan(t.location(in:self)) }
+    override func touchesMoved(_ touches:Set<UITouch>,with event:UIEvent?) { guard let t=activeTouch,touches.contains(t) else { return };let p=t.location(in:self);session.pointerMoved(p) }
+    override func touchesEnded(_ touches:Set<UITouch>,with event:UIEvent?) { guard let t=activeTouch,touches.contains(t) else { return };session.pointerEnded(t.location(in:self));activeTouch=nil }
     override func touchesCancelled(_ touches:Set<UITouch>,with event:UIEvent?) { activeTouch=nil;session.cancelAim() }
 }
 struct MetalView:UIViewRepresentable {
     var session:GameSession
     func makeCoordinator()->Coordinator { Coordinator() }
     func makeUIView(context:Context)->InteractiveMetalView {
-        let v=InteractiveMetalView();v.session=session;v.isMultipleTouchEnabled=false
+        let v=InteractiveMetalView();v.session=session;v.isMultipleTouchEnabled=true
         do { context.coordinator.renderer=try Renderer(view:v,session:session) } catch { print(error) }
         return v
     }

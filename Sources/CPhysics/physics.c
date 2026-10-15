@@ -24,6 +24,15 @@ int ec_box(ECWorld *w, float x, float y, float width, float height, float densit
     b2CreatePolygonShape(id,&sd,&poly);
     w->bodies[index]=id; return index;
 }
+void ec_resize_static(ECWorld *w,int id,float x,float y,float width,float height) {
+    b2BodyId body=w->bodies[id];b2ShapeId shape;
+    if(!b2Body_IsValid(body) || b2Body_GetType(body)!=b2_staticBody) return;
+    b2Body_GetShapes(body,&shape,1);
+    float radius=fminf(.04f,fminf(width,height)*.15f);
+    b2Polygon poly=b2MakeRoundedBox(width/2-radius,height/2-radius,radius);
+    b2Body_SetTransform(body,(b2Vec2){x,y},b2MakeRot(0));
+    b2Shape_SetPolygon(shape,&poly);
+}
 void ec_remove(ECWorld *w, int id) { if(b2Body_IsValid(w->bodies[id])) b2DestroyBody(w->bodies[id]); }
 void ec_step(ECWorld *w, float dt) { b2World_Step(w->world,dt,4); }
 ECState ec_state(ECWorld *w,int id) {

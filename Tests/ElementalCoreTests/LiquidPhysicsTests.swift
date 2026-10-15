@@ -88,4 +88,37 @@ final class LiquidPhysicsTests:XCTestCase {
         XCTAssertEqual(mass*vy+fluidMomentum.y,0,accuracy:0.0001)
         XCTAssertLessThan(energy,0.5*mass*9)
     }
+    func testStandingBuildsThickerIceDownwardWithoutLiftingTheCube() {
+        let s=Simulation();s.wind=0;s.placeCube(Vec(9.3,0.5));advance(s,1)
+        let initial=s.iceCells.map(\.height).max()!,top=s.iceCells.map { $0.center.y+$0.height/2 }.max()!,mass=s.waterField.representedVolume
+        let resting=s.cube.position.y
+        advance(s,6)
+        XCTAssertGreaterThan(s.iceCells.map(\.height).max()!,initial+0.2)
+        XCTAssertEqual(s.iceCells.map { $0.center.y+$0.height/2 }.max()!,top,accuracy:0.07)
+        XCTAssertEqual(s.cube.position.y,resting,accuracy:0.1)
+        XCTAssertEqual(s.waterField.representedVolume,mass,accuracy:0.0001)
+        XCTAssertFalse(s.inWater)
+    }
+    func testJumpingOffIceDoesNotRecreateMassOrLaunchWater() {
+        let s=Simulation();s.wind=0;s.placeCube(Vec(9.3,0.5));advance(s,3)
+        let mass=s.waterField.representedVolume,frozen=s.waterField.frozenVolume
+        XCTAssertTrue(s.jump(Vec(-4,9),buffered:false));advance(s,0.4)
+        XCTAssertGreaterThan(s.cube.position.y,1)
+        XCTAssertEqual(s.waterField.representedVolume,mass,accuracy:0.0001)
+        XCTAssertLessThan(s.waterField.frozenVolume,frozen+0.1)
+        XCTAssertTrue(s.waterField.liquid.particles.allSatisfy { $0.position.y<0.5 && hypot($0.velocity.x,$0.velocity.y)<6 })
+        XCTAssertLessThan(s.waterField.liquid.surfaceHeight(at:9.3),-0.35)
+    }
+
+    func testThawReturnsPhaseMassWithoutReplayingCapturedMomentum() {
+        let field=WaterField(platforms:[]),initial=field.representedVolume
+        field.liquid.addImpulse(at:Vec(9.3,-0.85),impulse:Vec(0.2,0.1),radius:0.7)
+        field.freezeContact(at:9.3,bottom:-0.71)
+        XCTAssertGreaterThan(field.frozenVolume,0)
+        for _ in 0..<310 { field.step(dt:0.1,coldSource:nil,heatSource:nil,occupied:[]) }
+        XCTAssertTrue(field.ice.allSatisfy { !$0.solid })
+        XCTAssertEqual(field.representedVolume,initial,accuracy:0.0001)
+        XCTAssertTrue(field.liquid.particles.filter { abs($0.position.x-9.3)<0.8 && $0.position.y > -0.88 }.allSatisfy { hypot($0.velocity.x,$0.velocity.y)<0.001 })
+    }
+
 }

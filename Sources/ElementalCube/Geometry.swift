@@ -138,28 +138,37 @@ enum Geometry {
         if wet>0.2 { m.ellipse(center:V3(-0.36,0.3,0.61),rx:0.018,ry:0.038,color:tint(0xa0e9ff,0.9)) }
         return m
     }
-    static func terrain(patches:[MaterialPatch] = [])->Mesh {
-        var m=Mesh(),r=RNG(seed:871)
-        for (start,end,top,bottom):(Float,Float,Float,Float) in [(-3,7,0,-4),(17,25,0,-4),(7,17,-4,-4.6)] {
+    static func terrain(patches:[MaterialPatch] = [],visible:WorldBounds=WorldBounds(-6,-8,29,11))->Mesh {
+        var m=Mesh()
+        // Only decorate the visible bricks; the full physics map retains its scale.
+        for (platformIndex,platform) in WorldLayout.terrain.enumerated() where visible.overlaps(platform,margin:2) {
+            let start=platform.x-platform.width/2,end=platform.x+platform.width/2,top=platform.y+platform.height/2,bottom=platform.y-platform.height/2-(platform.width==WorldLayout.bounds.width ? 24 : 0)
             m.box(center:V3((start+end)/2,(top+bottom)/2,0),size:V3(end-start,top-bottom,2.5),color:tint(0x6d8070))
-            var y=top-0.05
-            while y>bottom {
-                var x=start
-                while x<end {
-                    let w=min(0.8+r.next()*0.75,end-x),height=min(0.55+r.next()*0.3,y-bottom)
-                    m.box(center:V3(x+w/2,y-height/2,1.20),size:V3(max(0.02,w-0.035),max(0.02,height-0.04),0.12+r.next()*0.05),color:mix(tint(0x728579),tint(0xa6b398),r.next()))
-                    x+=w
+            let firstRow=max(0,Int(floor((top-visible.maxY-2)/0.75)))
+            let lastRow=max(firstRow,Int(ceil((top-max(bottom,visible.minY-2))/0.75)))
+            let firstCol=max(0,Int(floor((visible.minX-2-start)/1.1)))
+            let lastCol=max(firstCol,Int(ceil((min(end,visible.maxX+2)-start)/1.1))+1)
+            for row in firstRow..<lastRow {
+                let y=top-0.05-Float(row)*0.75
+                for col in firstCol..<lastCol {
+                    var tile=RNG(seed:UInt64(platformIndex+1)*8719 ^ UInt64(row+1)*131 ^ UInt64(col+2)*317)
+                    let rawX=start+Float(col)*1.1-(row%2==0 ? 0 : 0.5)
+                    let x=max(start,rawX),w=min(end,rawX+1.1)-x,height=min(0.69,y-bottom)
+                    guard w>0.04,height>0.04 else { continue }
+                    m.box(center:V3(x+w/2,y-height/2,1.20),size:V3(w-0.035,height-0.04,0.12+tile.next()*0.05),color:mix(tint(0x728579),tint(0xa6b398),tile.next()))
                 }
-                y-=0.75
             }
-            if top > -1 {
+            if platform.surface == .grass {
                 // Close the turf overhang in depth, so the rear coat cannot show
                 // through the gap between the grass lip and recessed stonework.
                 m.box(center:V3((start+end)/2,top-0.16,0.0),size:V3(end-start,0.24,2.56),color:tint(0x64784d))
                 m.box(center:V3((start+end)/2,top+0.01,0.0),size:V3(end-start,0.16,2.56),color:tint(0x82a45d))
-                for _ in 0..<Int((end-start)*22) {
-                    let x=start+r.next()*(end-start),h=0.05+r.next()*0.16,z=0.5+r.next()*0.35
-                    let patch=patches.min(by:{ abs($0.x-x)<abs($1.x-x) })
+                let grassStart=max(0,Int((max(start,visible.minX-2)-start)*22))
+                let grassEnd=max(grassStart,Int((min(end,visible.maxX+2)-start)*22))
+                for index in grassStart..<grassEnd {
+                    var r=RNG(seed:UInt64(platformIndex+1)*9319 ^ UInt64(index+1)*731)
+                    let x=start+(Float(index)+r.next())/22,h=0.05+r.next()*0.16,z=0.5+r.next()*0.35
+                    let patch=patches.filter { abs($0.y-top)<0.1 }.min(by:{ abs($0.x-x)<abs($1.x-x) })
                     let fuel=patch?.fuel ?? 1,frost=patch?.frost ?? 0
                     let color=mix(mix(tint(0x332f2b),mix(tint(0x587e45),tint(0xb9cf79),r.next()),fuel),tint(0xdbf7ff),frost)
                     m.triangle(V3(x-0.035,top+0.08,z),V3(x+0.04,top+0.08,z),V3(x+0.02,top+h*max(0.1,fuel),z),color,V3(0,0.5,1))
@@ -182,12 +191,23 @@ enum Geometry {
                 m.line(V3(x,y-0.03,1.29),V3(x+0.16,y-0.38,1.29),width:0.017,color:tint(0x59796e))
             }
         }
-        // Small weathered arch at the destination. Decoration has no hidden path.
+        // A recessed rock face supports the cliff shelves without blocking the path.
+        if visible.maxX>25 {
+            m.box(center:V3(46,-13,-2.7),size:V3(42,22,1.2),color:tint(0x536e67))
+            for i in 0..<16 {
+                let x:Float=25+Float(i)*2.7
+                m.box(center:V3(x,-13,-1.9),size:V3(0.12,21,0.18),color:tint(0x69877b))
+            }
+        }
+        // The former finish is now a waypoint on the longer journey.
         for x:Float in [22.25,23.8] { m.box(center:V3(x,1.05,-0.8),size:V3(0.34,2.1,0.4),color:tint(0xb4bb9b)) }
         m.box(center:V3(23.03,2.2,-0.8),size:V3(1.9,0.35,0.4),color:tint(0xc9cbb0))
-        m.line(V3(23,0,0.9),V3(23,2.35,0.9),width:0.055,color:tint(0x525c51))
-        m.quad(V3(23,2.2,0.95),V3(23.85,2.1,0.95),V3(23.67,1.65,0.95),V3(23,1.73,0.95),tint(0xead490),V3(0,0,1))
-        m.diamond(V3(23.36,1.94,1),size:0.12,color:tint(0xfff4cb))
+        for marker in [WorldLayout.goal] {
+            let x=marker.x,y=marker.y
+            m.line(V3(x,y,0.9),V3(x,y+2.35,0.9),width:0.055,color:tint(0x525c51))
+            m.quad(V3(x,y+2.2,0.95),V3(x+0.85,y+2.1,0.95),V3(x+0.67,y+1.65,0.95),V3(x,y+1.73,0.95),tint(0xead490),V3(0,0,1))
+            m.diamond(V3(x+0.36,y+1.94,1),size:0.12,color:tint(0xfff4cb))
+        }
         return m
     }
     static func bridgeSection(width:Float)->Mesh {
@@ -210,16 +230,46 @@ enum Geometry {
         }
         return m
     }
+    static func frozenWater(_ field:WaterField)->Mesh {
+        var mesh=Mesh()
+        let skinStart=field.rows*field.columns
+        for (index,c) in field.ice.enumerated() where c.solid {
+            let x=c.center.x,y=c.center.y,h=c.size/2,hh=c.height/2
+            if index<skinStart {
+                mesh.box(center:V3(x,y,1.08),size:V3(c.size,c.height,0.4),color:tint(0x9ad8ec,0.9))
+                continue
+            }
+            let col=index-skinStart,top=y+hh
+            func bottom(_ neighbour:Int)->Float {
+                let i=skinStart+neighbour
+                if neighbour>=0 && neighbour<field.columns && field.ice[i].solid { return (y-hh+field.ice[i].center.y-field.ice[i].height/2)/2 }
+                return y-hh+min(0.06,c.height*0.2)
+            }
+            let leftBottom=bottom(col-1),rightBottom=bottom(col+1),z:Float=1.33
+            let points=[V3(x-h,top,z),V3(x-h,leftBottom,z),V3(x+h,rightBottom,z),V3(x+h,top,z)]
+            let pale=tint(0xb9edfa,0.94),deep=tint(0x5babcf,0.88)
+            for i in [0,1,2,0,2,3] { mesh.vertices.append(Vertex(position:SIMD4(points[i],1),normal:SIMD4(0,0,1,0),color:i==0 || i==3 ? pale : deep)) }
+            mesh.quad(V3(x-h,top,z),V3(x+h,top,z),V3(x+h,top,1.0),V3(x-h,top,1.0),tint(0xd8f8ff,0.94),V3(0,1,0))
+            mesh.line(V3(x-h,top,z+0.01),V3(x+h,top,z+0.01),width:0.024,color:tint(0xf0feff))
+            mesh.line(V3(x-h,leftBottom,z+0.01),V3(x+h,rightBottom,z+0.01),width:0.009,color:tint(0x9fe7f5,0.7))
+            // Stable branching inclusions, not a border around every solver cell.
+            if col%3==0 && c.height>0.2 {
+                let start=V3(x-0.12,top-0.04,z+0.015),end=V3(x+0.09,top-c.height*0.72,z+0.015)
+                mesh.line(start,end,width:0.009,color:tint(0xecfdff,0.6))
+                mesh.line(start+(end-start)*0.5,start+(end-start)*0.5+V3(0.11,0.045,0),width:0.007,color:tint(0xecfdff,0.45))
+            }
+        }
+        return mesh
+    }
     static func liquid(_ field:WaterField,bodies:[FluidBody])->Mesh {
         var mesh=Mesh();let fluid=field.liquid,h=fluid.spacing,z:Float=1.29
         mesh.vertices.reserveCapacity(24000)
-        let frozen=field.frozenBodies
         var nodeValues=fluid.density
         for i in 0..<fluid.nx {
             let x=fluid.origin.x+Float(i)*h,level=field.surface(at:x)
             for j in 0..<fluid.ny {
                 let p=Vec(x,fluid.origin.y+Float(j)*h),id=i*fluid.ny+j
-                if p.y<level && (fluid.staticSolid(p) || bodies.contains(where:{ $0.contains(p) }) || frozen.contains(where:{ $0.contains(p) })) { nodeValues[id]=max(nodeValues[id],0.85) }
+                if p.y<level && (fluid.staticSolid(p) || bodies.contains(where:{ $0.contains(p) })) { nodeValues[id]=max(nodeValues[id],0.85) }
             }
         }
         func value(_ i:Int,_ j:Int)->Float { nodeValues[i*fluid.ny+j]-0.26 }

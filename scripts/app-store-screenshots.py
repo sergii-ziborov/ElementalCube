@@ -20,6 +20,10 @@ GALLERIES = {
         "APP_IPHONE_61": [(f"iphone-{form}.png", (2622,1206)) for form in ("ice","water","air","stone","fire")],
         "APP_IPAD_PRO_3GEN_129": [("ipad-13-ice.png", (2064,2752))],
     },
+    "gestures7": {
+        "APP_IPHONE_61": [(f"iphone-{scene}.png", (1206,2622)) for scene in ("gesture","skills","equipment","ice")],
+        "APP_IPAD_PRO_3GEN_129": [(f"ipad-13-{scene}.png", (2064,2752)) for scene in ("skills","ice")],
+    },
     "physics6": {
         "APP_IPHONE_61": [(f"iphone-{scene}.png", (1206,2622)) for scene in ("ice","crate","bridge","ability")],
         "APP_IPAD_PRO_3GEN_129": [("ipad-13-ice.png", (2064,2752))],
@@ -104,7 +108,8 @@ def apply(gallery, replace_earlier=False):
             existing = call("GET", f"/v1/appScreenshotSets/{screenshot_set['id']}/appScreenshots",
                             {"limit": 50})["data"]
             if replace_earlier and gallery != "alpha4":
-                old_names={n for n,_ in GALLERIES["alpha4"].get(display,[])}
+                older=("alpha4",) if gallery=="physics6" else ("alpha4","physics6")
+                old_names={n if old=="alpha4" else old+"-"+n for old in older for n,_ in GALLERIES[old].get(display,[])}
                 superseded.extend(asset["id"] for asset in existing if asset["attributes"]["fileName"] in old_names)
             for name, _ in files:
                 remote_name=name if gallery=="alpha4" else gallery+"-"+name
@@ -135,7 +140,7 @@ def apply(gallery, replace_earlier=False):
             for identity in superseded:
                 call("DELETE", f"/v1/appScreenshots/{identity}")
             if superseded:
-                print(f"Replaced {len(superseded)} archived alpha 4 screenshots after confirming the new set.", flush=True)
+                print(f"Replaced {len(superseded)} earlier owned screenshots after confirming the new set.", flush=True)
             return
         pending = incomplete
         time.sleep(5)
@@ -145,8 +150,8 @@ def apply(gallery, replace_earlier=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true")
-    parser.add_argument("--gallery",choices=GALLERIES,default="physics6")
-    parser.add_argument("--replace-earlier",action="store_true",help="Remove our alpha 4 assets only after the new gallery is COMPLETE")
+    parser.add_argument("--gallery",choices=GALLERIES,default="gestures7")
+    parser.add_argument("--replace-earlier",action="store_true",help="Remove our known earlier assets only after the new gallery is COMPLETE")
     args = parser.parse_args()
     validate(args.gallery)
     if args.apply:

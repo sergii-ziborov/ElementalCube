@@ -27,7 +27,7 @@ public final class LiquidSolver {
     private var stepNumber=0
     public var markerVolume:Float { spacing*spacing/4 }
     public init(platforms:[Platform]) {
-        self.platforms=platforms
+        self.platforms=platforms.filter { $0.x+$0.width/2>6.8 && $0.x-$0.width/2<17.2 && $0.y-$0.height/2<3 && $0.y+$0.height/2 > -4.2 }
         let n=66*46
         u=Array(repeating:0,count:n);v=u;oldU=u;oldV=u;weightU=u;weightV=u;pressure=u;counts=u;density=u
         particleDensity=u;owner=Array(repeating:-1,count:n)
@@ -346,7 +346,11 @@ public final class LiquidSolver {
         }
         return (Vec(impulse.x/dt,impulse.y/dt),angular/dt)
     }
-    public func restore(_ stored:[LiquidParticle]) { particles.append(contentsOf:stored) }
+    public func restoreAtRest(_ stored:[LiquidParticle]) {
+        // An anchored frozen sheet dissipates its captured momentum. It must not
+        // replay a stale splash 30 seconds later during melting.
+        particles.append(contentsOf:stored.map { LiquidParticle(position:$0.position,velocity:Vec(0,0),volume:$0.volume) })
+    }
     public func evaporate(at p:Vec,amount:Float,radius:Float)->Float {
         var remaining=max(0,amount)
         for i in particles.indices where hypot(particles[i].position.x-p.x,particles[i].position.y-p.y)<radius && remaining>0 {
