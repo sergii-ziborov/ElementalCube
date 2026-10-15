@@ -27,6 +27,8 @@ public final class Simulation {
     public let platforms:[Platform]
     public private(set) var cube:BodyState!
     public private(set) var crate:BodyState!
+    public private(set) var bridge:[BridgeSection]=[]
+    public let bridgeAnchors=[Vec(6.7,-0.005),Vec(17.3,-0.005)]
     public private(set) var crateExists=true
     public private(set) var crateFuel:Float=1
     public private(set) var crateFrost:Float=0
@@ -34,8 +36,8 @@ public final class Simulation {
     public private(set) var patches:[MaterialPatch]
     public private(set) var frostMarks:[FrostMark]=[]
     public private(set) var time:Float=0,wetness:Float=0,health:Float=100,mana:Float=100
-    public private(set) var passiveEquipped=false
-    public private(set) var passiveWorking=false
+    public private(set) var passiveEquipped=true
+    public private(set) var passiveWorking=true
     public var energy:Float { mana }
     public var dead:Bool { health<=0 }
     public var iceCells:[IceCell] { waterField.ice.filter { $0.solid } }
@@ -45,12 +47,12 @@ public final class Simulation {
     public private(set) var jumps=0,respawns=0,won=false,deepRelic=false
     public private(set) var collected:Set<Int>=[]
     public private(set) var particles:[Mote]=[]
-    public private(set) var wave:[Float]=Array(repeating:0,count:81)
-    private var waveSpeed:[Float]=Array(repeating:0,count:81)
     public let shards:[Vec]=[Vec(6.2,1.6),Vec(12,2.1),Vec(19,1.8)]
     private var world:OpaquePointer
     private var cubeID:Int32=0,crateID:Int32=0
     private var platformIDs:[Int32]=[]
+    private var bridgeIDs:[Int32]=[]
+    private var bridgeWidths:[Float]=[]
     private var iceIDs:[Int:Int32]=[:]
     private var emotionTime:Float=0,shakeCooldown:Float=0,cooldown:Float=0,materialClock:Float=0,particleClock:Float=0
     private var buffer:(Vec,Float)?
@@ -81,8 +83,7 @@ public final class Simulation {
     public var windVelocity:Float { wind*(1.2+sin(time*0.9)*0.6+sin(time*2.3)*0.25) }
     public init(form:ElementForm = .ice) {
         self.form=form;fur=FurPhysics(form:form)
-        // The bridge has a real 1.7 m passage beneath it, joining both banks.
-        platforms=[Platform(2,-2,10,4),Platform(21,-2,8,4),Platform(12,-1,1.7,1.8),Platform(12,-2.1,2.2,0.4),Platform(12,-4.3,10,0.6),Platform(-3.2,1,0.4,7),Platform(25.2,1,0.4,7)]
+        platforms=[Platform(2,-2,10,4),Platform(21,-2,8,4),Platform(12,-4.3,10,0.6),Platform(-3.2,1,0.4,7),Platform(25.2,1,0.4,7),Platform(6.7,-0.03,0.28,0.04),Platform(17.3,-0.03,0.28,0.04)]
         waterField=WaterField(platforms:platforms)
         patches=(-6..<50).map { MaterialPatch(x:Float($0)*0.5+0.25) }
         for p in platforms {
@@ -105,11 +106,24 @@ public final class Simulation {
         _=ec_slope(world,7,9.4,false);_=ec_slope(world,14.6,17,true)
         cubeID=ec_box(world,2.7,0.75,1.12,1.12,form.density,true,form == .air)
         crateID=ec_box(world,5.1,0.7,1.25,1.25,0.48,true,false)
+        let points=(0...6).map { i -> Vec in
+            let t=Float(i)/6;return Vec(10.1+3.8*t,-0.2-sin(t*Float.pi)*0.12)
+        }
+        for i in 0..<6 {
+            let a=points[i],b=points[i+1],width=hypot(b.x-a.x,b.y-a.y)
+            let id=ec_box(world,(a.x+b.x)/2,(a.y+b.y)/2,width,0.18,0.62,true,false)
+            ec_rotate(world,id,atan2(b.y-a.y,b.x-a.x));ec_material(world,id,0.72,0.03)
+            bridgeIDs.append(id);bridgeWidths.append(width)
+            if i>0 { ec_hinge(world,bridgeIDs[i-1],id,a.x,a.y) }
+        }
+        ec_rope(world,platformIDs[5],bridgeIDs[0],bridgeAnchors[0].x,bridgeAnchors[0].y,points[0].x,points[0].y)
+        ec_rope(world,platformIDs[6],bridgeIDs[5],bridgeAnchors[1].x,bridgeAnchors[1].y,points[6].x,points[6].y)
         if form == .air { ec_material(world,cubeID,0.015,0.02) }
         if form == .water { ec_material(world,cubeID,0.3,0.06) }
         sync();updateFur()
     }
     deinit { ec_destroy(world) }
+    /// Skill-loadout assignment. There is deliberately no gameplay-screen toggle.
     public func equipPassive(_ enabled:Bool) { passiveEquipped=enabled;passiveWorking=enabled && !manaExhausted && mana>0.1 && !dead }
     public func takeFeedback()->[SimulationFeedback] { let events=feedback;feedback.removeAll(keepingCapacity:true);return events }
     private func record(_ event:SimulationFeedback) { if feedback.count>=16 { feedback.removeFirst() };feedback.append(event) }
@@ -117,26 +131,44 @@ public final class Simulation {
         let s=ec_state(world,id)
         return BodyState(position:Vec(s.x,s.y),velocity:Vec(s.vx,s.vy),angle:s.angle,mass:s.mass,angularVelocity:s.omega,grounded:s.grounded)
     }
-    private func sync() { cube=state(cubeID);if crateExists { crate=state(crateID) } }
+    private func sync() {
+        cube=state(cubeID);if crateExists { crate=state(crateID) }
+        bridge=bridgeIDs.enumerated().map { BridgeSection(state:state($0.element),width:bridgeWidths[$0.offset]) }
+    }
+    public var fluidBodies:[FluidBody] {
+        func body(_ id:Int32,_ s:BodyState,_ w:Float,_ h:Float)->FluidBody {
+            FluidBody(id:Int(id),center:s.position,velocity:s.velocity,angle:s.angle,omega:s.angularVelocity,width:w,height:h,mass:s.mass,rotates:id != cubeID || form != .air)
+        }
+        var result=[body(cubeID,cube,1.12,1.12)]
+        if crateExists { result.append(body(crateID,crate,1.25,1.25)) }
+        for (i,section) in bridge.enumerated() { result.append(body(bridgeIDs[i],section.state,section.width,section.height)) }
+        return result
+    }
     public func intersectsSolid(at position:Vec)->Bool { ec_blocked(world,cubeID,position.x,position.y) }
     public func supportHeight(at x:Float)->Float {
         if x<=7 || x>=17 { return 0 }
         var height=waterEnabled && waterField.volume>0.01 ? max(waterField.floor(at:x),waterField.surface(at:x)) : waterField.floor(at:x)
         for p in platforms where abs(p.x-x)<p.width/2 && cube.position.y>p.y+p.height/2 { height=max(height,p.y+p.height/2) }
+        for section in bridge where abs(section.state.position.x-x)<section.width/2+0.08 && cube.position.y>section.state.position.y { height=max(height,section.state.position.y+section.height/2) }
         return height
     }
     private func immersion(_ s:BodyState,size:Float)->Float {
         guard s.position.x>7-size/3 && s.position.x<17+size/3 else { return 0 }
-        let x=max(7.001,min(16.999,s.position.x))
-        guard waterField.contains(Vec(x,min(s.position.y,waterField.surface(at:x)-0.01))) else { return 0 }
-        return max(0,min(1,(waterField.surface(at:x)-(s.position.y-size/2))/size))
+        guard waterField.volume>0.0001 else { return 0 }
+        let body=FluidBody(id:0,center:s.position,angle:s.angle,width:size,height:size)
+        var wet:Float=0
+        for i in 0..<5 { for j in 0..<5 {
+            let p=body.world(Vec((Float(i)+0.5)/5*size-size/2,(Float(j)+0.5)/5*size-size/2))
+            if waterField.contains(p) { wet+=1/25 }
+        } }
+        return wet
     }
     public func launchVelocity(for request:Vec)->Vec {
         guard request.x.isFinite,request.y.isFinite else { return cube.velocity }
         let length=hypot(request.x,request.y),factor=length>12 ? 12/length : 1
         let impulse=Vec(request.x*factor*jumpScale,max(2.8,request.y*factor)*jumpScale)
         if inWater && !cube.grounded && form != .stone {
-            return Vec(cube.velocity.x+impulse.x*0.85,cube.velocity.y+max(8.8,impulse.y)-min(0,cube.velocity.y))
+            return Vec(cube.velocity.x+impulse.x*1.15,cube.velocity.y+max(11.5,impulse.y)-min(0,cube.velocity.y))
         }
         let weight:Float=form == .stone && inWater ? 0.45 : 1-wetness*0.1
         return Vec(cube.velocity.x+impulse.x,cube.velocity.y+impulse.y*weight)
@@ -156,6 +188,10 @@ public final class Simulation {
     }
     public func resetCube() { ec_teleport(world,cubeID,2.7,0.75);wetness=0;cooldown=0;buffer=nil;won=false;health=100;mana=100;sync();updateFur() }
     public func placeCube(_ p:Vec) { guard p.x.isFinite,p.y.isFinite else { return };ec_teleport(world,cubeID,p.x,p.y);sync();updateFur() }
+    public func placeCrate(_ p:Vec,angle:Float=0,velocity:Vec=Vec(0,0),omega:Float=0) {
+        guard crateExists,p.x.isFinite,p.y.isFinite,angle.isFinite else { return }
+        ec_teleport(world,crateID,p.x,p.y);ec_rotate(world,crateID,angle);ec_velocity(world,crateID,velocity.x,velocity.y,omega);sync()
+    }
     public func damage(_ amount:Float) {
         guard amount.isFinite,amount>0,!dead else { return }
         health=max(0,health-amount)
@@ -169,6 +205,15 @@ public final class Simulation {
         passiveWorking=passiveEquipped && !manaExhausted && !dead
         mana=min(100,mana+dt*(passiveWorking ? -form.manaCost : 4))
         mana=max(0,mana)
+        if waterEnabled {
+            waterField.advanceFluid(dt:dt,gravity:gravity,bodies:fluidBodies)
+            if passiveEquipped && !dead && form == .ice {
+                let foot=fluidBodies[0].corners.map(\.y).min()!,level=waterLevel
+                if cube.position.x>7 && cube.position.x<17 && foot>level-0.12 && foot+min(0,cube.velocity.y)*dt<level+0.035 && level>waterField.floor(at:cube.position.x)+0.05 {
+                    waterField.freezeContact(at:cube.position.x,bottom:foot);syncIceColliders()
+                }
+            }
+        }
         landingAge+=dt;impact*=exp(-dt*7);emotionTime=max(0,emotionTime-dt)
         shakeTime=max(0,shakeTime-dt);shakeCooldown=max(0,shakeCooldown-dt)
         if !dead {
@@ -184,17 +229,14 @@ public final class Simulation {
                     }
                 }
             } else if cube.grounded {
-                ec_drive(world,cubeID,movement,surface == .ice ? 0.12 : (form == .stone && passiveWorking ? 1.6 : 1),false)
-            } else if inWater { ec_drive(world,cubeID,movement,form == .stone ? 0.35 : 0.85,true) }
-        }
-        for (id,s,size) in [(cubeID,cube!,Float(1.12)),(crateID,crate!,Float(1.25))] where id != crateID || crateExists {
-            let fraction=waterEnabled ? immersion(s,size:size) : 0
-            if fraction>0 {
-                let drag:Float=id==cubeID && form == .water && passiveWorking ? 1.4 : 3.2
-                ec_force(world,id,-s.velocity.x*s.mass*drag*fraction,gravity*size*size*1.12*fraction-s.velocity.y*s.mass*4*fraction)
-                if id==cubeID { wetness=min(1,wetness+dt*2) }
+                ec_drive(world,cubeID,movement,surface == .ice ? 0.55 : (form == .stone && passiveWorking ? 1.6 : 1),false)
+            } else if inWater {
+                // Stone keeps its rolling motor in water: loss of a floor contact
+                // for one step must not turn a heavy walker into a weak swimmer.
+                ec_drive(world,cubeID,movement,form == .stone ? (passiveWorking ? 1.6 : 1) : 0.85,form != .stone)
             }
         }
+        if waterEnabled { applyLiquidForces(dt:dt) }
         if form != .air { ec_force(world,cubeID,windVelocity*cube.mass*0.035,0) }
         ec_step(world,dt);sync()
         wetness=inWater ? min(1,wetness+dt*2) : max(0,wetness-dt*0.065)
@@ -206,6 +248,7 @@ public final class Simulation {
         if cube.grounded {
             if iceCells.contains(where:{ abs($0.center.x-cube.position.x)<0.8 && abs($0.center.y-(cube.position.y-0.56))<0.35 }) { surface = .ice }
             else if crateExists && abs(cube.position.x-crate.position.x)<1.15 && cube.position.y>crate.position.y+0.75 { surface = crateFrost>0.5 ? .ice : .wood }
+            else if bridge.contains(where:{ abs($0.state.position.x-cube.position.x)<$0.width/2+0.3 && abs(cube.position.y-$0.state.position.y-0.65)<0.35 }) { surface = .wood }
             else {
                 let patch=patches.min(by:{ abs($0.x-cube.position.x)<abs($1.x-cube.position.x) })
                 let frosted=frostMarks.contains { $0.cold>0.5 && abs($0.position.x-cube.position.x)<0.75 && abs($0.position.y-(cube.position.y-0.56))<0.2 }
@@ -229,8 +272,6 @@ public final class Simulation {
         squash*=exp(-dt*11)
         if let b=buffer { buffer=b.1>dt ? (b.0,b.1-dt) : nil;if cube.grounded && cooldown<=0 { _=jump(b.0,buffered:false) } }
         updateMaterials(dt:dt)
-        for i in 1..<wave.count-1 { waveSpeed[i]+=(wave[i-1]+wave[i+1]-2*wave[i])*dt*100;waveSpeed[i]-=wave[i]*dt*12;waveSpeed[i]*=exp(-dt*1.4) }
-        for i in 1..<wave.count-1 { wave[i]+=waveSpeed[i]*dt }
         if !dead {
             for i in shards.indices where !collected.contains(i) {
                 let p=shards[i],d=cube.position
@@ -285,17 +326,9 @@ public final class Simulation {
         if materialClock>=0.1 {
             // Retained water adds mass and rotational inertia to furry forms.
             if form.hasFur { ec_density(world,cubeID,form.density*(1+wetness*0.16)) }
-            let oldCount=iceIDs.count
             waterField.step(dt:materialClock,coldSource:cold && waterEnabled ? cube.position : nil,heatSource:fire ? cube.position : nil,occupied:crateExists ? [cube.position,crate.position] : [cube.position])
             materialClock=0
-            for (i,id) in Array(iceIDs) where !waterEnabled || !waterField.ice[i].solid { ec_remove(world,id);iceIDs.removeValue(forKey:i) }
-            for i in waterField.ice.indices where waterEnabled && waterField.ice[i].solid && iceIDs[i]==nil {
-                let cell=waterField.ice[i]
-                guard ec_space_clear(world,cell.center.x,cell.center.y,cell.size-0.01,cell.size-0.01) else { waterField.deferSolid(at:i);continue }
-                let id=ec_box(world,cell.center.x,cell.center.y,cell.size,cell.size,0,false,true)
-                if id>=0 { ec_material(world,id,0.015,0.02);iceIDs[i]=id }
-            }
-            if oldCount==0 && !iceIDs.isEmpty { record(.frozeWater) }
+            syncIceColliders()
             // A cold contact changes the actual body's friction as well as its appearance.
             for (i,id) in platformIDs.enumerated() {
                 let p=platforms[i]
@@ -311,13 +344,39 @@ public final class Simulation {
             if cold && inWater { emit(cube.position,kind:2,count:2) }
         }
     }
+    private func syncIceColliders() {
+        let oldCount=iceIDs.count
+        for (i,id) in Array(iceIDs) where !waterEnabled || !waterField.ice[i].solid { ec_remove(world,id);iceIDs.removeValue(forKey:i) }
+        for i in waterField.ice.indices where waterEnabled && waterField.ice[i].solid && iceIDs[i]==nil {
+            let cell=waterField.ice[i]
+            guard ec_space_clear(world,cell.center.x,cell.center.y,cell.size-0.012,max(0.002,cell.height-0.012)) else { waterField.deferSolid(at:i);continue }
+            let id=ec_box(world,cell.center.x,cell.center.y,cell.size,cell.height,0,false,true)
+            if id>=0 { ec_material(world,id,0.015,0.02);iceIDs[i]=id }
+        }
+        if oldCount==0 && !iceIDs.isEmpty { record(.frozeWater) }
+    }
+    private func applyLiquidForces(dt:Float) {
+        guard waterField.volume>0.0001 else { return }
+        for body in fluidBodies {
+            guard body.center.x+body.width>7,body.center.x-body.width<17 else { continue }
+            let mass=body.mass
+            if let load=waterField.liquid.pressureLoads[body.id] {
+                ec_force(world,Int32(body.id),mass*load.velocity.x/dt,mass*load.velocity.y/dt)
+                ec_torque(world,Int32(body.id),body.inertia*load.omega/dt)
+            }
+            let coefficient:Float=body.id==Int(cubeID) && form == .water && passiveWorking ? 5 : 14
+            let drag=waterField.liquid.dragLoad(on:body,mass:mass,dt:dt,coefficient:coefficient)
+            ec_force(world,Int32(body.id),drag.force.x,drag.force.y);ec_torque(world,Int32(body.id),drag.torque)
+        }
+    }
     private func updateFur() {
+        let obstacles=Array(fluidBodies.dropFirst())+waterField.frozenBodies
         fur.step(dt:1/60,center:SIMD3(cube.position.x,cube.position.y,0.55),angle:bodyAngle,stretch:bodyStretch,
                  wind:windVelocity,water:{ self.waterEnabled && self.waterField.contains($0) },solid:{ p in
-            self.platforms.contains { abs(p.x-$0.x)<$0.width/2 && abs(p.y-$0.y)<$0.height/2 } || (p.x>7 && p.x<17 && p.y<self.waterField.floor(at:p.x))
+            self.platforms.contains { abs(p.x-$0.x)<$0.width/2 && abs(p.y-$0.y)<$0.height/2 } || (p.x>7 && p.x<17 && p.y<self.waterField.floor(at:p.x)) || obstacles.contains { $0.contains(p) }
         })
     }
-    public func disturb(_ x:Float,amount:Float) { let i=max(1,min(wave.count-2,Int((x-7)/10*80)));waveSpeed[i]-=amount*6;waveSpeed[i-1]-=amount*3;waveSpeed[i+1]-=amount*3 }
+    public func disturb(_ x:Float,amount:Float) { waterField.liquid.addImpulse(at:Vec(x,waterField.surface(at:x)-0.15),impulse:Vec(0,-amount*0.1),radius:0.8) }
     private func random()->Float { randomSeed=randomSeed &* 6364136223846793005 &+ 1;return Float((randomSeed>>32)&0xffff)/65535 }
     private func emit(_ p:Vec,kind:Int,count:Int) {
         for _ in 0..<count { particles.append(Mote(position:p,velocity:Vec((random()-0.5)*(kind>=4 ? 1.2 : 5),random()*4+0.5),life:0.45+random()*0.65,kind:kind)) }

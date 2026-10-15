@@ -13,8 +13,8 @@ final class FeedbackAndSettingsTests: XCTestCase {
         XCTAssertTrue(s.takeFeedback().isEmpty)
     }
     func testLandingFeedbackIsDeliveredOnceAndUsesTheContactSurface() {
-        for (x,surface) in [(Float(2),Surface.grass),(Float(12),Surface.stone)] {
-            let s=Simulation();s.placeCube(Vec(x,5));advance(s,2)
+        for (x,surface) in [(Float(2),Surface.grass),(Float(12),Surface.wood)] {
+            let s=Simulation(form:.stone);s.placeCube(Vec(x,5));advance(s,2)
             let landings=s.takeFeedback().compactMap { event -> Float? in
                 if case let .landed(impact,actual)=event { XCTAssertEqual(actual,surface);return impact }
                 return nil

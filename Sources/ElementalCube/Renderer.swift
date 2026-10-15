@@ -91,7 +91,7 @@ final class Renderer: NSObject, MTKViewDelegate {
         }
         var floorHeight:Float=0,floorSlope:Float=0
         if s.surface == .ice { floorHeight=p.y-0.56 }
-        else if s.surface == .wood { floorHeight=s.crate.position.y+0.625 }
+        else if s.surface == .wood { floorHeight = p.y-0.56 }
         else if p.x>7 && p.x<9.4 { floorSlope = -1.625;floorHeight = -(p.x-7)*1.625 }
         else if p.x>14.6 && p.x<17 { floorSlope=1.625;floorHeight = -(17-p.x)*1.625 }
         else if s.surface == .stone { floorHeight = p.y < -1 ? s.waterField.floor(at:p.x) : -0.1 }
@@ -149,10 +149,30 @@ final class Renderer: NSObject, MTKViewDelegate {
             }
         }
         drawMesh(details)
+        drawMesh(Geometry.bridgeFixtures())
+        for section in s.bridge {
+            drawMesh(Geometry.bridgeSection(width:section.width),translation(V3(section.state.position.x,section.state.position.y,0.55))*rotationZ(section.state.angle))
+        }
+        if let first=s.bridge.first,let last=s.bridge.last {
+            var ropes=Mesh()
+            let left=FluidBody(id:0,center:first.state.position,angle:first.state.angle,width:first.width,height:first.height).world(Vec(-first.width/2,0))
+            let right=FluidBody(id:0,center:last.state.position,angle:last.state.angle,width:last.width,height:last.height).world(Vec(last.width/2,0))
+            for (a,b) in [(s.bridgeAnchors[0],left),(s.bridgeAnchors[1],right)] {
+                let distance=hypot(b.x-a.x,b.y-a.y),length=hypot(Float(3.4),Float(0.195))+0.12
+                let sag=sqrt(max(0,3*distance*(length-distance)/8))
+                for z:Float in [-0.12,1.20] {
+                    for i in 0..<16 {
+                        func point(_ t:Float)->V3 { V3(a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t-4*sag*t*(1-t),z) }
+                        ropes.line(point(Float(i)/16),point(Float(i+1)/16),width:0.045,color:tint(0x6b6550))
+                    }
+                }
+            }
+            drawMesh(ropes)
+        }
         if s.crateExists {
             var box=Geometry.crate()
             for i in box.vertices.indices { box.vertices[i].color=mix(box.vertices[i].color*SIMD4(0.3+s.crateFuel*0.7,0.3+s.crateFuel*0.7,0.3+s.crateFuel*0.7,1),tint(0xc4edff),s.crateFrost*0.8) }
-            drawMesh(box,translation(V3(s.crate.position.x,s.crate.position.y,0.4))*rotationZ(s.crate.angle)*rotationY(0.06))
+            drawMesh(box,translation(V3(s.crate.position.x,s.crate.position.y,0.55))*rotationZ(s.crate.angle))
         } else {
             var ash=Mesh();ash.box(center:V3(s.crate.position.x,s.crate.position.y-0.5,0.65),size:V3(0.9,0.12,0.7),color:tint(0x383936));drawMesh(ash)
         }
@@ -199,34 +219,16 @@ final class Renderer: NSObject, MTKViewDelegate {
         }
         // Water composites after the cube. The submerged fur and eyes acquire its tint.
         e.setDepthStencilState(depthRead)
-        if s.waterEnabled {
-            var water=Mesh()
-            for i in 0..<80 {
-                let x=7+Float(i)*0.125,x2=x+0.125,y=s.waterField.surface(at:x)+s.wave[i]*min(1,s.waterField.volume),y2=s.waterField.surface(at:x2)+s.wave[i+1]*min(1,s.waterField.volume)
-                if y <= s.waterField.floor(at:x)+0.01 { continue }
-                let a=V3(x,s.waterField.floor(at:x),1.7),b=V3(x2,s.waterField.floor(at:x2),1.7),c=V3(x2,y2,1.7),d=V3(x,y,1.7)
-                let deep=tint(0x177e82,0.72),top=tint(0x67c8c3,0.46)
-                let normal=SIMD4<Float>(0,0,1,0)
-                for (p,col) in [(a,deep),(b,deep),(c,top),(a,deep),(c,top),(d,top)] { water.vertices.append(Vertex(position:SIMD4(p,1),normal:normal,color:col)) }
-                water.line(V3(x,y,1.72),V3(x2,y2,1.72),width:0.022,color:tint(0xd1fff0,0.8))
-                if i%6<4 { water.line(V3(x,y+0.03,1.74),V3(x2,y2+0.03,1.74),width:0.008,color:tint(0xf2ffe5,0.55)) }
-            }
-            for i in 0..<12 {
-                let x=7.3+Float(i)*0.8,y = -0.9-Float(i%4)*0.48+sin(s.time*0.8+Float(i))*0.04
-                guard s.waterField.contains(Vec(x,y)) else { continue }
-                water.line(V3(x,y,1.73),V3(x+0.28,y,1.73),width:0.012,color:tint(0xc0ede0,0.2))
-            }
-            drawMesh(water)
-        }
+        if s.waterEnabled { drawMesh(Geometry.liquid(s.waterField,bodies:s.fluidBodies)) }
         if s.waterEnabled {
             var ice=Mesh()
             for cell in s.waterField.ice where cell.cold>0.08 {
-                let p=cell.center,h=cell.size/2,alpha=cell.solid ? 1 : cell.cold*0.65
-                ice.box(center:V3(p.x,p.y,0.95),size:V3(cell.size*0.98,cell.size*0.98,0.28),color:tint(0x80cde5,alpha))
+                let p=cell.center,h=cell.size/2,hh=cell.height/2,alpha=cell.solid ? 1 : cell.cold*0.65
+                ice.box(center:V3(p.x,p.y,0.95),size:V3(cell.size*0.98,cell.height*0.98,0.28),color:tint(0x80cde5,alpha))
                 if cell.solid {
-                    ice.line(V3(p.x-h,p.y+h,1.13),V3(p.x+h,p.y+h,1.13),width:0.025,color:tint(0xedfdff))
-                    ice.line(V3(p.x-h*0.65,p.y+h*0.8,1.14),V3(p.x+h*0.1,p.y-h*0.25,1.14),width:0.014,color:tint(0xeaffff))
-                    ice.line(V3(p.x+h*0.1,p.y-h*0.25,1.14),V3(p.x+h,p.y-h*0.65,1.14),width:0.009,color:tint(0xd0faff))
+                    ice.line(V3(p.x-h,p.y+hh,1.13),V3(p.x+h,p.y+hh,1.13),width:0.025,color:tint(0xedfdff))
+                    ice.line(V3(p.x-h*0.65,p.y+hh*0.8,1.14),V3(p.x+h*0.1,p.y-hh*0.25,1.14),width:0.014,color:tint(0xeaffff))
+                    ice.line(V3(p.x+h*0.1,p.y-hh*0.25,1.14),V3(p.x+h,p.y-hh*0.65,1.14),width:0.009,color:tint(0xd0faff))
                 }
             }
             drawMesh(ice)

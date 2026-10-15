@@ -11,7 +11,7 @@ final class SimulationTests:XCTestCase {
         XCTAssertFalse(s.jump(Vec(5,8),buffered:false));XCTAssertEqual(s.jumps,1)
     }
     func testBuoyancyAndWetness() {
-        let s=Simulation();s.placeCube(Vec(9,-1.8));advance(s,3)
+        let s=Simulation(form:.water);s.placeCube(Vec(9,-1.8));advance(s,3)
         XCTAssertGreaterThan(s.wetness,0.9);XCTAssertGreaterThan(s.cube.position.y,-1.6);XCTAssertLessThan(s.cube.position.y,0)
         s.placeCube(Vec(2,1));advance(s,8);XCTAssertLessThan(s.wetness,0.65)
     }
@@ -42,29 +42,41 @@ final class SimulationTests:XCTestCase {
         XCTAssertEqual(a.cube.position.y,b.cube.position.y,accuracy:0.00001)
     }
     func testWaterStrokeCanReachShoreWithoutIce() {
-        let s=Simulation();s.placeCube(Vec(10,-1));advance(s,1)
+        // Start in open water: a jump directly beneath the bridge hits its underside.
+        let s=Simulation();s.equipPassive(false);s.placeCube(Vec(9,-1));advance(s,1)
         XCTAssertTrue(s.inWater);XCTAssertFalse(s.cube.grounded);XCTAssertTrue(s.jump(Vec(-6,9.5),buffered:false))
         advance(s,0.25);XCTAssertFalse(s.jump(Vec(-5.5,9),buffered:false))
-        advance(s,2);XCTAssertLessThan(s.cube.position.x,7);XCTAssertTrue(s.cube.grounded)
+        // Keep moving onto the bank after landing instead of rolling back off its edge.
+        s.movement = -1;advance(s,2);s.movement=0
+        XCTAssertLessThan(s.cube.position.x,7);XCTAssertTrue(s.cube.grounded)
     }
     func testPassiveFreezeWhileImmersedLeavesAnExit() {
         let s=Simulation();s.placeCube(Vec(10,-1));s.equipPassive(true);advance(s,3)
         XCTAssertTrue(s.canLaunch)
         XCTAssertTrue(s.jump(Vec(-6,9.5),buffered:false));advance(s,2)
+        s.movement = -1;advance(s,4)
+        // The first stroke can hit the bridge underside. Once clear, hop
+        // from the new ice ledge onto the bank using the same player controls.
+        if s.cube.position.x>=7 {
+            XCTAssertTrue(s.jump(Vec(-5,8.5),buffered:false));advance(s,2)
+        }
+        s.movement=0
+        XCTAssertLessThan(s.cube.position.x,7)
         XCTAssertTrue(s.cube.grounded);XCTAssertGreaterThan(s.cube.position.y,0)
     }
     func testRollingMovesAndRotatesTheRigidBody() {
-        let s=Simulation();advance(s,1);s.movement = -1;advance(s,1)
+        let s=Simulation();s.equipPassive(false);advance(s,1);s.movement = -1;advance(s,1)
         XCTAssertLessThan(s.cube.position.x,1);XCTAssertGreaterThan(abs(s.cube.angle),1)
         s.movement=0;advance(s,2);XCTAssertLessThan(abs(s.cube.velocity.x),0.2)
     }
     func testSwimmingCanExitAlongTheShallowBank() {
-        let s=Simulation();s.placeCube(Vec(9.8,-1));advance(s,1)
+        let s=Simulation(form:.water);s.placeCube(Vec(9.8,-1));advance(s,1)
         s.movement = -1;advance(s,6)
         XCTAssertLessThan(s.cube.position.x,7);XCTAssertTrue(s.cube.grounded)
     }
     func testFrostedGrassPreservesMoreMomentum() {
         let grass=Simulation(),ice=Simulation()
+        grass.equipPassive(false)
         for s in [grass,ice] { s.wind=0;s.placeCube(Vec(-1,0.7)) }
         ice.equipPassive(true);advance(grass,2);advance(ice,2)
         XCTAssertEqual(ice.surface,.ice)
@@ -78,7 +90,7 @@ final class SimulationTests:XCTestCase {
             for _ in 0..<300 { s.step();if s.landingAge<0.02 { return s.impact } }
             return -1
         }
-        let soft=impactAt(2),hard=impactAt(12)
+        let soft=impactAt(2),hard=impactAt(8.5)
         XCTAssertGreaterThan(soft,0);XCTAssertGreaterThan(hard,soft+0.2)
     }
     func testAimDirectionsAndRadialPowerAreStable() {
@@ -118,8 +130,11 @@ final class SimulationTests:XCTestCase {
             XCTFail("Did not land at x=\(s.cube.position.x), y=\(s.cube.position.y)")
         }
         landAt(Vec(5.1,1.81));XCTAssertGreaterThan(s.cube.position.y,1.4)
-        advance(s,0.2);landAt(Vec(12,0.46));XCTAssertGreaterThan(s.cube.position.x,10.5)
-        advance(s,0.2);landAt(Vec(19.5,0.56));XCTAssertGreaterThan(s.cube.position.x,17)
+        for x:Float in [9.3,12,15.5] {
+            advance(s,0.2);landAt(Vec(x,s.waterField.surface(at:x)+0.56))
+        }
+        advance(s,0.2);landAt(Vec(18.2,0.56))
+        s.movement=1;advance(s,1.5);s.movement=0;XCTAssertGreaterThan(s.cube.position.x,17)
         advance(s,0.2);landAt(Vec(23,0.56));advance(s,0.3)
         XCTAssertTrue(s.won)
     }

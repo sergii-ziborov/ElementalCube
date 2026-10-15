@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Validate alpha 4 screenshots; --apply uploads them to the editable Apple card.
+"""Validate native screenshots; --apply uploads them to the editable Apple card.
 
-Manual helper, without CI/CD. Existing assets are retained and matched by name.
+Manual helper, without CI/CD. Existing assets are retained unless --replace-earlier removes our older alpha 4 set after successful delivery.
 Credentials and temporary upload URLs are never printed or saved.
 """
 import argparse
@@ -15,24 +15,29 @@ import urllib.request
 
 from asc import BUNDLE, ROOT, call
 
-SETS = {
-    "APP_IPHONE_61": [(f"iphone-{form}.png", (2622, 1206))
-                      for form in ("ice", "water", "air", "stone", "fire")],
-    "APP_IPAD_PRO_3GEN_129": [("ipad-13-ice.png", (2064, 2752))],
+GALLERIES = {
+    "alpha4": {
+        "APP_IPHONE_61": [(f"iphone-{form}.png", (2622,1206)) for form in ("ice","water","air","stone","fire")],
+        "APP_IPAD_PRO_3GEN_129": [("ipad-13-ice.png", (2064,2752))],
+    },
+    "physics6": {
+        "APP_IPHONE_61": [(f"iphone-{scene}.png", (1206,2622)) for scene in ("ice","crate","bridge","ability")],
+        "APP_IPAD_PRO_3GEN_129": [("ipad-13-ice.png", (2064,2752))],
+    },
 }
 EDITABLE = {"PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED"}
 
 
-def validate():
-    for files in SETS.values():
+def validate(gallery):
+    for files in GALLERIES[gallery].values():
         for name, size in files:
-            data = (ROOT / "Previews/alpha4" / name).read_bytes()
+            data = (ROOT / "Previews" / gallery / name).read_bytes()
             if data[:8] != b"\x89PNG\r\n\x1a\n":
                 raise SystemExit(f"Invalid PNG: {name}")
             width, height, depth, color = struct.unpack(">IIBB", data[16:26])
             if (width, height) != size or depth != 8 or color != 2:
                 raise SystemExit(f"Expected original-size RGB PNG without alpha: {name}")
-    print("Validated six original screenshots for iPhone and iPad 13-inch.", flush=True)
+    print(f"Validated original {gallery} screenshots for iPhone and iPad 13-inch.", flush=True)
 
 
 def upload(screenshot, data, name):
@@ -67,7 +72,7 @@ def upload(screenshot, data, name):
             "attributes": {"uploaded": True, "sourceFileChecksum": checksum}}})
 
 
-def apply():
+def apply(gallery, replace_earlier=False):
     apps = call("GET", "/v1/apps", {"filter[bundleId]": BUNDLE})["data"]
     if len(apps) != 1:
         raise SystemExit("Expected the existing ElementalCube app card")
@@ -84,11 +89,12 @@ def apply():
     if len(locales) != 2:
         raise SystemExit("Apply Russian and English metadata before screenshots")
     pending = []
+    superseded = []
     for locale in locales:
         language = locale["attributes"]["locale"]
         sets = call("GET", f"/v1/appStoreVersionLocalizations/{locale['id']}/appScreenshotSets",
                     {"limit": 200})["data"]
-        for display, files in SETS.items():
+        for display, files in GALLERIES[gallery].items():
             screenshot_set = next((s for s in sets if s["attributes"]["screenshotDisplayType"] == display), None)
             if screenshot_set is None:
                 screenshot_set = call("POST", "/v1/appScreenshotSets", body={"data": {
@@ -97,14 +103,18 @@ def apply():
                         "type": "appStoreVersionLocalizations", "id": locale["id"]}}}}})["data"]
             existing = call("GET", f"/v1/appScreenshotSets/{screenshot_set['id']}/appScreenshots",
                             {"limit": 50})["data"]
+            if replace_earlier and gallery != "alpha4":
+                old_names={n for n,_ in GALLERIES["alpha4"].get(display,[])}
+                superseded.extend(asset["id"] for asset in existing if asset["attributes"]["fileName"] in old_names)
             for name, _ in files:
-                data = (ROOT / "Previews/alpha4" / name).read_bytes()
-                screenshot = next((s for s in existing if s["attributes"]["fileName"] == name), None)
+                remote_name=name if gallery=="alpha4" else gallery+"-"+name
+                data = (ROOT / "Previews" / gallery / name).read_bytes()
+                screenshot = next((s for s in existing if s["attributes"]["fileName"] == remote_name), None)
                 if screenshot is None:
                     if len(existing) >= 10:
                         raise SystemExit(f"Screenshot set is full: {language} {display}")
                     screenshot = call("POST", "/v1/appScreenshots", body={"data": {
-                        "type": "appScreenshots", "attributes": {"fileName": name, "fileSize": len(data)},
+                        "type": "appScreenshots", "attributes": {"fileName": remote_name, "fileSize": len(data)},
                         "relationships": {"appScreenshotSet": {"data": {
                             "type": "appScreenshotSets", "id": screenshot_set["id"]}}}}})["data"]
                     existing.append(screenshot)
@@ -121,7 +131,11 @@ def apply():
             if state != "COMPLETE":
                 incomplete.append((identity, language, name))
         if not incomplete:
-            print("Apple confirmed all 12 screenshots COMPLETE.", flush=True)
+            print("Apple confirmed all screenshots COMPLETE.", flush=True)
+            for identity in superseded:
+                call("DELETE", f"/v1/appScreenshots/{identity}")
+            if superseded:
+                print(f"Replaced {len(superseded)} archived alpha 4 screenshots after confirming the new set.", flush=True)
             return
         pending = incomplete
         time.sleep(5)
@@ -131,7 +145,9 @@ def apply():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--gallery",choices=GALLERIES,default="physics6")
+    parser.add_argument("--replace-earlier",action="store_true",help="Remove our alpha 4 assets only after the new gallery is COMPLETE")
     args = parser.parse_args()
-    validate()
+    validate(args.gallery)
     if args.apply:
-        apply()
+        apply(args.gallery,args.replace_earlier)

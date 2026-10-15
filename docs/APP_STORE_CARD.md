@@ -1,6 +1,6 @@
 # ElementalCube — материалы карточки Apple
 
-Версия альфы: **0.1.0 (5)**. Одно приложение для iPhone и iPad. Карточка [App Store Connect](https://appstoreconnect.apple.com/apps/6822921592/testflight) заполнена на русском и английском, включая задания сборки 5. Внутренней группе доступна новая мягкая шерсть; [внешняя альфа](https://testflight.apple.com/join/snm99FQh) ожидает проверки Apple. В карточке сохранены 12 снимков предыдущей сборки 4.
+Версия альфы: **0.1.0 (6)**. Одно приложение для iPhone и iPad. Карточка [App Store Connect](https://appstoreconnect.apple.com/apps/6822921592/testflight) заполнена на русском и английском, тексты обновления сохранены для сборки 6. Пока внутренней группе доступна сборка 5; [внешняя альфа](https://testflight.apple.com/join/snm99FQh) ожидает проверки Apple. В карточке сохранены 10 принятых Apple снимков сборки 6.
 
 ## Данные приложения
 
@@ -23,7 +23,7 @@
 - [Конфиденциальность](https://github.com/sergii-ziborov/ElementalCube/blob/main/docs/PRIVACY.md)
 
 
-Иконка: [PNG 1024 × 1024](../Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png). Новая шерсть: [сборка 5](../Previews/fur5). Снимки пяти форм, уже загруженные в карточку: [альфа 4](../Previews/alpha4). [Архивные размеры Apple](../Previews/app-store) относятся к сборкам 2 и 3.
+Иконка: [PNG 1024 × 1024](../Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png). Физика воды и моста: [сборка 6](../Previews/physics6). Шерсть: [сборка 5](../Previews/fur5). Предыдущая галерея пяти форм сохранена в [архиве альфы 4](../Previews/alpha4). [Архивные размеры Apple](../Previews/app-store) относятся к сборкам 2 и 3.
 
 
 ## Русский
@@ -51,133 +51,115 @@
 ```text
 Маленький куб. Большой мир.
 
-Выберите одну из пяти стихий и исследуйте тихий берег. Льдинка постепенно замораживает воду касанием; Капля плавает; Ветерок скользит над водой; Камушек тонет и находит подводные проходы; Огонёк сжигает горючее и испаряет воду, теряя здоровье.
+Выберите одну из пяти стихий и исследуйте тихий берег. Льдинка сразу создаёт ледяную опору при касании воды и затем постепенно расширяет лёд; Капля плавает; Ветерок скользит над водой; Камушек тонет и находит подводные проходы; Огонёк сжигает горючее и испаряет воду, теряя здоровье.
 
-Начальную пассивную способность нужно экипировать в слот. После этого она работает автоматически. Нажатие на слот открывает описание. Здоровье и мана всегда видны; выбирайте, где тратить силы.
+Начальная пассивная способность уже назначена и работает автоматически. Нажатие на название открывает описание. Здоровье и мана всегда видны; выбирайте, где тратить силы.
 
-Потяните и отпустите, чтобы прыгнуть по выбранной дуге. Катитесь по траве, толкайте деревянный ящик, скользите по льду и плывите к берегу. Доберитесь до флага, соберите три кристалла или отправьтесь каменной формой за глубинной реликвией.
+Потяните и отпустите, чтобы прыгнуть по выбранной дуге. Катитесь по траве, толкайте и опрокидывайте плавучий ящик, раскачивайте подвесной мост, скользите по льду и плывите к берегу. Доберитесь до флага, соберите три кристалла или отправьтесь каменной формой за глубинной реликвией.
 
 Кубик реагирует на ваши действия: сосредотачивается перед прыжком, радуется находкам и встряхивает мокрую шерсть. Пряди спереди и по бокам меняются от ветра, движения и намокания. Мягкая трава и твёрдый камень по-разному встречают его после полёта; поддерживаемые iPhone добавляют тактильный отклик.
 
 Это ранняя альфа ElementalCube: одна карта и пять форм для проверки управления и физики. Обучение, эволюция, арены и сохранение прохождения ещё не реализованы.
 
-Игра работает без регистрации, рекламы и игрового сервера. Поддерживаются iPhone и iPad, портретная и горизонтальная ориентации. Настройки, выбранная форма и экипировка сохраняются.
+Игра работает без регистрации, рекламы и игрового сервера. Поддерживаются iPhone и iPad, портретная и горизонтальная ориентации. Настройки, выбранная форма сохраняются.
 ```
 
 ### Описание TestFlight
 
 ```text
-Добро пожаловать в альфу ElementalCube 0.1.0 (5)!
+Добро пожаловать в ElementalCube 0.1.0 (6)!
 
-Пять форм меняют способ движения и взаимодействия с миром: лёд постепенно замораживает, вода плавает, воздух скользит, камень исследует дно, огонь сжигает и испаряет воду с потерей здоровья.
+Ящик падает, вращается и вытесняет воду. Шесть секций подвесного моста прогибаются под весом куба. Жидкость и предметы обмениваются импульсами через расчёт давления.
 
-Выберите стихию кнопкой сверху. Нажмите на слот, прочитайте описание и экипируйте пассивную способность — повторные нажатия для применения не нужны. Здоровье и мана видны сразу. Смена формы начинает новую попытку.
+Льдинка сразу замораживает опору под собой при первом касании воды; дальше холод растёт постепенно. Начальные пассивные способности назначены автоматически. Нажатие на название открывает только описание.
 
-Шерсть на всех гранях, включая переднюю, реагирует на ветер, движение и воду. В настройках можно изменить ветер, гравитацию и управление.
+Пять форм, здоровье и мана, мягкая шерсть, ветер и намокание. Выбор другой формы начинает новую попытку. Игра работает без регистрации и игрового сервера. Интерфейс на русском.
 
-В альфе одна карта. Обучение, эволюция, арены и сохранение прохождения ещё не готовы. Особенно интересуют ощущения управления и производительность на физических iPhone и iPad.
+Одна тестовая карта; дерево навыков, обучение, эволюция и арены ещё не реализованы. Особенно важны ощущения управления и производительность на физических iPhone/iPad.
 ```
 
-### Что проверить — TestFlight
+### Что проверять — сборка 6
 
 ```text
-Альфа 0.1.0 (5) — новая мягкая шерсть.
+Альфа 0.1.0 (6) — вода и предметы.
 
-Вместо редких жёстких полосок — плотный короткий подшёрсток и изогнутые пучки. Сравните сухой пушистый контур и мокрую приглаженную шерсть. Проверьте ветер, качение, прыжки и высыхание; обратите внимание на плавность игры.
+• Столкните ящик с берега стрелками. Проверьте падение, вращение, плавучесть, волны и столкновения с кубом.
+• Прыгните на подвесной мост разными формами. Доски должны прогибаться, оставаться соединёнными и постепенно успокаиваться. Посмотрите на мост снизу.
+• Вода должна доходить до берегов и погружённых предметов; движение ящика должно создавать течение и волну.
+• Льдинка: при первом касании воды сразу возникает опора. Куб не должен сначала погружаться. Дальше лёд растёт локально; после ухода медленно тает.
+• Нажмите «Морозное касание»: только описание, без переключателя экипировки. Все начальные пассивные способности уже назначены.
+• Вода плавает, воздух скользит, камень проходит по дну под мостом и выходит по склону, огонь испаряет воду с потерей здоровья.
+• Проверьте здоровье и ману, шерсть, ветер, намокание, прыжки в обе стороны, поворот устройства и возврат из фона.
 
-Пять стихий и пассивные способности сохранены.
-
-• Выберите каждую форму кнопкой сверху; смена начинает новую попытку.
-• Нажмите слот или название способности. Откроется описание с переключателем экипировки. После включения способность работает автоматически.
-• Проверьте здоровье и ману, истощение и возобновление способности после 20 маны.
-• Лёд: двигайтесь вдоль воды. Она должна замерзать постепенно рядом с кубом, вверх и вниз. Выберитесь на берег; лёд не должен запечатывать героя.
-• Вода: плывите и выходите по береговому склону. Прыжок в воде расходует 6 маны.
-• Воздух: скользите без качения по суше и над водой.
-• Камень: опуститесь на дно, пройдите под центральной опорой за реликвией и вернитесь по склону.
-• Огонь: зажгите траву и ящик; проверьте обугленный след. В воде наблюдайте пар, падение уровня и потерю здоровья.
-• Посмотрите на шерсть спереди, измените ветер, намочите и высушите куба.
-• Сравните посадку на траву и камень. Поверните устройство и вернитесь из фона: управление не должно застревать.
-
-В отзыве укажите модель устройства, форму, место проблемы и ощущение скорости/плавности игры.
+В отзыве укажите модель устройства, форму, место проблемы и плавность игры.
 ```
 
-## English (US)
+## English
 
-### Подзаголовок
+### Subtitle
 
 ```text
 Small cube. Big world.
 ```
 
-### Промотекст
+### Promotional text
 
 ```text
 Five elements, five personalities. Freeze water by touch, glide above it, explore the bottom, or evaporate a pond with fire in a playful physics sandbox.
 ```
 
-### Ключевые слова
+### Keywords
 
 ```text
 cube,physics,platformer,ice,water,jump,puzzle,adventure,cozy
 ```
 
-### Описание App Store
+### App Store description
 
 ```text
 Small cube. Big world.
 
-Choose one of five elements and explore a quiet shore. Ice gradually freezes nearby water by touch. Water floats. Air slides above the surface. Stone sinks into underwater passages. Fire burns fuel and evaporates water at a health cost.
+Choose one of five elements and explore a quiet shore. Ice immediately forms support on first water contact, then gradually spreads the freeze. Water floats. Air slides above the surface. Stone sinks into underwater passages. Fire burns fuel and evaporates water at a health cost.
 
-Equip your starting passive ability in its slot, then let it work automatically. Tapping the slot opens its description. Health and mana are visible from the start.
+Your starting passive is already assigned and works automatically. Tap its name to read the description. Health and mana are visible from the start.
 
-Drag and release to jump along your chosen arc. Roll over grass, push a wooden crate, slide on ice, and swim back to shore. Reach the flag, collect three crystals, or take Stone through the passage to a deep relic.
+Drag and release to jump along your chosen arc. Roll over grass, push and tip a floating crate, and load a suspended bridge, slide on ice, and swim back to shore. Reach the flag, collect three crystals, or take Stone through the passage to a deep relic.
 
 Your cube has a personality: it focuses before a jump, celebrates discoveries, and shakes its wet fur. Strands on the front and sides react to wind, motion, and water. Soft grass and hard stone create different landings. Supported iPhones add tactile feedback.
 
 This is an early ElementalCube alpha with one map and five forms. Training, evolution, arenas, and saved playthroughs are not available yet.
 
-No account, ads, or game server connection is required. Designed for iPhone and iPad in portrait and landscape. Settings, selected form, and equipped passive persist locally.
+No account, ads, or game server connection is required. Designed for iPhone and iPad in portrait and landscape. Settings and selected form persist locally.
 
 The current in-game interface is in Russian.
 ```
 
-### Описание TestFlight
+### TestFlight description
 
 ```text
-Welcome to ElementalCube alpha 0.1.0 (5)!
+Welcome to ElementalCube 0.1.0 (6)!
 
-Five forms change movement and interaction: Ice gradually freezes, Water swims, Air slides, Stone explores the bottom, and Fire burns fuel and evaporates water at a health cost.
+The crate falls, rotates and displaces water. Six suspended bridge sections bend under the cube’s weight. Liquid pressure exchanges momentum with moving objects.
 
-Choose an element at the top. Tap the ability slot, read its description, and equip the passive. It then works automatically. Health and mana are visible immediately. Switching forms starts a new attempt.
+Ice immediately forms support on first water contact; further freezing spreads gradually. Starting passives are assigned automatically. Tap an ability name to read its description.
 
-Fur on all faces, including the front, reacts to wind, movement, and water. Wind, gravity, and controls can be adjusted in Settings.
+Five forms, health and mana, soft fur, wind and wetness. Changing form starts a new attempt. No account or game server is required. The interface is currently in Russian.
 
-This alpha has one map. Training, evolution, arenas, and saved playthroughs are not ready. Please focus on controls and performance on physical iPhones and iPads.
-
-The current in-game interface is in Russian.
+One test map. The skill tree, training, evolution and arenas are not implemented yet. Please focus on controls and performance on physical iPhones and iPads.
 ```
 
-### Что проверить — TestFlight
+### What to test — build 6
 
 ```text
-Alpha 0.1.0 (5): softer fur.
+Alpha 0.1.0 (6): water and objects.
 
-Sparse rigid strips have been replaced by a dense short undercoat and curved tufts. Compare the fluffy dry silhouette with the flattened wet coat. Try wind, rolling, jumping and drying, and watch frame smoothness.
+• Push the crate off the bank with the movement buttons. Check falling, rotation, buoyancy, waves and collisions with the cube.
+• Jump onto the suspended bridge with different forms. Boards should bend, remain connected and settle. Inspect their undersides.
+• Water should meet banks and submerged objects. Moving objects should create flow and waves.
+• Ice: support should form immediately on first water contact, before sinking. Further freezing should spread locally and thaw slowly after leaving.
+• Tap the passive ability name: a description only, with no equip toggle. Starting passives are already assigned.
+• Water floats, Air glides, Stone takes the passage beneath the bridge and climbs the bank, and Fire evaporates water at a health cost.
+• Check health, mana, fur, wind, wetting, jumps in both directions, rotation and return from background.
 
-All five elements and passive abilities remain available.
-
-• Try every form using the top button. Switching resets the map.
-• Tap the slot or ability name. Read the description and equip the passive. It should then work automatically.
-• Watch health and mana, exhaustion, and ability recovery at 20 mana.
-• Ice: move near water and watch freezing grow locally up and down. Leave the water without getting sealed inside ice.
-• Water: swim and leave along the bank. A water stroke costs 6 mana.
-• Air: slide without rolling on land and above water.
-• Stone: sink, take the passage beneath the central support, collect the relic, and climb back out.
-• Fire: ignite grass and the crate, leaving char. In water, watch steam, the receding level, and health loss.
-• Inspect front fur, change wind, and wet/dry the cube.
-• Compare soft and hard landings, rotate the device, and return from background. Controls should not stay pressed.
-
-Please include your device model, form, location, and impressions of speed and smoothness in feedback.
+Include your device model, form, location and frame smoothness in feedback.
 ```
-
-Контакт для обратной связи TestFlight: `sergii.ziborov@gmail.com`. Игра не требует учётной записи или демо-пароля. Контактный телефон для Apple Beta App Review заполняется отдельно владельцем аккаунта.

@@ -35,7 +35,6 @@ struct GameView:View {
         return session.inverted ? "Удерживай ← →. Для прыжка потяни назад и отпусти." : "Удерживай ← →. Для прыжка потяни к цели и отпусти."
         #endif
     }
-    var abilityCaption:String { session.passiveEquipped ? "СЛОТ 1 / 1" : "СЛОТ 0 / 1" }
     var body:some View {
         GeometryReader { geo in
             let short=geo.size.height<550
@@ -56,7 +55,7 @@ struct GameView:View {
                             if compact {
                                 HStack(spacing:5) {
                                     Circle().fill(session.passiveWorking ? Color.green.opacity(0.65) : ink.opacity(0.25)).frame(width:5,height:5)
-                                    Text(session.form.name + (session.form.hasFur && session.wetness>0.2 ? " · шерсть \(Int(session.wetness*100))%" : (session.passiveEquipped ? " · пассивная" : " · слот свободен"))).font(.system(size:10)).opacity(0.7)
+                                    Text(session.form.name + (session.form.hasFur && session.wetness>0.2 ? " · шерсть \(Int(session.wetness*100))%" : " · пассивная")).font(.system(size:10)).opacity(0.7)
                                 }
                             }
                         }.padding(short ? 10 : 18).background(cream.opacity(0.75),in:RoundedRectangle(cornerRadius:short ? 12 : 18))
@@ -157,26 +156,15 @@ struct GameView:View {
                     Text(session.form == .air ? "СКОЛЬЗИ" : (session.form == .stone && session.inWater ? "ПО ДНУ" : (session.inWater ? "ПЛЫВИ" : "КАТИСЬ"))).font(.system(size:9,weight:.semibold)).tracking(1.5).foregroundStyle(cream.opacity(0.65))
                     HStack(spacing:7) { movementButton(-1,compact:compact);movementButton(1,compact:compact) }
                 }
-                VStack(alignment:.leading,spacing:9) {
-                    if !compact { Text("ПАССИВНАЯ СПОСОБНОСТЬ").font(.system(size:9,weight:.semibold)).tracking(1.7).foregroundStyle(cream.opacity(0.65)) }
-                    HStack(spacing:13) {
-                        Button { session.showAbility() } label: {
-                            VStack(spacing:5) {
-                                Image(systemName:session.form.symbol).font(.system(size:compact ? 26 : 34,weight:.ultraLight))
-                                if compact { Text(session.form.ability).font(.system(size:8,weight:.medium)).lineLimit(1).minimumScaleFactor(0.7) }
-                                Text(abilityCaption).font(.system(size:compact ? 8 : 10,weight:.semibold,design:.monospaced))
-                            }.foregroundStyle(cream).frame(width:compact ? 62 : 82,height:compact ? 64 : 82)
-                                .background(ink.opacity(0.65),in:RoundedRectangle(cornerRadius:19))
-                                .overlay(RoundedRectangle(cornerRadius:19).stroke(session.passiveEquipped ? mint : cream.opacity(0.35),lineWidth:session.passiveEquipped ? 2 : 1))
-                        }.buttonStyle(.plain).accessibilityLabel(session.form.ability+", пассивная способность. Открыть описание")
-                        if !compact {
-                            Button { session.showAbility() } label: { VStack(alignment:.leading,spacing:6) {
-                                Text(session.form.ability).font(.system(size:16,weight:.medium,design:.serif)).foregroundStyle(cream)
-                                Text(session.passiveEquipped ? (session.passiveWorking ? "Действует автоматически.\nНажми, чтобы узнать больше." : "Мана восстанавливается.\nСпособность скоро вернётся.") : "Нажми и экипируй.\nЗанимает один слот.").font(.system(size:11)).foregroundStyle(cream.opacity(0.7)).lineSpacing(3)
-                            } }.buttonStyle(.plain)
-                        }
-                    }
-                }
+                Button { session.showAbility() } label: {
+                    VStack(alignment:.leading,spacing:7) {
+                        Label("ПАССИВНАЯ",systemImage:session.form.symbol)
+                            .font(.system(size:compact ? 8 : 9,weight:.medium)).tracking(0.5).foregroundStyle(cream.opacity(0.65))
+                        Text(session.form.ability).font(.system(size:compact ? 13 : 18,weight:.medium,design:.serif))
+                            .foregroundStyle(cream).lineLimit(2).multilineTextAlignment(.leading)
+                        if !compact { Text("Описание способности").font(.system(size:11)).foregroundStyle(cream.opacity(0.6)) }
+                    }.frame(maxWidth:compact ? 100 : 250,alignment:.leading).padding(.vertical,9).contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityLabel(session.form.ability+", пассивная способность. Открыть описание")
                 Spacer(minLength:0)
                 if !compact {
                     VStack(spacing:8) {
@@ -230,11 +218,10 @@ struct GameView:View {
         ScrollView {
             VStack(alignment:.leading,spacing:22) {
                 HStack { Label(session.form.ability,systemImage:session.form.symbol).font(.system(size:25,design:.serif));Spacer();Button { session.abilityInfo=false } label:{ Image(systemName:"xmark") }.buttonStyle(.plain) }
-                Text("ПАССИВНАЯ · НАЧАЛЬНАЯ · 1 СЛОТ").font(.system(size:10,weight:.bold)).tracking(1.3).opacity(0.6)
+                Text("ПАССИВНАЯ СПОСОБНОСТЬ").font(.system(size:10,weight:.bold)).tracking(1.3).opacity(0.6)
                 Text(session.form.explanation).font(.system(size:15)).lineSpacing(6)
-                Text(String(format:"Расход: %.1f маны/с. Без экипированной способности мана восстанавливается: 4/с. При истощении — пауза до 20 маны. Здоровье восстанавливается при новой попытке.",session.form.manaCost)).font(.system(size:12)).lineSpacing(4).opacity(0.7)
-                Toggle("Экипировать пассивную способность",isOn:Binding(get:{session.passiveEquipped},set:{session.equipPassive($0)})).tint(ink)
-                Text(session.passiveEquipped ? "Слот 1 / 1 занят. Способность действует при движении и контакте с миром, без повторных нажатий." : "Слот 0 / 1. Включи способность здесь, затем вернись в игру.").font(.system(size:12)).lineSpacing(4).opacity(0.7)
+                Text(String(format:"Расход: %.1f маны/с. При истощении мана восстанавливается до 20, затем способность возобновляется. Здоровье восстанавливается при новой попытке.",session.form.manaCost)).font(.system(size:12)).lineSpacing(4).opacity(0.7)
+                Text(session.form == .ice ? "Первая ледяная опора возникает даже при восстановлении маны. Мана нужна для дальнейшего распространения холода." : "Действует автоматически при движении и контакте с миром.").font(.system(size:12)).lineSpacing(4).opacity(0.7)
                 Button("В игру") { session.abilityInfo=false }.buttonStyle(PillButton())
             }.padding(28).frame(maxWidth:540).foregroundStyle(ink)
         }.frame(maxWidth:.infinity).background(cream)
@@ -243,7 +230,7 @@ struct GameView:View {
         ScrollView {
             VStack(alignment:.leading,spacing:16) {
                 HStack { Text("Пять характеров стихии").font(.system(size:25,design:.serif));Spacer();Button { session.forms=false } label:{ Image(systemName:"xmark") }.buttonStyle(.plain) }
-                Text("Смена формы начинает новую попытку и восстанавливает мир. У каждой формы своё тело и одна начальная пассивная способность. Экипируй её в слоте.").font(.system(size:13)).lineSpacing(4).opacity(0.7)
+                Text("Смена формы начинает новую попытку и восстанавливает мир. У каждой формы своё тело и уже назначенная начальная пассивная способность.").font(.system(size:13)).lineSpacing(4).opacity(0.7)
                 ForEach(ElementForm.allCases) { form in
                     Button { session.selectForm(form) } label: {
                         HStack(alignment:.top,spacing:14) {

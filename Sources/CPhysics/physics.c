@@ -40,6 +40,31 @@ ECState ec_state(ECWorld *w,int id) {
 }
 void ec_impulse(ECWorld *w,int id,float vx,float vy) { float m=b2Body_GetMass(w->bodies[id]); b2Body_ApplyLinearImpulseToCenter(w->bodies[id],(b2Vec2){vx*m,vy*m},true); }
 void ec_force(ECWorld *w,int id,float fx,float fy) { b2Body_ApplyForceToCenter(w->bodies[id],(b2Vec2){fx,fy},true); }
+void ec_force_at(ECWorld *w,int id,float fx,float fy,float x,float y) { b2Body_ApplyForce(w->bodies[id],(b2Vec2){fx,fy},(b2Vec2){x,y},true); }
+void ec_torque(ECWorld *w,int id,float torque) { b2Body_ApplyTorque(w->bodies[id],torque,true); }
+void ec_rotate(ECWorld *w,int id,float angle) { b2Body_SetTransform(w->bodies[id],b2Body_GetPosition(w->bodies[id]),b2MakeRot(angle)); }
+void ec_velocity(ECWorld *w,int id,float vx,float vy,float omega) {
+    b2Body_SetLinearVelocity(w->bodies[id],(b2Vec2){vx,vy});b2Body_SetAngularVelocity(w->bodies[id],omega);
+}
+void ec_hinge(ECWorld *w,int a,int b,float x,float y) {
+    b2RevoluteJointDef def=b2DefaultRevoluteJointDef();
+    def.bodyIdA=w->bodies[a];def.bodyIdB=w->bodies[b];
+    b2Vec2 anchor={x,y};
+    def.localAnchorA=b2Body_GetLocalPoint(def.bodyIdA,anchor);def.localAnchorB=b2Body_GetLocalPoint(def.bodyIdB,anchor);
+    def.referenceAngle=b2Rot_GetAngle(b2Body_GetRotation(def.bodyIdB))-b2Rot_GetAngle(b2Body_GetRotation(def.bodyIdA));
+    def.enableLimit=true;def.lowerAngle=-.65f;def.upperAngle=.65f;
+    def.enableSpring=true;def.hertz=1.8f;def.dampingRatio=.7f;def.collideConnected=false;
+    b2CreateRevoluteJoint(w->world,&def);
+}
+void ec_rope(ECWorld *w,int a,int b,float ax,float ay,float bx,float by) {
+    b2DistanceJointDef def=b2DefaultDistanceJointDef();def.bodyIdA=w->bodies[a];def.bodyIdB=w->bodies[b];
+    def.localAnchorA=b2Body_GetLocalPoint(def.bodyIdA,(b2Vec2){ax,ay});def.localAnchorB=b2Body_GetLocalPoint(def.bodyIdB,(b2Vec2){bx,by});
+    // Zero spring stiffness leaves only the unilateral length limits:
+    // slack cable must not push the bridge like a compressed rod.
+    def.length=hypotf(bx-ax,by-ay);def.enableSpring=true;def.hertz=0;def.dampingRatio=0;
+    def.enableLimit=true;def.minLength=.05f;def.maxLength=def.length+.12f;
+    b2CreateDistanceJoint(w->world,&def);
+}
 void ec_teleport(ECWorld *w,int id,float x,float y) { b2Body_SetTransform(w->bodies[id],(b2Vec2){x,y},b2MakeRot(0)); b2Body_SetLinearVelocity(w->bodies[id],(b2Vec2){0,0}); b2Body_SetAngularVelocity(w->bodies[id],0); }
 void ec_gravity(ECWorld *w,float gravity) { b2World_SetGravity(w->world,(b2Vec2){0,-gravity}); }
 void ec_material(ECWorld *w,int id,float friction,float restitution) {
@@ -54,7 +79,7 @@ void ec_drive(ECWorld *w,int id,float input,float grip,bool swimming) {
     b2BodyId body=w->bodies[id];ECState s=ec_state(w,id);b2MassData m=b2Body_GetMassData(body);
     if(fabsf(input)>.01f) {
         float target=input*(swimming ? 2.7f : 3.4f);
-        float force=fmaxf(-24,fminf(24,(target-s.vx)*12))*m.mass*grip;
+        float force=fmaxf(-40,fminf(40,(target-s.vx)*18))*m.mass*grip;
         b2Body_ApplyForceToCenter(body,(b2Vec2){force,0},true);
         if(!swimming) b2Body_ApplyTorque(body,m.rotationalInertia*(-input*6-s.omega)*18*grip,true);
     } else if(!swimming && s.grounded) {

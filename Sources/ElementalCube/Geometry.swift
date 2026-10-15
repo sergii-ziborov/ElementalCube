@@ -18,6 +18,8 @@ struct Mesh {
         quad(V3(a.x,b.y,b.z),V3(b.x,b.y,b.z),V3(b.x,b.y,a.z),V3(a.x,b.y,a.z),color,V3(0,1,0))
         quad(V3(b.x,a.y,b.z),V3(b.x,a.y,a.z),V3(b.x,b.y,a.z),V3(b.x,b.y,b.z),color,V3(1,0,0))
         quad(V3(a.x,a.y,a.z),V3(a.x,a.y,b.z),V3(a.x,b.y,b.z),V3(a.x,b.y,a.z),color,V3(-1,0,0))
+        quad(V3(a.x,a.y,a.z),V3(b.x,a.y,a.z),V3(b.x,a.y,b.z),V3(a.x,a.y,b.z),color,V3(0,-1,0))
+        quad(V3(b.x,a.y,a.z),V3(a.x,a.y,a.z),V3(a.x,b.y,a.z),V3(b.x,b.y,a.z),color,V3(0,0,-1))
     }
     mutating func ellipse(center:V3,rx:Float,ry:Float,color:C4,segments:Int=28) {
         for i in 0..<segments {
@@ -138,14 +140,14 @@ enum Geometry {
     }
     static func terrain(patches:[MaterialPatch] = [])->Mesh {
         var m=Mesh(),r=RNG(seed:871)
-        for (start,end,top,bottom):(Float,Float,Float,Float) in [(-3,7,0,-4),(17,25,0,-4),(11.15,12.85,-0.1,-1.9),(10.9,13.1,-1.9,-2.3),(7,17,-4,-4.6)] {
-            m.box(center:V3((start+end)/2,(top+bottom)/2,-0.5),size:V3(end-start,top-bottom,1.8),color:tint(0x6d8070))
+        for (start,end,top,bottom):(Float,Float,Float,Float) in [(-3,7,0,-4),(17,25,0,-4),(7,17,-4,-4.6)] {
+            m.box(center:V3((start+end)/2,(top+bottom)/2,0),size:V3(end-start,top-bottom,2.5),color:tint(0x6d8070))
             var y=top-0.05
             while y>bottom {
                 var x=start
                 while x<end {
                     let w=min(0.8+r.next()*0.75,end-x),height=min(0.55+r.next()*0.3,y-bottom)
-                    m.box(center:V3(x+w/2,y-height/2,0.43),size:V3(max(0.02,w-0.035),max(0.02,height-0.04),0.22+r.next()*0.07),color:mix(tint(0x728579),tint(0xa6b398),r.next()))
+                    m.box(center:V3(x+w/2,y-height/2,1.20),size:V3(max(0.02,w-0.035),max(0.02,height-0.04),0.12+r.next()*0.05),color:mix(tint(0x728579),tint(0xa6b398),r.next()))
                     x+=w
                 }
                 y-=0.75
@@ -153,8 +155,8 @@ enum Geometry {
             if top > -1 {
                 // Close the turf overhang in depth, so the rear coat cannot show
                 // through the gap between the grass lip and recessed stonework.
-                m.box(center:V3((start+end)/2,top-0.16,0.0),size:V3(end-start,0.24,1.82),color:tint(0x64784d))
-                m.box(center:V3((start+end)/2,top+0.01,0.0),size:V3(end-start,0.16,1.82),color:tint(0x82a45d))
+                m.box(center:V3((start+end)/2,top-0.16,0.0),size:V3(end-start,0.24,2.56),color:tint(0x64784d))
+                m.box(center:V3((start+end)/2,top+0.01,0.0),size:V3(end-start,0.16,2.56),color:tint(0x82a45d))
                 for _ in 0..<Int((end-start)*22) {
                     let x=start+r.next()*(end-start),h=0.05+r.next()*0.16,z=0.5+r.next()*0.35
                     let patch=patches.min(by:{ abs($0.x-x)<abs($1.x-x) })
@@ -173,11 +175,11 @@ enum Geometry {
         // Visible shallow banks correspond to the actual sloped collision surfaces.
         for (start,end,right):(Float,Float,Bool) in [(7,9.4,false),(14.6,17,true)] {
             let y1:Float=right ? -3.9 : 0,y2:Float=right ? 0 : -3.9
-            m.quad(V3(start,-4,0.63),V3(end,-4,0.63),V3(end,y2,0.63),V3(start,y1,0.63),tint(0x849b8c),V3(0,0,1))
-            m.quad(V3(start,y1,0.8),V3(end,y2,0.8),V3(end,y2,-0.8),V3(start,y1,-0.8),tint(0xa2b4a0),V3(right ? -0.6 : 0.6,0.8,0))
+            m.quad(V3(start,-4,1.28),V3(end,-4,1.28),V3(end,y2,1.28),V3(start,y1,1.28),tint(0x849b8c),V3(0,0,1))
+            m.quad(V3(start,y1,1.28),V3(end,y2,1.28),V3(end,y2,-1.1),V3(start,y1,-1.1),tint(0xa2b4a0),V3(right ? -0.6 : 0.6,0.8,0))
             for i in 0..<8 {
                 let t=Float(i)/8,x=start+(end-start)*t,y=y1+(y2-y1)*t
-                m.line(V3(x,y-0.03,0.65),V3(x+0.16,y-0.38,0.65),width:0.017,color:tint(0x59796e))
+                m.line(V3(x,y-0.03,1.29),V3(x+0.16,y-0.38,1.29),width:0.017,color:tint(0x59796e))
             }
         }
         // Small weathered arch at the destination. Decoration has no hidden path.
@@ -187,6 +189,83 @@ enum Geometry {
         m.quad(V3(23,2.2,0.95),V3(23.85,2.1,0.95),V3(23.67,1.65,0.95),V3(23,1.73,0.95),tint(0xead490),V3(0,0,1))
         m.diamond(V3(23.36,1.94,1),size:0.12,color:tint(0xfff4cb))
         return m
+    }
+    static func bridgeSection(width:Float)->Mesh {
+        var m=Mesh()
+        m.box(center:V3(0,0,0),size:V3(width,0.18,1.25),color:tint(0xa67b51))
+        for z:Float in [-0.48,-0.24,0,0.24,0.48] {
+            m.box(center:V3(0,0.09,z),size:V3(width-0.02,0.018,0.218),color:tint(0xc59b68))
+        }
+        for x:Float in [-width*0.34,width*0.34] {
+            m.ellipse(center:V3(x,0,0.635),rx:0.023,ry:0.023,color:tint(0x3a4d4b),segments:8)
+        }
+        return m
+    }
+    static func bridgeFixtures()->Mesh {
+        var m=Mesh()
+        for x:Float in [6.7,17.3] {
+            m.box(center:V3(x,-0.03,0.55),size:V3(0.28,0.04,1.32),color:tint(0x77867c))
+            m.box(center:V3(x,-0.005,0.55),size:V3(0.36,0.02,1.4),color:tint(0xa6b398))
+            m.ellipse(center:V3(x,-0.005,1.225),rx:0.045,ry:0.035,color:tint(0x324f51),segments:12)
+        }
+        return m
+    }
+    static func liquid(_ field:WaterField,bodies:[FluidBody])->Mesh {
+        var mesh=Mesh();let fluid=field.liquid,h=fluid.spacing,z:Float=1.29
+        mesh.vertices.reserveCapacity(24000)
+        let frozen=field.frozenBodies
+        var nodeValues=fluid.density
+        for i in 0..<fluid.nx {
+            let x=fluid.origin.x+Float(i)*h,level=field.surface(at:x)
+            for j in 0..<fluid.ny {
+                let p=Vec(x,fluid.origin.y+Float(j)*h),id=i*fluid.ny+j
+                if p.y<level && (fluid.staticSolid(p) || bodies.contains(where:{ $0.contains(p) }) || frozen.contains(where:{ $0.contains(p) })) { nodeValues[id]=max(nodeValues[id],0.85) }
+            }
+        }
+        func value(_ i:Int,_ j:Int)->Float { nodeValues[i*fluid.ny+j]-0.26 }
+        func clip(_ polygon:[V3],_ depth:(V3)->Float)->[V3] {
+            guard !polygon.isEmpty else { return [] }
+            var out:[V3]=[]
+            for i in polygon.indices {
+                let a=polygon[i],b=polygon[(i+1)%polygon.count],da=depth(a),db=depth(b)
+                if da>=0 { out.append(a) }
+                if (da>=0) != (db>=0) { out.append(a+(b-a)*(da/(da-db))) }
+            }
+            return out
+        }
+        for i in 1..<fluid.nx-1 { for j in 1..<fluid.ny-1 {
+            let x=fluid.origin.x+Float(i)*h,y=fluid.origin.y+Float(j)*h
+            let positions=[V3(x,y,z),V3(x+h,y,z),V3(x+h,y+h,z),V3(x,y+h,z)]
+            let values=[value(i,j),value(i+1,j),value(i+1,j+1),value(i,j+1)]
+            if values.allSatisfy({ $0<0 }) { continue }
+            for indices in [[0,1,2],[0,2,3]] {
+                var polygon:[V3]=[],edge:[V3]=[]
+                for k in 0..<3 {
+                    let a=indices[k],b=indices[(k+1)%3],pa=positions[a],pb=positions[b],da=values[a],db=values[b]
+                    if da>=0 { polygon.append(pa) }
+                    if (da>=0) != (db>=0) { let p=pa+(pb-pa)*(da/(da-db));polygon.append(p);edge.append(p) }
+                }
+                polygon=clip(polygon) { $0.x-7 };polygon=clip(polygon) { 17-$0.x }
+                polygon=clip(polygon) { $0.y-field.floor(at:$0.x) }
+                if polygon.count>=3 {
+                    for k in 1..<polygon.count-1 {
+                        for p in [polygon[0],polygon[k],polygon[k+1]] {
+                            let depth=max(0,min(1,(-p.y-0.5)/3.5)),color=mix(tint(0x61cbd3,0.43),tint(0x176c91,0.69),depth)
+                            mesh.vertices.append(Vertex(position:SIMD4(p,1),normal:SIMD4(0,0,1,0),color:color))
+                        }
+                    }
+                }
+                if edge.count==2 && edge.allSatisfy({ $0.x>=7 && $0.x<=17 && $0.y>field.floor(at:$0.x)+0.012 }) {
+                    let a=edge[0],b=edge[1]
+                    mesh.quad(a,b,V3(b.x,b.y,-0.75),V3(a.x,a.y,-0.75),tint(0x9ce8e5,0.28),V3(0,1,0))
+                    mesh.line(a+V3(0,0,0.01),b+V3(0,0,0.01),width:0.014,color:tint(0xdcfff4,0.8))
+                }
+            }
+        } }
+        for (i,p) in fluid.particles.enumerated() where i%29==0 && hypot(p.velocity.x,p.velocity.y)>0.7 {
+            mesh.line(V3(p.position.x,p.position.y,z+0.015),V3(p.position.x+p.velocity.x*0.025,p.position.y+p.velocity.y*0.025,z+0.015),width:0.009,color:tint(0xc7f5f1,0.22))
+        }
+        return mesh
     }
     static func crate()->Mesh {
         var m=Mesh();m.box(center:V3(0,0,0),size:V3(1.25,1.25,1),color:tint(0xad8860))

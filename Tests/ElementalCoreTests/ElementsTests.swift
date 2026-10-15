@@ -3,10 +3,10 @@ import XCTest
 
 final class ElementsTests:XCTestCase {
     private func advance(_ s:Simulation,_ seconds:Float) { for _ in 0..<Int(seconds/Simulation.timestep) { s.step() } }
-    func testFiveMaterialsHaveHealthManaAndExplicitPassiveSlot() {
+    func testFiveMaterialsStartWithAssignedPassiveHealthAndMana() {
         for form in ElementForm.allCases {
             let s=Simulation(form:form)
-            XCTAssertEqual(s.health,100);XCTAssertEqual(s.mana,100);XCTAssertFalse(s.passiveEquipped)
+            XCTAssertEqual(s.health,100);XCTAssertEqual(s.mana,100);XCTAssertTrue(s.passiveEquipped)
             s.equipPassive(true);advance(s,1)
             XCTAssertTrue(s.passiveWorking);XCTAssertLessThan(s.mana,100)
             s.equipPassive(false);advance(s,1);XCTAssertEqual(s.mana,100,accuracy:0.1)
@@ -27,16 +27,18 @@ final class ElementsTests:XCTestCase {
         s.movement = -1;advance(s,12)
         XCTAssertLessThan(s.cube.position.x,7,"\(s.cube.position)");XCTAssertGreaterThan(s.cube.position.y,0)
     }
-    func testHydrostaticHeadDoesNotDrainIntoSolidPillar() {
+    func testPhaseUpdatesAndEvaporationConserveRepresentedWater() {
         let s=Simulation(),field=s.waterField,initial=field.volume
         for _ in 0..<300 { field.step(dt:0.1,coldSource:nil,heatSource:nil,occupied:[]) }
         XCTAssertEqual(field.surface(at:10),-0.72,accuracy:0.001)
         XCTAssertEqual(field.surface(at:14),-0.72,accuracy:0.001)
         XCTAssertEqual(field.surface(at:12),-0.72,accuracy:0.001)
         XCTAssertEqual(field.volume,initial,accuracy:0.001)
+        XCTAssertEqual(field.representedVolume,initial,accuracy:0.0001)
         _=field.evaporate(around:Vec(10,-1),amount:1)
         XCTAssertEqual(field.surface(at:10),field.surface(at:14),accuracy:0.001)
         XCTAssertEqual(field.volume+field.evaporated,initial,accuracy:0.001)
+        XCTAssertEqual(field.representedVolume,field.volume,accuracy:0.0001)
     }
     func testBurnedCrateLosesItsCollider() {
         let s=Simulation(form:.fire);s.wind=0;s.equipPassive(true);s.placeCube(Vec(3.9,0.7));advance(s,10)
@@ -44,7 +46,7 @@ final class ElementsTests:XCTestCase {
         XCTAssertFalse(s.intersectsSolid(at:Vec(5.1,0.7)))
     }
     func testAirSlidesWithoutRollingAndSkimsWater() {
-        let s=Simulation(form:.air);s.wind=0;s.equipPassive(true);s.placeCube(Vec(10,0.1));advance(s,3)
+        let s=Simulation(form:.air);s.wind=0;s.equipPassive(true);s.placeCube(Vec(9.4,0.1));advance(s,4)
         XCTAssertLessThan(s.wetness,0.1);XCTAssertEqual(s.cube.position.y,s.waterLevel+0.76,accuracy:0.2)
         s.movement=1;advance(s,1)
         XCTAssertGreaterThan(s.cube.position.x,11)
@@ -52,9 +54,9 @@ final class ElementsTests:XCTestCase {
         XCTAssertTrue(s.jump(Vec(0,7),buffered:false))
     }
     func testNoPassiveMeansNoEnvironmentalFreezeOrBurn() {
-        let ice=Simulation();ice.placeCube(Vec(10,-1));advance(ice,3)
+        let ice=Simulation();ice.equipPassive(false);ice.placeCube(Vec(10,-1));advance(ice,3)
         XCTAssertTrue(ice.iceCells.isEmpty)
-        let fire=Simulation(form:.fire);advance(fire,3)
+        let fire=Simulation(form:.fire);fire.equipPassive(false);advance(fire,3)
         XCTAssertTrue(fire.patches.allSatisfy { $0.fuel==1 });XCTAssertEqual(fire.crateFuel,1)
     }
     func testFireConsumesLocalFuelAndLeavesPersistentChar() {
@@ -81,10 +83,10 @@ final class ElementsTests:XCTestCase {
         XCTAssertLessThan(s.waterField.volume,initial-1);XCTAssertLessThan(s.health,100)
         XCTAssertEqual(s.waterField.volume+s.waterField.evaporated,initial,accuracy:0.001)
         // Follow the receding surface into both sides of the connected basin.
-        for i in 0..<80 {
+        for _ in 0..<80 {
             if s.waterField.volume<0.0001 { break }
-            let x:Float=i%2==0 ? 10 : 14
-            s.placeCube(Vec(x,s.waterField.surface(at:x)-0.2));advance(s,0.5)
+            guard let marker=s.waterField.liquid.particles.first else { break }
+            s.placeCube(marker.position);advance(s,0.5)
         }
         XCTAssertLessThan(s.waterField.volume,0.0001)
         XCTAssertGreaterThan(s.health,0)

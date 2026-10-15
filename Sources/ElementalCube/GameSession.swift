@@ -10,7 +10,6 @@ final class GameSession: ObservableObject {
     @Published var energy:Float = 100
     @Published var health:Float = 100
     @Published var form:ElementForm = .ice
-    @Published var passiveEquipped=false
     @Published var passiveWorking=false
     @Published var abilityInfo=false
     @Published var forms=false
@@ -46,12 +45,12 @@ final class GameSession: ObservableObject {
         let args=ProcessInfo.processInfo.arguments
         visualPreview=args.contains { $0.hasPrefix("--preview-") }
         let furPreview=args.contains { $0.hasPrefix("--preview-fur-") }
-        let previewForm=furPreview ? ElementForm.ice : ElementForm.allCases.first { args.contains("--preview-"+$0.rawValue) }
+        let physicsPreview=args.contains { $0.hasPrefix("--preview-physics-") }
+        let previewForm=physicsPreview ? (args.contains("--preview-physics-crate") ? ElementForm.water : (args.contains("--preview-physics-bridge") ? .stone : .ice)) : (furPreview ? ElementForm.ice : ElementForm.allCases.first { args.contains("--preview-"+$0.rawValue) })
         form=previewForm ?? ElementForm(rawValue:UserDefaults.standard.string(forKey:"elementalcube.form") ?? "ice") ?? .ice
         simulation=Simulation(form:form)
         let storedWind=UserDefaults.standard.object(forKey:"elementalcube.wind") as? Double ?? 1
         wind=storedWind.isFinite ? max(-3,min(3,storedWind)) : 1;simulation.wind=Float(wind)
-        if !visualPreview { simulation.equipPassive(UserDefaults.standard.bool(forKey:"elementalcube.passive."+form.rawValue)) }
         let stored = visualPreview ? PlaygroundSettings() : settingsStore.load()
         gravity=stored.gravity;power=stored.power;zoom=stored.zoom;water=stored.water
         inverted=stored.inverted;debug=stored.debug;haptics=stored.haptics
@@ -59,7 +58,17 @@ final class GameSession: ObservableObject {
         // Reproducible local QA scenes, never enabled by a normal launch.
         if visualPreview {
             simulation.equipPassive(true)
-            if furPreview {
+            if physicsPreview {
+                simulation.wind=0;zoom=1.1
+                if args.contains("--preview-physics-crate") {
+                    simulation.placeCube(Vec(11.1,-0.2));simulation.placeCrate(Vec(9.8,0.8),angle:0.35,velocity:Vec(1.8,-1))
+                    for _ in 0..<130 { simulation.step() }
+                } else if args.contains("--preview-physics-bridge") {
+                    simulation.placeCube(Vec(12,1.2));for _ in 0..<240 { simulation.step() }
+                } else {
+                    simulation.placeCube(Vec(9.3,0.5));for _ in 0..<100 { simulation.step() }
+                }
+            } else if furPreview {
                 zoom=1.8
                 simulation.wind=args.contains("--preview-fur-wind") || args.contains("--preview-fur-live") ? 3 : 0.5
                 if args.contains("--preview-fur-wet") {
@@ -82,7 +91,7 @@ final class GameSession: ObservableObject {
             }
         }
         abilityInfo=args.contains("--preview-ability");forms=args.contains("--preview-forms")
-        if args.contains("--preview-fur-live") { visualPreview=false }
+        if args.contains("--preview-fur-live") || args.contains("--preview-physics-live") { visualPreview=false }
         refresh()
     }
     private func persistSettings() {
@@ -120,7 +129,7 @@ final class GameSession: ObservableObject {
     func releaseAim() {
         guard aiming else { return }; let v=aimImpulse
         let accepted=simulation.jump(v)
-        if !accepted && simulation.inWater && simulation.energy<6 { hint="Для толчка нужно 6 маны. Сними пассивную способность, чтобы восстановить запас." }
+        if !accepted && simulation.inWater && simulation.energy<6 { hint="Для толчка нужно 6 маны. Дождись восстановления запаса." }
         else if !accepted { hint="Для следующего прыжка нужна опора или контакт с водой." }
         else if simulation.inWater { hint="В воде: потяни в сторону берега и отпусти, чтобы выбраться." }
         else { hint="Попробуй короткий прыжок на ящик или длинный — к опоре в воде." }
@@ -130,19 +139,13 @@ final class GameSession: ObservableObject {
     func cancelAim() { aiming=false;aim = .zero;movementInput.clear();applyMovement() }
     func tapJump() { guard !suspended else { return };_ = simulation.jump(Vec(0,7.2));deliverFeedback() }
     func showAbility() { guard !suspended else { return };cancelAim();abilityInfo=true }
-    func equipPassive(_ enabled:Bool) {
-        simulation.equipPassive(enabled)
-        UserDefaults.standard.set(enabled,forKey:"elementalcube.passive."+form.rawValue)
-        refresh()
-    }
     func selectForm(_ selection:ElementForm) {
         form=selection;UserDefaults.standard.set(form.rawValue,forKey:"elementalcube.form")
         reset();forms=false
     }
     func reset() {
         simulation=Simulation(form:form);simulation.gravity=Float(gravity);simulation.jumpScale=Float(power);simulation.waterEnabled=water;simulation.wind=Float(wind)
-        simulation.equipPassive(UserDefaults.standard.bool(forKey:"elementalcube.passive."+form.rawValue))
-        visualPreview=false;cancelAim();hint="Новая попытка. Нажми на слот, чтобы экипировать пассивную способность.";refresh()
+        visualPreview=false;cancelAim();hint="Новая попытка. \(form.ability) действует автоматически.";refresh()
     }
     func tick() {
         guard !suspended && !visualPreview else { return }
@@ -152,6 +155,6 @@ final class GameSession: ObservableObject {
     func refresh() {
         shards=simulation.collected.count;energy=simulation.energy;wetness=simulation.wetness;grounded=simulation.cube.grounded
         inWater=simulation.inWater;won=simulation.won;jumps=simulation.jumps
-        health=simulation.health;dead=simulation.dead;passiveEquipped=simulation.passiveEquipped;passiveWorking=simulation.passiveWorking;deepRelic=simulation.deepRelic
+        health=simulation.health;dead=simulation.dead;passiveWorking=simulation.passiveWorking;deepRelic=simulation.deepRelic
     }
 }
