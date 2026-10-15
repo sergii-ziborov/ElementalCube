@@ -20,9 +20,12 @@ private struct SkillPalette {
 /// so the diagram remains usable with VoiceOver and without motion effects.
 struct MonsterSkillTree:View {
     var monster:MonsterRecord
+    var wetness:Double=0
+    var health:Double=100
+    var burning:Double=0
     var select:(SkillNode)->Void
     private var palette:SkillPalette { SkillPalette(monster.form) }
-    private let rows:[[SkillNode.Kind]] = [[.jump,.passive],[.momentum,.mastery],[.control,.affinity]]
+    private let rows:[[SkillNode.Kind?]] = [[.jump,.passive],[.momentum,.mastery],[.doubleJump,.affinity],[.control,nil]]
     var body:some View {
         VStack(spacing:0) {
             HStack(alignment:.top) {
@@ -44,31 +47,32 @@ struct MonsterSkillTree:View {
                     ForEach(0..<2,id:\.self) { branch in
                         let x=w*(branch==0 ? 0.25 : 0.75)
                         connection(from:CGPoint(x:w/2,y:78),to:CGPoint(x:x,y:108),active:true)
-                        ForEach(0..<2,id:\.self) { row in
-                            let kind=rows[row+1][branch]
-                            let node=monster.tree.first { $0.kind==kind }!
+                        ForEach(0..<rows.count-1,id:\.self) { row in
+                            if let kind=rows[row+1][branch],let node=monster.tree.first(where:{ $0.kind==kind }) {
                             // Bow outwards around the labels, then back into the next node.
                             branchConnection(x:x,y:CGFloat(138+row*126),side:branch==0 ? -1 : 1,
                                              active:monster.learned.contains(node.kind),available:monster.canLearn(node))
+                            }
                         }
                     }.allowsHitTesting(false).accessibilityHidden(true)
                     ZStack {
                         Circle().stroke(palette.accent.opacity(0.16),lineWidth:1).frame(width:88,height:88)
                         Circle().stroke(palette.accent.opacity(0.35),lineWidth:1).frame(width:73,height:73)
                         Circle().fill(palette.accent.opacity(0.12)).frame(width:64,height:64)
-                        MonsterPortrait(form:monster.form).frame(width:52,height:58)
-                    }.position(x:w/2,y:47).accessibilityHidden(true)
-                    ForEach(0..<3,id:\.self) { row in
+                        MonsterPortrait(form:monster.form,wetness:wetness,health:health,burning:burning,celebration:monster.learned.count,interactive:true).frame(width:52,height:58).accessibilityIdentifier("portrait.tree")
+                    }.position(x:w/2,y:47)
+                    ForEach(0..<rows.count,id:\.self) { row in
                         ForEach(0..<2,id:\.self) { branch in
-                            let node=monster.tree.first { $0.kind==rows[row][branch] }!
+                            if let kind=rows[row][branch],let node=monster.tree.first(where:{ $0.kind==kind }) {
                             skill(node,width:w*0.44)
                                 .position(x:w*(branch==0 ? 0.25 : 0.75),y:CGFloat(138+row*126)+28)
+                            }
                         }
                     }
                     Text("ДВИЖЕНИЕ").position(x:w*0.22,y:77)
                     Text("СТИХИЯ").position(x:w*0.78,y:77)
                 }.font(.system(size:8,weight:.semibold)).tracking(0.8)
-            }.frame(height:500)
+            }.frame(height:626)
             HStack(spacing:16) {
                 legend("Изучено",symbol:"checkmark.circle.fill",color:palette.accent)
                 legend("Доступно",symbol:"plus.circle",color:palette.paper)

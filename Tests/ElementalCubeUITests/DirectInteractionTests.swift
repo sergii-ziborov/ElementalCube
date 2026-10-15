@@ -33,6 +33,12 @@ final class DirectInteractionTests:XCTestCase {
         sleep(2);XCTAssertEqual(value("jumps"),"1")
     }
     func testDragCubeJumpsInTheDraggedDirectionAndRotates() {
+        app.buttons["inventory.open"].tap()
+        let directed=app.buttons["skill.jump"]
+        XCTAssertTrue(directed.waitForExistence(timeout:5))
+        if !directed.isHittable { app.swipeUp() };directed.tap()
+        app.buttons["skill.learn"].tap()
+        app.buttons["inventory.close"].tap()
         let start=Double(value("x"))!
         coordinate(.zero).press(forDuration:0.1,thenDragTo:coordinate(CGVector(dx:75,dy:-125)))
         XCTAssertEqual(value("jumps"),"1")
@@ -41,6 +47,11 @@ final class DirectInteractionTests:XCTestCase {
         XCTAssertEqual(value("aiming"),"0")
         XCTAssertTrue(cube.exists)
         let image=XCTAttachment(screenshot:app.screenshot());image.name="iPhone landscape direct controls";image.lifetime = .keepAlways;add(image)
+    }
+    func testDirectedDragIsLockedUntilLearnedButTapStillJumps() {
+        coordinate(.zero).press(forDuration:0.1,thenDragTo:coordinate(CGVector(dx:75,dy:-125)))
+        XCTAssertEqual(value("jumps"),"0")
+        cube.tap();XCTAssertEqual(value("jumps"),"1")
     }
     func testPersonalTreeAndEquipmentChangeTheSelectedMonster() {
         app.buttons["inventory.open"].tap()

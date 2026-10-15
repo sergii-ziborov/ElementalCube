@@ -25,3 +25,4 @@ void ec_drive(ECWorld *w, int id, float input, float grip, bool swimming);
 int ec_slope(ECWorld *w, float start, float end, bool right);
 bool ec_blocked(ECWorld *w, int id, float x, float y);
 bool ec_space_clear(ECWorld *w, float x, float y, float width, float height);
+bool ec_space_clear_ignoring(ECWorld *w, int id, float x, float y, float width, float height);

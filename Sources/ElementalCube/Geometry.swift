@@ -242,7 +242,11 @@ enum Geometry {
             let col=index-skinStart,top=y+hh
             func bottom(_ neighbour:Int)->Float {
                 let i=skinStart+neighbour
-                if neighbour>=0 && neighbour<field.columns && field.ice[i].solid { return (y-hh+field.ice[i].center.y-field.ice[i].height/2)/2 }
+                if neighbour>=0 && neighbour<field.columns && field.ice[i].solid {
+                    let n=field.ice[i]
+                    let gap=abs(n.center.x-x)-(n.size+c.size)/2
+                    if gap<0.015 { return (y-hh+n.center.y-n.height/2)/2 }
+                }
                 return y-hh+min(0.06,c.height*0.2)
             }
             let leftBottom=bottom(col-1),rightBottom=bottom(col+1),z:Float=1.33
@@ -252,11 +256,25 @@ enum Geometry {
             mesh.quad(V3(x-h,top,z),V3(x+h,top,z),V3(x+h,top,1.0),V3(x-h,top,1.0),tint(0xd8f8ff,0.94),V3(0,1,0))
             mesh.line(V3(x-h,top,z+0.01),V3(x+h,top,z+0.01),width:0.024,color:tint(0xf0feff))
             mesh.line(V3(x-h,leftBottom,z+0.01),V3(x+h,rightBottom,z+0.01),width:0.009,color:tint(0x9fe7f5,0.7))
-            // Stable branching inclusions, not a border around every solver cell.
-            if col%3==0 && c.height>0.2 {
-                let start=V3(x-0.12,top-0.04,z+0.015),end=V3(x+0.09,top-c.height*0.72,z+0.015)
-                mesh.line(start,end,width:0.009,color:tint(0xecfdff,0.6))
-                mesh.line(start+(end-start)*0.5,start+(end-start)*0.5+V3(0.11,0.045,0),width:0.007,color:tint(0xecfdff,0.45))
+            // Fine, stationary dendrites grow with thickness. Partial-width cells
+            // expose a tapered crystalline front instead of a flashing square.
+            let veinAlpha=min(0.62,max(0,(c.height-0.12)*1.8))
+            let start=V3(x-h*0.55,top-0.025,z+0.015)
+            let end=V3(x+h*0.2,top-c.height*0.78,z+0.015)
+            mesh.line(start,end,width:0.007,color:tint(0xf1feff,veinAlpha))
+            for branch in 1...3 {
+                let fraction=Float(branch)*0.22,root=start+(end-start)*fraction
+                let side:Float=branch%2==0 ? -1 : 1
+                mesh.line(root,root+V3(side*h*0.6,c.height*0.13,0),width:0.005,color:tint(0xe2fcff,veinAlpha*0.7))
+            }
+            if c.size<field.cell-0.015 {
+                for side:Float in [-1,1] {
+                    let xx=x+side*h
+                    for j in 0..<3 {
+                        let yy=top-Float(j+1)*c.height/4
+                        mesh.line(V3(xx,yy,z+0.01),V3(xx+side*0.025,yy-0.035,z+0.01),width:0.006,color:tint(0xc7f4ff,0.48))
+                    }
+                }
             }
         }
         return mesh
@@ -312,8 +330,21 @@ enum Geometry {
                 }
             }
         } }
-        for (i,p) in fluid.particles.enumerated() where i%29==0 && hypot(p.velocity.x,p.velocity.y)>0.7 {
+        for (i,p) in fluid.particles.enumerated() where !p.isSpray && i%29==0 && hypot(p.velocity.x,p.velocity.y)>0.7 {
             mesh.line(V3(p.position.x,p.position.y,z+0.015),V3(p.position.x+p.velocity.x*0.025,p.position.y+p.velocity.y*0.025,z+0.015),width:0.009,color:tint(0xc7f5f1,0.22))
+        }
+        for p in fluid.particles where p.isSpray {
+            let speed=max(0.01,hypot(p.velocity.x,p.velocity.y)),r=max(0.018,min(0.045,sqrt(p.volume/Float.pi)*0.65))
+            let center=V3(p.position.x,p.position.y,1.50),tail=center-V3(p.velocity.x/speed,p.velocity.y/speed,0)*min(0.15,speed*0.018)
+            mesh.line(tail,center,width:r*1.15,color:tint(0x86dce9,0.6))
+            mesh.ellipse(center:center,rx:r,ry:r*1.3,color:tint(0xc6f6fc,0.83),segments:10)
+            mesh.ellipse(center:center+V3(-r*0.25,r*0.3,0.005),rx:r*0.3,ry:r*0.42,color:tint(0xf2ffff,0.9),segments:7)
+        }
+        let frozen=field.frozenBodies
+        for f in fluid.foam where !bodies.contains(where:{ $0.contains(f.position,margin:-0.01) }) && !frozen.contains(where:{ $0.contains(f.position,margin:0.02) }) {
+            let alpha=min(1,f.life*1.6)*f.strength
+            mesh.ellipse(center:V3(f.position.x,f.position.y,1.49),rx:0.037+f.strength*0.035,ry:0.014,color:tint(0xf0ffff,alpha*0.8),segments:9)
+            mesh.ellipse(center:V3(f.position.x+0.045,f.position.y+0.012,1.49),rx:0.017,ry:0.011,color:tint(0xd2f6f6,alpha*0.55),segments:7)
         }
         return mesh
     }

@@ -21,6 +21,7 @@ final class GameSession: ObservableObject {
     @Published var dead=false
     @Published var deepRelic=false
     var suspended:Bool { paused || settings || abilityInfo || forms || dead || aiming }
+    @Published var burning:Float = 0
     @Published var wetness:Float = 0
     @Published var grounded = true
     @Published var inWater = false
@@ -31,7 +32,7 @@ final class GameSession: ObservableObject {
     @Published var settings = false
     @Published var debug = false { didSet { persistSettings() } }
     @Published var paused = false
-    @Published var hint = "Тап по кубику — прыжок. Карта — движение. Потяни кубика — прицелься." { didSet { hintUntil=simulation.time+3 } }
+    @Published var hint = "Тап по кубику — прыжок. Карта — движение. Новые приёмы — в дереве навыков." { didSet { hintUntil=simulation.time+3 } }
     var hintUntil:Float = 0
     @Published var gravity:Double = 18 { didSet { simulation.gravity=Float(gravity);persistSettings() } }
     @Published var power:Double = 1 { didSet { persistSettings() } }
@@ -56,6 +57,7 @@ final class GameSession: ObservableObject {
         form=previewForm ?? ElementForm(rawValue:UserDefaults.standard.string(forKey:"elementalcube.form") ?? "ice") ?? .ice
         if !visualPreview && !args.contains("--ui-testing") { inventory=inventoryStore.load(selectedForm:form);form=inventory.selected.form }
         else { if args.contains("--ui-testing") { form = .ice };inventory=MonsterInventory(selectedForm:form) }
+        if args.contains("--preview-gesture"),let node=inventory.selected.tree.first(where:{ $0.kind == .jump }) { _=inventory.learn(node,monsterID:inventory.selectedID) }
         simulation=Simulation(form:form);simulation.applySkills(of:inventory.selected)
         let storedWind=UserDefaults.standard.object(forKey:"elementalcube.wind") as? Double ?? 1
         wind=storedWind.isFinite ? max(-3,min(3,storedWind)) : 1;simulation.wind=Float(wind)
@@ -72,6 +74,15 @@ final class GameSession: ObservableObject {
                 simulation.placeCube(Vec(41,-12.3));for _ in 0..<120 { simulation.step() }
             } else if args.contains("--preview-gesture") || args.contains("--preview-skills") || args.contains("--preview-equipment") {
                 for _ in 0..<120 { simulation.step() }
+            } else if args.contains("--preview-splash") {
+                simulation.wind=0;zoom=0.9
+                simulation.placeCube(Vec(9.1,0.1))
+                simulation.placeCrate(Vec(10,1.2),angle:0.1,velocity:Vec(0,-5))
+                // Stop a real coupled impact at its first visible spray crest.
+                for _ in 0..<200 {
+                    simulation.step()
+                    if simulation.waterField.liquid.particles.contains(where:{ $0.isSpray && $0.position.y>simulation.waterField.liquid.surfaceHeight(at:$0.position.x)+0.36 }) { break }
+                }
             } else if physicsPreview {
                 simulation.wind=0;zoom=1.1
                 if args.contains("--preview-physics-crate") {
@@ -128,7 +139,8 @@ final class GameSession: ObservableObject {
     }
     private func deliverFeedback() { feedback.play(simulation.takeFeedback(),enabled:haptics && !visualPreview) }
     var aimImpulse:Vec {
-        AimPlanner.directImpulse(dx:Float(aim.width),dy:Float(aim.height),maximumSpeed:simulation.jumpSkill.maximumSpeed,sensitivity:Float(power))
+        guard simulation.directionalJumpUnlocked else { return Vec(0,0) }
+        return AimPlanner.directImpulse(dx:Float(aim.width),dy:Float(aim.height),maximumSpeed:simulation.jumpSkill.maximumSpeed,sensitivity:Float(power))
     }
     var launchVelocity:Vec { simulation.launchVelocity(for:aimImpulse) }
     func pointerBegan(_ point:CGPoint) {
@@ -154,13 +166,15 @@ final class GameSession: ObservableObject {
         let impulse:Vec
         switch release {
         case .tapJump:impulse=Vec(0,7.2)
-        case .aim:impulse=aimedImpulse
+        case .aim:
+            impulse=aimedImpulse
+            if !simulation.directionalJumpUnlocked { hint="Направленный прыжок нужно изучить в дереве. Короткий тап — обычный прыжок." }
         case .none:impulse=Vec(0,0)
         }
         if hypot(impulse.x,impulse.y)>0.05 {
-            let accepted=simulation.jump(impulse,buffered:false)
-            if !accepted { hint="Для толчка нужна опора, контакт с водой и запас маны." }
-            else { hint=release == .tapJump ? "Обычный прыжок. Потяни кубика, чтобы выбрать направление и силу." : "Чем дальше тянешь, тем сильнее прыжок. Предел задаёт навык куба." }
+            let accepted=simulation.performJump(impulse,directed:release != .tapJump)
+            if !accepted { hint=simulation.nextJumpIsAirJump ? "Двойной прыжок нужно изучить; дополнительный толчок стоит 10 маны." : "Для приёма нужны опора и запас маны." }
+            else { hint=release == .tapJump ? (simulation.directionalJumpUnlocked ? "Обычный прыжок. Потяни кубика, чтобы выбрать направление и силу." : "Обычный прыжок. Направленный и двойной открываются в дереве навыков.") : "Чем дальше тянешь, тем сильнее прыжок. Предел задаёт навык куба." }
             deliverFeedback();refresh()
         }
         applyMovement()
@@ -180,7 +194,7 @@ final class GameSession: ObservableObject {
         if moving != 0 { direction=moving<0 ? -1 : 1 }
     }
     func cancelAim() { aiming=false;aim = .zero;directControl.cancel();movementInput.clear();applyMovement() }
-    func tapJump() { guard !suspended else { return };_ = simulation.jump(Vec(0,7.2));deliverFeedback() }
+    func tapJump() { guard !suspended else { return };_ = simulation.performJump();deliverFeedback() }
     func showAbility() { guard !suspended else { return };cancelAim();abilityInfo=true }
     func selectMonster(_ id:UUID) {
         saveInventory()
@@ -211,7 +225,7 @@ final class GameSession: ObservableObject {
         if publishTime > 0.06 { publishTime=0;refresh() }
     }
     func refresh() {
-        shards=simulation.collected.count;energy=simulation.energy;wetness=simulation.wetness;grounded=simulation.cube.grounded
+        shards=simulation.collected.count;energy=simulation.energy;burning=simulation.burning;wetness=simulation.wetness;grounded=simulation.cube.grounded
         inWater=simulation.inWater;won=simulation.won;jumps=simulation.jumps
         let changed=inventory.selected.crystals.union(simulation.collected) != inventory.selected.crystals || (simulation.deepRelic && !inventory.selected.deepRelic)
         inventory.recordFinds(crystals:simulation.collected,relic:simulation.deepRelic)

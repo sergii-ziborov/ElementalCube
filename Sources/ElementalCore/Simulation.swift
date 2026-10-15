@@ -30,6 +30,9 @@ public final class Simulation {
     public private(set) var crate:BodyState!
     public private(set) var bridge:[BridgeSection]=[]
     public let bridgeAnchors=[Vec(6.7,-0.005),Vec(17.3,-0.005)]
+    public var fireSources:[FireSource]=WorldLayout.campfires.map { FireSource($0,radius:0.95) }
+    public private(set) var burning:Float=0
+    private var ignitionHeat:Float=0,burnTime:Float=0,burnFeedbackClock:Float=0
     public private(set) var crateExists=true
     public private(set) var crateFuel:Float=1
     public private(set) var crateFrost:Float=0
@@ -62,13 +65,16 @@ public final class Simulation {
     private var randomSeed:UInt64=8251
     private var feedback:[SimulationFeedback]=[]
     private var ticks=0
-    private var manaExhausted=false
+    public private(set) var directionalJumpUnlocked=false,doubleJumpUnlocked=false
+    private var airJumpUsed=false
+    public private(set) var airControlMultiplier:Float=1
     private var lastSupportTime:Float = -10
     public var gravity:Float=18 { didSet { ec_gravity(world,gravity) } }
     public var waterEnabled=true
     public var manaCostMultiplier:Float=1,landingDamageMultiplier:Float=1,fireDamageMultiplier:Float=1
     public func applySkills(of monster:MonsterRecord) {
         guard monster.form==form else { return }
+        directionalJumpUnlocked=monster.learned.contains(.jump);doubleJumpUnlocked=monster.learned.contains(.doubleJump);airControlMultiplier=monster.airControlMultiplier
         jumpSkill=monster.jumpSkill;waterField.conductivity=monster.conductivity
         manaCostMultiplier=monster.manaMultiplier;landingDamageMultiplier=monster.landingDamageMultiplier;fireDamageMultiplier=monster.fireDamageMultiplier
     }
@@ -76,7 +82,10 @@ public final class Simulation {
     public let waterLeft:Float=7,waterRight:Float=17
     public var waterLevel:Float { waterField.surface(at:cube.position.x) }
     public var inWater:Bool { waterEnabled && immersion(cube,size:1.12)>0.02 }
-    public var canLaunch:Bool { !dead && (cube.grounded || time-lastSupportTime<0.1 || inWater || (form == .air && passiveWorking && hovering)) && cooldown<=0 }
+    private var hasJumpSupport:Bool { cube.grounded || time-lastSupportTime<0.1 || inWater || (form == .air && passiveWorking && hovering) }
+    public var canLaunch:Bool { !dead && cooldown<=0 && (hasJumpSupport || (doubleJumpUnlocked && !airJumpUsed)) }
+    public var nextJumpIsAirJump:Bool { !hasJumpSupport }
+    public var nextJumpManaCost:Float { (nextJumpIsAirJump ? 10 : 6)*manaCostMultiplier }
     public var hovering:Bool {
         guard form == .air else { return false }
         return abs(cube.position.y-supportHeight(at:cube.position.x)-0.76)<0.35 && abs(cube.velocity.y)<1.5
@@ -138,7 +147,7 @@ public final class Simulation {
     }
     deinit { ec_destroy(world) }
     /// Skill-loadout assignment. There is deliberately no gameplay-screen toggle.
-    public func equipPassive(_ enabled:Bool) { passiveEquipped=enabled;passiveWorking=enabled && !manaExhausted && mana>0.1 && !dead }
+    public func equipPassive(_ enabled:Bool) { passiveEquipped=enabled;passiveWorking=enabled && !dead }
     public func takeFeedback()->[SimulationFeedback] { let events=feedback;feedback.removeAll(keepingCapacity:true);return events }
     private func record(_ event:SimulationFeedback) { if feedback.count>=16 { feedback.removeFirst() };feedback.append(event) }
     private func state(_ id:Int32)->BodyState {
@@ -190,20 +199,29 @@ public final class Simulation {
         let weight:Float=form == .stone && inWater ? 0.45 : 1-wetness*0.1
         return Vec(cube.velocity.x+impulse.x,cube.velocity.y+impulse.y*weight)
     }
+    /// Player-facing action gate. A basic jump is free; learned techniques use mana.
+    @discardableResult public func performJump(_ request:Vec=Vec(0,7.2),directed:Bool=false)->Bool {
+        guard !directed || directionalJumpUnlocked else { return false }
+        let cost:Float=nextJumpIsAirJump ? 10*manaCostMultiplier : (directed ? 6*manaCostMultiplier : 0)
+        guard canLaunch,mana+0.0001>=cost else { return false }
+        guard jump(directed ? request : Vec(0,7.2),buffered:false) else { return false }
+        mana=max(0,mana-cost);return true
+    }
+    /// Physical launch primitive; gesture input must use performJump for skill/cost checks.
     @discardableResult public func jump(_ request:Vec,buffered:Bool=true)->Bool {
         guard request.x.isFinite,request.y.isFinite,!dead else { return false }
         guard canLaunch else { if buffered { buffer=(request,0.12) };return false }
         let swimming=inWater && !cube.grounded
         if swimming && form == .stone { return false }
-        if swimming && mana<6 { return false }
+        if !hasJumpSupport { airJumpUsed=true }
         let velocity=launchVelocity(for:request)
         ec_impulse(world,cubeID,velocity.x-cube.velocity.x,velocity.y-cube.velocity.y)
         lastSupportTime = -10;cooldown=swimming ? 0.4 : 0.16
-        if swimming { mana-=6;disturb(cube.position.x,amount:1);emit(Vec(cube.position.x,waterLevel),kind:1,count:24) }
+        if swimming { waterField.liquid.addFoam(at:Vec(cube.position.x,waterLevel),strength:0.8) }
         squash = form == .stone ? 0 : -0.28;jumps+=1;buffer=nil;mood = .focused;emotionTime=0.3
         record(.jumped);emit(cube.position,kind:0,count:12);sync();return true
     }
-    public func resetCube() { ec_teleport(world,cubeID,2.7,0.75);wetness=0;cooldown=0;buffer=nil;won=false;health=100;mana=100;sync();updateFur() }
+    public func resetCube() { ec_teleport(world,cubeID,2.7,0.75);wetness=0;cooldown=0;buffer=nil;airJumpUsed=false;burning=0;burnTime=0;ignitionHeat=0;won=false;health=100;mana=100;sync();updateFur() }
     public func placeCube(_ p:Vec) { guard p.x.isFinite,p.y.isFinite else { return };ec_teleport(world,cubeID,p.x,p.y);lastSupportTime = -10;sync();updateFur() }
     public func placeCrate(_ p:Vec,angle:Float=0,velocity:Vec=Vec(0,0),omega:Float=0) {
         guard crateExists,p.x.isFinite,p.y.isFinite,angle.isFinite else { return }
@@ -217,11 +235,8 @@ public final class Simulation {
     public func step() {
         let dt=Self.timestep;time+=dt;ticks+=1;cooldown=max(0,cooldown-dt)
         let old=cube!,wasInWater=inWater
-        if mana<=0.1 { manaExhausted=true }
-        if mana>=20 { manaExhausted=false }
-        passiveWorking=passiveEquipped && !manaExhausted && !dead
-        mana=min(100,mana+dt*(passiveWorking ? -form.manaCost*manaCostMultiplier : 4))
-        mana=max(0,mana)
+        passiveWorking=passiveEquipped && !dead
+        mana=min(100,mana+dt*4)
         if waterEnabled {
             waterField.advanceFluid(dt:dt,gravity:gravity,bodies:fluidBodies)
             if passiveEquipped && !dead && form == .ice {
@@ -235,13 +250,13 @@ public final class Simulation {
         shakeTime=max(0,shakeTime-dt);shakeCooldown=max(0,shakeCooldown-dt)
         if !dead {
             if form == .air {
-                ec_drive(world,cubeID,movement,0.85,true)
+                ec_drive(world,cubeID,movement,0.85*airControlMultiplier,true)
                 ec_force(world,cubeID,windVelocity*cube.mass*0.5,0)
                 if passiveWorking && cooldown<=0 {
                     let height=max(supportHeight(at:cube.position.x),supportHeight(at:cube.position.x+movement*0.9))
                     let gap=cube.position.y-height-0.76
                     if gap<0.8 && cube.velocity.y<2 {
-                        let lift=max(0,min(gravity*3,gravity-gap*75-cube.velocity.y*12))
+                        let lift=max(0,min(gravity*3*airControlMultiplier,gravity-gap*75*airControlMultiplier-cube.velocity.y*12))
                         ec_force(world,cubeID,0,cube.mass*lift)
                     }
                 }
@@ -255,11 +270,11 @@ public final class Simulation {
         }
         if waterEnabled { applyLiquidForces(dt:dt) }
         if form != .air { ec_force(world,cubeID,windVelocity*cube.mass*0.035,0) }
-        ec_step(world,dt);sync();if cube.grounded { lastSupportTime=time }
+        ec_step(world,dt);sync();if cube.grounded { lastSupportTime=time;if cooldown<=0 && cube.velocity.y<0.3 { airJumpUsed=false } };if inWater { airJumpUsed=false }
         wetness=inWater ? min(1,wetness+dt*2) : max(0,wetness-dt*0.065)
         if form == .fire { wetness=0 }
         if !wasInWater && inWater {
-            disturb(cube.position.x,amount:min(1.5,abs(old.velocity.y)*0.13));emit(Vec(cube.position.x,waterLevel),kind:1,count:28)
+            waterField.liquid.addFoam(at:Vec(cube.position.x,waterLevel),strength:min(1,abs(old.velocity.y)*0.1))
             record(.enteredWater(strength:min(1,abs(old.velocity.y)/10)));mood = .displeased;emotionTime=3
         }
         if cube.grounded {
@@ -289,6 +304,7 @@ public final class Simulation {
         if emotionTime<=0 { mood=dead ? .sleepy : (health<25 || (inWater && form == .fire) ? .displeased : (idleTime>8 ? .sleepy : (cube.velocity.y < -5 ? .startled : .curious))) }
         squash*=exp(-dt*11)
         if let b=buffer { buffer=b.1>dt ? (b.0,b.1-dt) : nil;if cube.grounded && cooldown<=0 { _=jump(b.0,buffered:false) } }
+        updateBurning(dt:dt)
         updateMaterials(dt:dt)
         if !dead {
             for i in shards.indices where !collected.contains(i) {
@@ -301,13 +317,46 @@ public final class Simulation {
         if cube.position.y < WorldLayout.bounds.minY-2 || !cube.position.x.isFinite { respawns+=1;resetCube() }
         for i in particles.indices {
             particles[i].life-=dt;particles[i].position.x+=particles[i].velocity.x*dt;particles[i].position.y+=particles[i].velocity.y*dt
-            particles[i].velocity.y+=dt*(particles[i].kind>=4 ? 1.5 : -4)
+            particles[i].velocity.y+=dt*(particles[i].kind>=4 ? 1.5 : (particles[i].kind==1 ? -gravity : -4))
+            if particles[i].kind==1 {
+                let p=particles[i].position
+                if p.x>7 && p.x<17 && p.y<=waterField.surface(at:p.x) && particles[i].velocity.y<0 {
+                    waterField.liquid.addFoam(at:p,strength:0.2);particles[i].life=0
+                } else if waterField.solid(at:p) || platforms.contains(where:{ !$0.boundary && abs(p.x-$0.x)<$0.width/2 && abs(p.y-$0.y)<$0.height/2 }) { particles[i].life=0 }
+            }
         }
         particles.removeAll { $0.life<=0 };if particles.count>550 { particles.removeFirst(particles.count-550) }
         if ticks%2==0 { updateFur() }
     }
+    private func updateBurning(dt:Float) {
+        guard !form.fireImmune else { burning=0;burnTime=0;ignitionHeat=0;return }
+        let fraction=inWater ? immersion(cube,size:1.12) : 0
+        if fraction>0.12 {
+            ignitionHeat=0;burnTime=max(0,burnTime-dt*24*fraction)
+            burning=max(0,burning-dt*7*fraction)
+            if fraction>0.5 { burning=0;burnTime=0 }
+            return
+        }
+        var exposure:Float=0
+        for source in fireSources {
+            exposure=max(exposure,source.intensity*max(0,1-hypot(cube.position.x-source.position.x,cube.position.y-source.position.y)/max(0.1,source.radius)))
+        }
+        for patch in patches where patch.burning>0 {
+            exposure=max(exposure,max(0,1-hypot(cube.position.x-patch.x,cube.position.y-patch.y-0.2)/0.95))
+        }
+        if crateExists && crateBurning>0 { exposure=max(exposure,max(0,1-hypot(cube.position.x-crate.position.x,cube.position.y-crate.position.y)/1.5)) }
+        ignitionHeat=max(0,ignitionHeat+dt*(exposure*(1-wetness*0.9)-0.12))
+        if ignitionHeat>0.35 { burnTime=5;burning=min(1,burning+dt*2) }
+        else if burning>0 { burnTime=max(0,burnTime-dt);burning=max(0,burning-dt*(burnTime>0 ? 0.06 : 1.5)) }
+        if exposure<0.05 { ignitionHeat=max(0,ignitionHeat-dt*0.7) }
+        if burning>0 && !dead {
+            damage(dt*5*burning);wetness=max(0,wetness-dt*0.18*burning)
+            mood = .displeased;emotionTime=0.5;burnFeedbackClock-=dt
+            if burnFeedbackClock<=0 { record(.hurt);burnFeedbackClock=1 }
+        }
+    }
     private func updateMaterials(dt:Float) {
-        let cold=passiveWorking && form == .ice,fire=passiveWorking && form == .fire
+        let cold=passiveWorking && form == .ice,fire=(passiveWorking && form == .fire) || burning>0.35
         for i in frostMarks.indices {
             let p=frostMarks[i].position,touch=abs(p.x-cube.position.x)<0.9 && abs(p.y-cube.position.y)<0.9
             frostMarks[i].cold=max(0,min(1,frostMarks[i].cold+dt*(touch && cold ? 0.9 : (touch && fire ? -2 : -1/30))))
@@ -335,16 +384,16 @@ public final class Simulation {
             let contact=hypot(crate.position.x-cube.position.x,crate.position.y-cube.position.y)<1.65
             crateFrost=max(0,min(1,crateFrost+dt*(cold && contact ? 1 : (fire && contact ? -2 : -1/30))))
             ec_material(world,crateID,crateFrost>0.5 ? 0.015 : 0.48,0.035)
-            if fire && contact && immersion(crate,size:1.25)<0.1 { crateBurning=1 }
+            if (fire && contact || fireSources.contains(where:{ hypot($0.position.x-crate.position.x,$0.position.y-crate.position.y)<$0.radius+0.4 })) && immersion(crate,size:1.25)<0.1 { crateBurning=1 }
             if immersion(crate,size:1.25)>0.2 { crateBurning=0 }
             if crateBurning>0 { crateFuel=max(0,crateFuel-dt*0.14) }
             if crateFuel<=0 { ec_remove(world,crateID);crateExists=false;crateBurning=0;emit(crate.position,kind:5,count:28) }
         }
         materialClock+=dt;particleClock+=dt
-        if materialClock>=0.1 {
+        if materialClock>=1/30 {
             // Retained water adds mass and rotational inertia to furry forms.
             if form.hasFur { ec_density(world,cubeID,form.density*(1+wetness*0.16)) }
-            waterField.step(dt:materialClock,coldSource:cold && waterEnabled ? cube.position : nil,heatSource:fire ? cube.position : nil,occupied:crateExists ? [cube.position,crate.position] : [cube.position])
+            waterField.step(dt:materialClock,coldSource:cold && waterEnabled ? cube.position : nil,heatSource:fire ? cube.position : nil,occupied:crateExists ? [cube.position,crate.position] : [cube.position],coldFoot:fluidBodies[0].corners.map(\.y).min())
             materialClock=0
             syncIceColliders()
             // A cold contact changes the actual body's friction as well as its appearance.
@@ -356,7 +405,7 @@ public final class Simulation {
         }
         if particleClock>0.1 {
             particleClock=0
-            if form == .fire && !dead { emit(cube.position,kind:4,count:fire ? 4 : 1);if inWater { emit(Vec(cube.position.x,waterLevel),kind:5,count:5) } }
+            if (form == .fire || burning>0) && !dead { emit(cube.position,kind:4,count:fire ? 4 : 1);if inWater { emit(Vec(cube.position.x,waterLevel),kind:5,count:5) } }
             for patch in patches where patch.burning>0 { emit(Vec(patch.x,patch.y+0.15),kind:4,count:1) }
             if crateBurning>0 { emit(crate.position,kind:4,count:3) }
             if cold && inWater { emit(cube.position,kind:2,count:2) }
@@ -369,11 +418,13 @@ public final class Simulation {
             let cell=waterField.ice[i]
             guard ec_space_clear(world,cell.center.x,cell.center.y,cell.size-0.012,max(0.002,cell.height-0.012)) else { waterField.deferSolid(at:i);continue }
             let id=ec_box(world,cell.center.x,cell.center.y,cell.size,cell.height,0,false,true)
-            if id>=0 { ec_material(world,id,0.015,0.02);iceIDs[i]=id }
+            if id>=0 { ec_material(world,id,0.015,0.02);iceIDs[i]=id;iceShapes[i]=cell }
         }
         for (i,id) in iceIDs where iceShapes[i]?.center != waterField.ice[i].center || iceShapes[i]?.height != waterField.ice[i].height || iceShapes[i]?.size != waterField.ice[i].size {
             let c=waterField.ice[i]
-            ec_resize_static(world,id,c.center.x,c.center.y,c.size,c.height);iceShapes[i]=c
+            if ec_space_clear_ignoring(world,id,c.center.x,c.center.y,max(0.002,c.size-0.012),max(0.002,c.height-0.012)) {
+                ec_resize_static(world,id,c.center.x,c.center.y,c.size,c.height);iceShapes[i]=c
+            } else if let old=iceShapes[i] { waterField.restoreShape(at:i,to:old) }
         }
         if oldCount==0 && !iceIDs.isEmpty { record(.frozeWater) }
     }

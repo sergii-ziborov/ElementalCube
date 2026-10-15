@@ -16,6 +16,7 @@ public enum WorldLayout {
     public static let originalBounds=WorldBounds(-3,-4.6,25,8.4)
     public static let bounds=originalBounds.scaled(4)
     public static let goal=Vec(64,-22.9)
+    public static let campfires=[Vec(23,0.3)]
     public static let summit=Vec(-40,22)
     public static let floorHeight:Float = -22.9
     public static let platforms:[Platform] = {
@@ -36,6 +37,7 @@ public enum WorldLayout {
             result.append(Platform(26.2+Float(i)*2.4,-Float(i+1)*2-0.55,2.4,1.1))
         }
         for i in 0..<6 { result.append(Platform(Float(i)*5,-19.5+Float(i)*2.5-0.5,4.2,1)) }
+        for fire in campfires { result.append(Platform(fire.x,0.055,0.9,0.11)) }
         result.append(Platform(b.center.x,(floorHeight+b.minY)/2,b.width,floorHeight-b.minY))
         return result
     }()

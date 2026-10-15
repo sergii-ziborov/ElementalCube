@@ -8,7 +8,7 @@ final class ElementsTests:XCTestCase {
             let s=Simulation(form:form)
             XCTAssertEqual(s.health,100);XCTAssertEqual(s.mana,100);XCTAssertTrue(s.passiveEquipped)
             s.equipPassive(true);advance(s,1)
-            XCTAssertTrue(s.passiveWorking);XCTAssertLessThan(s.mana,100)
+            XCTAssertTrue(s.passiveWorking);XCTAssertEqual(s.mana,100)
             s.equipPassive(false);advance(s,1);XCTAssertEqual(s.mana,100,accuracy:0.1)
         }
     }
@@ -112,10 +112,13 @@ final class ElementsTests:XCTestCase {
         let s=Simulation();s.wind=0;s.equipPassive(true);s.placeCube(Vec(3.9,0.7));advance(s,2)
         XCTAssertGreaterThan(s.crateFrost,0.5)
     }
-    func testManaExhaustionHasRecoveryHysteresis() {
-        let s=Simulation(form:.air);s.wind=0;s.equipPassive(true);advance(s,64)
-        XCTAssertFalse(s.passiveWorking);XCTAssertLessThan(s.mana,20)
-        advance(s,6);XCTAssertTrue(s.passiveWorking)
+    func testPassiveRemainsFreeAfterAnActiveJumpSpendsMana() {
+        var monster=MonsterRecord(form:.air)
+        XCTAssertTrue(monster.learn(monster.tree.first { $0.kind == .jump }!))
+        let s=Simulation(form:.air);s.wind=0;s.applySkills(of:monster);advance(s,1)
+        XCTAssertTrue(s.performJump(Vec(3,7),directed:true));XCTAssertEqual(s.mana,94,accuracy:0.001)
+        advance(s,0.5);XCTAssertTrue(s.passiveWorking);XCTAssertEqual(s.mana,94+Float(Int(Float(0.5)/Simulation.timestep))*Simulation.timestep*4,accuracy:0.001)
+        advance(s,2);XCTAssertTrue(s.passiveWorking);XCTAssertEqual(s.mana,100,accuracy:0.01)
     }
     func testStoneHasNoFurAndFrontFurExistsForWaterAndIce() {
         XCTAssertTrue(FurPhysics(form:.stone).strands.isEmpty)

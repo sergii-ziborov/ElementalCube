@@ -4,6 +4,13 @@ public struct LiquidParticle {
     public var position:Vec
     public var velocity:Vec
     public var volume:Float
+    public var isSpray=false
+    public var sprayAge:Float=0
+}
+public struct SurfaceFoam {
+    public var position:Vec
+    public var life:Float
+    public var strength:Float
 }
 
 /// Incompressible free-surface PIC/FLIP fluid on a staggered MAC grid.
@@ -24,6 +31,9 @@ public final class LiquidSolver {
     public private(set) var pressureLoads:[Int:(velocity:Vec,omega:Float)]=[:]
     private let platforms:[Platform]
     private var bodies:[FluidBody]=[]
+    public private(set) var foam:[SurfaceFoam]=[]
+    private var splashCooldown:[Int:Float]=[:]
+    private var foamClock:Float=0
     private var stepNumber=0
     public var markerVolume:Float { spacing*spacing/4 }
     public init(platforms:[Platform]) {
@@ -101,7 +111,7 @@ public final class LiquidSolver {
             if i==0 || i==nx-1 || j==0 || staticSolid(p) || frozen.contains(where:{ $0.contains(p) }) { kind[id]=0 }
             else if let k=bodies.firstIndex(where:{ $0.contains(p) }) { kind[id]=0;owner[id]=k;solidVelocity[id]=bodies[k].velocity(at:p) }
         } }
-        for p in particles {
+        for p in particles where !p.isSpray {
             let id=index(p.position)
             if kind[id] != 0 { kind[id]=2;counts[id]+=p.volume/markerVolume }
             transfer(p.position,component:0,value:p.velocity.x)
@@ -123,6 +133,7 @@ public final class LiquidSolver {
     }
     public func advance(dt:Float,gravity:Float,bodies:[FluidBody],frozen:[FluidBody]) {
         guard dt>0,dt<=0.04 else { return }
+        let energyBefore=mechanicalEnergy(gravity:gravity,bodies:bodies)
         self.bodies=bodies
         pressureLoads.removeAll(keepingCapacity:true)
         // Predict the same gravity step that Box2D will take, then solve water
@@ -199,7 +210,7 @@ public final class LiquidSolver {
             solidVelocity[i]=self.bodies[k].velocity(at:point)
         }
         boundaries()
-        for i in particles.indices {
+        for i in particles.indices where !particles[i].isSpray {
             let p=particles[i].position
             let pic=velocity(at:p),before=Vec(sample(oldU,at:p,component:0),sample(oldV,at:p,component:1))
             var velocity=Vec((particles[i].velocity.x+pic.x-before.x)*0.92+pic.x*0.08,
@@ -214,6 +225,7 @@ public final class LiquidSolver {
         stepNumber+=1
         if stepNumber%2==0 { separate(frozen:frozen) }
         updateSurface()
+        advanceSecondaryWater(dt:dt,gravity:gravity,impactBodies:bodies,energyBefore:energyBefore,frozen:frozen)
     }
     private func collide(_ particle:inout LiquidParticle,frozen:[FluidBody]) {
         let radius=spacing*0.16
@@ -247,9 +259,9 @@ public final class LiquidSolver {
     private func separate(frozen:[FluidBody]) {
         for i in heads.indices { heads[i] = -1 }
         next=Array(repeating:-1,count:particles.count)
-        for i in particles.indices { let cell=index(particles[i].position);next[i]=heads[cell];heads[cell]=i }
+        for i in particles.indices where !particles[i].isSpray { let cell=index(particles[i].position);next[i]=heads[cell];heads[cell]=i }
         let minimum=spacing*0.50
-        for i in particles.indices {
+        for i in particles.indices where !particles[i].isSpray {
             let cell=index(particles[i].position),x=cell/ny,y=cell%ny
             for xx in max(0,x-1)...min(nx-1,x+1) { for yy in max(0,y-1)...min(ny-1,y+1) {
                 var j=heads[xx*ny+yy]
@@ -271,7 +283,7 @@ public final class LiquidSolver {
     private func updateSurface() {
         var top=Array(repeating:Float(-4),count:nx)
         for i in counts.indices { counts[i]=0 }
-        for p in particles {
+        for p in particles where !p.isSpray {
             let id=index(p.position);counts[id]+=p.volume/markerVolume
             top[id/ny]=max(top[id/ny],p.position.y+spacing*0.24)
         }
@@ -365,5 +377,127 @@ public final class LiquidSolver {
             let id=i*ny+j,d=(u[id+ny]-u[id]+v[id+1]-v[id])/spacing;sum+=d*d;n+=1
         } }
         return sqrt(sum/max(1,n))
+    }
+}
+
+
+extension LiquidSolver {
+    private func mechanicalEnergy(gravity:Float,bodies:[FluidBody],predictionDT:Float=0)->Double {
+        var energy:Double=0
+        for p in particles { energy+=Double(p.volume)*(Double(p.velocity.x*p.velocity.x+p.velocity.y*p.velocity.y)*0.5+Double(gravity*(p.position.y+4))) }
+        for b in bodies where b.mass>0 {
+            let y=b.center.y+b.velocity.y*predictionDT
+            energy+=Double(b.mass)*(Double(b.velocity.x*b.velocity.x+b.velocity.y*b.velocity.y)*0.5+Double(gravity*(y+4)))+Double(b.inertia*b.omega*b.omega)*0.5
+        }
+        return energy
+    }
+    private func advanceSecondaryWater(dt:Float,gravity:Float,impactBodies:[FluidBody],energyBefore:Double,frozen:[FluidBody]) {
+        for id in Array(splashCooldown.keys) { splashCooldown[id]=max(0,(splashCooldown[id] ?? 0)-dt) }
+        var reentries:[Vec]=[]
+        for i in particles.indices where particles[i].isSpray {
+            particles[i].sprayAge+=dt
+            particles[i].velocity.y-=gravity*dt
+            particles[i].velocity.x*=exp(-dt*0.16)
+            particles[i].position.x+=particles[i].velocity.x*dt
+            particles[i].position.y+=particles[i].velocity.y*dt
+            let before=particles[i].velocity
+            collide(&particles[i],frozen:frozen)
+            // Drops hitting rigid bodies return their momentum to that body.
+            if before != particles[i].velocity {
+                for body in self.bodies where body.mass>0 && body.contains(particles[i].position,margin:spacing*0.2) {
+                    let impulse=Vec((before.x-particles[i].velocity.x)*particles[i].volume,(before.y-particles[i].velocity.y)*particles[i].volume)
+                    let old=pressureLoads[body.id] ?? (Vec(0,0),Float(0))
+                    let lever=Vec(particles[i].position.x-body.center.x,particles[i].position.y-body.center.y)
+                    pressureLoads[body.id]=(Vec(old.0.x+impulse.x/body.mass,old.0.y+impulse.y/body.mass),old.1+(lever.x*impulse.y-lever.y*impulse.x)/body.inertia)
+                    break
+                }
+            }
+            let p=particles[i].position
+            if particles[i].velocity.y<=0 && p.y<surfaceHeight(at:p.x)+spacing*0.1 && contains(p) {
+                particles[i].isSpray=false;particles[i].sprayAge=0;reentries.append(p)
+            }
+        }
+        // A jet can also detach naturally from an already fast, sparse crest.
+        var sprayCount=particles.reduce(0) { $0+($1.isSpray ? 1 : 0) }
+        if sprayCount<120 {
+            for i in particles.indices where !particles[i].isSpray && particles[i].velocity.y>1.2 {
+                let p=particles[i].position
+                if p.y>surfaceHeight(at:p.x)+spacing*0.7 && sprayCount<120 { particles[i].isSpray=true;particles[i].sprayAge=0;sprayCount+=1 }
+            }
+        }
+        let energyAfter=mechanicalEnergy(gravity:gravity,bodies:self.bodies,predictionDT:dt)
+        var budget=Float(max(0,energyBefore-energyAfter))*0.3
+        for body in impactBodies where body.mass>0 && body.velocity.y < -1.2 && body.center.x>7 && body.center.x<17 {
+            let level=surfaceHeight(at:body.center.x),half=body.height/2
+            guard body.center.y-half<level+0.22 && body.center.y+half>level+0.04 && (splashCooldown[body.id] ?? 0)<=0 else { continue }
+            let spent=detachSplash(at:Vec(body.center.x,level),halfWidth:body.width/2,speed:min(8,abs(body.velocity.y)),budget:budget)
+            if spent>0 { budget=max(0,budget-spent);splashCooldown[body.id]=0.35 }
+            addFoam(at:Vec(body.center.x-body.width/2-0.1,level),strength:0.7)
+            addFoam(at:Vec(body.center.x+body.width/2+0.1,level),strength:0.7)
+        }
+        for p in reentries { addFoam(at:p,strength:0.35) }
+        foamClock+=dt
+        if foamClock>0.13 {
+            foamClock=0
+            for b in impactBodies where hypot(b.velocity.x,b.velocity.y)>0.65 && b.center.x>7 && b.center.x<17 {
+                let y=surfaceHeight(at:b.center.x)
+                if abs(b.center.y-y)<b.height/2+0.15 {
+                    addFoam(at:Vec(b.center.x-b.width/2-0.06,y),strength:0.25)
+                    addFoam(at:Vec(b.center.x+b.width/2+0.06,y),strength:0.25)
+                }
+            }
+        }
+        for i in foam.indices {
+            let flow=velocity(at:foam[i].position)
+            foam[i].position.x=max(7.04,min(16.96,foam[i].position.x+flow.x*dt))
+            let target=surfaceHeight(at:foam[i].position.x)+0.015
+            foam[i].position.y+=(target-foam[i].position.y)*min(1,dt*14)
+            foam[i].life-=dt
+            if frozen.contains(where:{ $0.contains(foam[i].position,margin:0.025) }) { foam[i].life-=dt*6 }
+        }
+        foam.removeAll { $0.life<=0 };if foam.count>260 { foam.removeFirst(foam.count-260) }
+        updateSurface()
+    }
+    /// Redirect a few real surface markers into spray. Equal/opposite momentum
+    /// goes into nearby bulk water. The quadratic energy limit spends only a
+    /// fraction of energy lost by this step's coupled dissipative solve.
+    @discardableResult private func detachSplash(at p:Vec,halfWidth:Float,speed:Float,budget:Float)->Float {
+        guard budget>0.00001,particles.filter({ $0.isSpray }).count<100 else { return 0 }
+        var candidates:[Int]=[],bulk:[Int]=[]
+        for i in particles.indices where !particles[i].isSpray {
+            let q=particles[i].position,dx=abs(q.x-p.x),depth=p.y-q.y
+            if dx<halfWidth+0.55 && dx>halfWidth+0.025 && depth > -0.08 && depth<0.19 && !bodies.contains(where:{ $0.contains(q,margin:0.025) }) { candidates.append(i) }
+            else if dx<1.4 && depth>0.2 && depth<1.1 { bulk.append(i) }
+        }
+        // Both exposed lips of the impact eject water; do not fill the quota
+        // from one side simply because markers were seeded in x order.
+        candidates.sort { particles[$0].position.y>particles[$1].position.y }
+        let jets=Array(candidates.filter { particles[$0].position.x<p.x }.prefix(3))+Array(candidates.filter { particles[$0].position.x>=p.x }.prefix(3))
+        let mass=bulk.reduce(Float(0)) { $0+particles[$1].volume }
+        guard jets.count>1,mass>0.05 else { return 0 }
+        var changes:[(Int,Vec)]=[],momentum=Vec(0,0)
+        for i in jets {
+            let q=particles[i],sign:Float=q.position.x<p.x ? -1 : 1
+            let desired=Vec(sign*(0.9+speed*0.45),1.6+speed*0.88)
+            let change=Vec(desired.x-q.velocity.x,desired.y-q.velocity.y)
+            changes.append((i,change));momentum.x+=change.x*q.volume;momentum.y+=change.y*q.volume
+        }
+        let recoil=Vec(-momentum.x/mass,-momentum.y/mass)
+        for i in bulk { changes.append((i,recoil)) }
+        var a:Float=0,b:Float=0
+        for (i,d) in changes { let q=particles[i];a+=0.5*q.volume*(d.x*d.x+d.y*d.y);b+=q.volume*(q.velocity.x*d.x+q.velocity.y*d.y) }
+        guard a>0.0000001 else { return 0 }
+        let factor=min(1,max(0,(-b+sqrt(max(0,b*b+4*a*budget)))/(2*a)))
+        guard factor>0.08 else { return 0 }
+        for (i,d) in changes { particles[i].velocity.x+=d.x*factor;particles[i].velocity.y+=d.y*factor }
+        for i in jets { particles[i].isSpray=true;particles[i].sprayAge=0 }
+        return max(0,a*factor*factor+b*factor)
+    }
+    public func addFoam(at p:Vec,strength:Float) {
+        guard p.x>7,p.x<17 else { return }
+        let amount=max(0,min(1,strength))
+        for i in 0..<3 {
+            foam.append(SurfaceFoam(position:Vec(p.x+Float(i-1)*0.045,p.y),life:0.9+Float((stepNumber+i*13)%17)*0.06,strength:amount))
+        }
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 
 public struct SkillNode:Identifiable,Equatable {
-    public enum Kind:String,Codable { case passive,jump,momentum,mastery,control,affinity }
+    public enum Kind:String,Codable { case passive,jump,momentum,mastery,control,affinity,doubleJump }
     public var id:String
     public var kind:Kind
     public var title:String
@@ -20,7 +20,7 @@ public enum MonsterItem:String,Codable,CaseIterable,Identifiable {
         switch self {
         case .travelerCharm:return "Стартовый оберег. Уменьшает урон от жёстких приземлений на 10%. Занимает слот талисмана."
         case .aetherShard:return "Найден в мире этим монстром. При первом сборе также даёт одно очко для его дерева навыков."
-        case .deepRelic:return "Добыта каменным кубом под мостом. Уменьшает урон от приземлений на 20% и расход маны пассивкой на 10%. Занимает слот талисмана."
+        case .deepRelic:return "Добыта каменным кубом под мостом. Уменьшает урон от приземлений на 20% и расход маны активными приёмами на 10%. Занимает слот талисмана."
         }
     }
 }
@@ -40,7 +40,7 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
     public private(set) var equippedCharm:MonsterItem?
     public init(form:ElementForm,name:String?=nil,id:UUID=UUID(),parents:[MonsterAncestor]=[]) {
         self.id=id;self.name=name ?? form.name;self.form=form;self.parents=parents
-        learned=[.passive,.jump];crystals=[];deepRelic=false;skillPoints=1;equippedCharm=nil
+        learned=[.passive];crystals=[];deepRelic=false;skillPoints=1;equippedCharm=nil
     }
     public static func offspring(_ first:Self,_ second:Self,body:ElementForm)->Self {
         Self(form:body,name:first.name+" · "+second.name,parents:[first,second].map { MonsterAncestor(id:$0.id,name:$0.name,form:$0.form) })
@@ -64,30 +64,31 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
         case .ice:
             mobility=("Ледяной разбег","Предел скорости прыжка +8%.")
             mastery=("Глубокий холод","Теплопроводность морозного касания +25%: лёд быстрее нарастает в глубину и в стороны.")
-            affinity=("Сердце зимы","Ещё +25% к теплопроводности и −15% к расходу маны пассивкой.")
+            affinity=("Сердце зимы","Ещё +25% к теплопроводности и −15% к расходу маны активными приёмами.")
         case .water:
             mobility=("Упругая капля","Предел скорости прыжка +8%.")
             mastery=("Сильная волна","Предельная скорость толчка в воде +15%.")
-            affinity=("Течение","Ещё +15% к пределу толчка в воде и −15% к расходу маны пассивкой.")
+            affinity=("Течение","Ещё +15% к пределу толчка в воде и −15% к расходу маны активными приёмами.")
         case .air:
             mobility=("Попутный ветер","Предел скорости прыжка +8%.")
-            mastery=("Тихое парение","Воздушная подушка тратит на 20% меньше маны.")
-            affinity=("Долгий полёт","Ещё −15% к расходу маны воздушной подушкой.")
+            mastery=("Тихое парение","Управляемость и сила воздушной подушки +20%.")
+            affinity=("Долгий полёт","Ещё +20% к управляемости подушкой и −15% к расходу маны активными приёмами.")
         case .stone:
             mobility=("Разгон валуна","Предел скорости прыжка +8%.")
             mastery=("Крепкая порода","Урон от жёстких приземлений снижен на 20%.")
-            affinity=("Монолит","Ещё −20% к урону от приземлений и −15% к расходу маны пассивкой.")
+            affinity=("Монолит","Ещё −20% к урону от приземлений и −15% к расходу маны активными приёмами.")
         case .fire:
             mobility=("Искра ввысь","Предел скорости прыжка +8%.")
             mastery=("Жаркое ядро","Испарение воды расходует на 15% меньше здоровья.")
-            affinity=("Неугасимый","Ещё −15% к потере здоровья при испарении и −15% к расходу маны пассивкой.")
+            affinity=("Неугасимый","Ещё −15% к потере здоровья при испарении и −15% к расходу маны активными приёмами.")
         }
         let lineage=isHybrid ? " · "+parents.map(\.form.name).joined(separator:"/") : ""
         return [node(.passive,form.ability+lineage,form.explanation,form.symbol,0,nil),
-                node(.jump,"Прыжок", "Короткий тап по кубику — обычный прыжок вверх. Потяни его в сторону полёта, чтобы выбрать направление и силу в пределах навыка.","arrow.up.right",0,nil),
+                node(.jump,"Направленный прыжок", "Открывает прицеливание перетягиванием кубика: выбирай направление и силу по пунктиру. Расход: 6 маны. Обычный прыжок коротким тапом доступен без изучения и бесплатен.","arrow.up.right",1,nil),
                 node(.momentum,mobility.0+lineage,mobility.1,"arrow.up.forward",1,.jump),
                 node(.mastery,mastery.0+lineage,mastery.1,form.symbol,1,.passive),
-                node(.control,"Свободная траектория"+lineage,"Ещё +8% к предельной скорости прыжка.","point.topleft.down.to.point.bottomright.curvepath",2,.momentum),
+                node(.doubleJump,"Двойной прыжок","После обычного или направленного прыжка позволяет один дополнительный толчок в воздухе. Второй короткий тап — вверх. Расход дополнительного толчка: 10 маны; восстанавливается при приземлении.","arrow.up",2,.momentum),
+                node(.control,"Свободная траектория"+lineage,"Ещё +8% к предельной скорости направленного прыжка.","point.topleft.down.to.point.bottomright.curvepath",2,.doubleJump),
                 node(.affinity,affinity.0+lineage,affinity.1,"sparkles",2,.mastery)]
     }
     public func canLearn(_ node:SkillNode)->Bool {
@@ -108,13 +109,24 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
     }
     public var masteryRanks:Int { (learned.contains(.mastery) ? 1 : 0)+(learned.contains(.affinity) ? 1 : 0) }
     public var conductivity:Float { form == .ice ? 1+Float(masteryRanks)*0.25 : 1 }
-    public var manaMultiplier:Float { (equippedCharm == .deepRelic ? 0.9 : 1)*(form == .air && learned.contains(.mastery) ? 0.8 : 1)*(learned.contains(.affinity) ? 0.85 : 1) }
+    public var manaMultiplier:Float { (equippedCharm == .deepRelic ? 0.9 : 1)*(learned.contains(.affinity) ? 0.85 : 1) }
+    public var airControlMultiplier:Float { form == .air ? 1+Float(masteryRanks)*0.2 : 1 }
+    fileprivate mutating func migrateStarterJump() { learned.remove(.jump) }
     public var landingDamageMultiplier:Float { (form == .stone ? 1-Float(masteryRanks)*0.2 : 1)*(equippedCharm == .deepRelic ? 0.8 : (equippedCharm == .travelerCharm ? 0.9 : 1)) }
     public var fireDamageMultiplier:Float { form == .fire ? 1-Float(masteryRanks)*0.15 : 1 }
 }
 public struct MonsterInventory:Codable,Equatable {
     public private(set) var monsters:[MonsterRecord]
     public private(set) var selectedID:UUID
+    public private(set) var schemaVersion=2
+    private enum CodingKeys:String,CodingKey { case monsters,selectedID,schemaVersion }
+    public init(from decoder:Decoder) throws {
+        let c=try decoder.container(keyedBy:CodingKeys.self)
+        monsters=try c.decode([MonsterRecord].self,forKey:.monsters);selectedID=try c.decode(UUID.self,forKey:.selectedID)
+        let storedVersion=try c.decodeIfPresent(Int.self,forKey:.schemaVersion) ?? 1
+        if storedVersion<2 { for i in monsters.indices { monsters[i].migrateStarterJump() } }
+        schemaVersion=2
+    }
     public init(selectedForm:ElementForm = .ice) {
         monsters=ElementForm.allCases.map { MonsterRecord(form:$0) }
         selectedID=monsters.first { $0.form==selectedForm }!.id
@@ -133,7 +145,7 @@ public struct MonsterInventory:Codable,Equatable {
         guard let i=monsters.firstIndex(where:{ $0.id==selectedID }) else { return };monsters[i].recordFinds(crystals:crystals,relic:relic)
     }
     public var isValid:Bool {
-        !monsters.isEmpty && Set(monsters.map(\.id)).count==monsters.count && monsters.contains { $0.id==selectedID } && monsters.allSatisfy { $0.skillPoints>=0 && $0.learned.contains(.passive) && $0.learned.contains(.jump) && ($0.equippedCharm.map { $0.isEquipment } ?? true) }
+        !monsters.isEmpty && Set(monsters.map(\.id)).count==monsters.count && monsters.contains { $0.id==selectedID } && monsters.allSatisfy { $0.skillPoints>=0 && $0.learned.contains(.passive) && ($0.equippedCharm.map { $0.isEquipment } ?? true) }
     }
 }
 public final class MonsterInventoryStore {

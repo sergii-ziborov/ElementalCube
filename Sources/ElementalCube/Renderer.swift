@@ -143,7 +143,7 @@ final class Renderer: NSObject, MTKViewDelegate {
         }
         for particle in s.particles {
             let color:[C4]=[tint(0xe4deba),tint(0xb8f5ee),tint(0xc2f9ff),tint(0xfaf0b4),tint(0xffab4d),tint(0xdfece5,0.55)]
-            details.ellipse(center:V3(particle.position.x,particle.position.y,0.9),rx:0.035,ry:0.035,color:color[particle.kind]*SIMD4(1,1,1,min(1,particle.life*2)),segments:6)
+            details.ellipse(center:V3(particle.position.x,particle.position.y,particle.kind==1 ? 1.48 : 0.9),rx:particle.kind==1 ? 0.022 : 0.035,ry:particle.kind==1 ? min(0.07,0.028+abs(particle.velocity.y)*0.004) : 0.035,color:color[particle.kind]*SIMD4(1,1,1,min(1,particle.life*2)),segments:6)
         }
         if !s.deepRelic {
             details.diamond(V3(12,-3.35,0.85),size:0.22,color:tint(0xebc77d))
@@ -182,6 +182,15 @@ final class Renderer: NSObject, MTKViewDelegate {
             }
             drawMesh(ropes)
         }
+        for source in s.fireSources {
+            var ring=Mesh()
+            for i in 0..<6 {
+                let a=Float(i)*2*Float.pi/6
+                ring.box(center:V3(source.position.x+cos(a)*0.4,0.10,0.55+sin(a)*0.3),size:V3(0.18,0.17,0.18),color:tint(0x74766b))
+            }
+            ring.line(V3(source.position.x-0.25,0.15,0.42),V3(source.position.x+0.25,0.15,0.72),width:0.12,color:tint(0x75513d));drawMesh(ring)
+            drawMesh(Geometry.flames(time:s.time,active:true),translation(V3(source.position.x,0.18,0.55))*scale(SIMD3(repeating:0.55)))
+        }
         if s.crateExists {
             var box=Geometry.crate()
             for i in box.vertices.indices { box.vertices[i].color=mix(box.vertices[i].color*SIMD4(0.3+s.crateFuel*0.7,0.3+s.crateFuel*0.7,0.3+s.crateFuel*0.7,1),tint(0xc4edff),s.crateFrost*0.8) }
@@ -205,7 +214,7 @@ final class Renderer: NSObject, MTKViewDelegate {
         if let charm=session.inventory.selected.equippedCharm {
             var ornament=Mesh();ornament.diamond(V3(0,-0.34,1.14),size:0.075,color:charm == .deepRelic ? tint(0xebc77d) : tint(0xb3c6b2));drawMesh(ornament,model,character:true)
         }
-        if s.form == .fire && !s.dead { drawMesh(Geometry.flames(time:s.time,active:s.passiveWorking),model) }
+        if (s.form == .fire || s.burning>0) && !s.dead { drawMesh(Geometry.flames(time:s.time,active:s.passiveWorking || s.burning>0),model) }
         let blinkPhase=s.time.truncatingRemainder(dividingBy:4.7)
         let mood:Mood=session.aiming ? .focused : (s.won ? .delighted : s.mood)
         let gaze=session.aiming ? session.aimImpulse.x*0.004 : s.cube.velocity.x*0.006
@@ -233,12 +242,6 @@ final class Renderer: NSObject, MTKViewDelegate {
                 trajectory.ellipse(center:point,rx:radius*1.35,ry:radius*1.35,color:tint(0x214b4f,alpha*0.8),segments:10)
                 trajectory.ellipse(center:point+V3(0,0,0.01),rx:radius*0.7,ry:radius*0.7,color:tint(0xc8ffff,alpha),segments:10)
             }
-            let impulse=session.aimImpulse,r=max(0.001,hypot(impulse.x,impulse.y)),d=V3(impulse.x/r,impulse.y/r,0)
-            let tip=V3(p.x,p.y,1.3)+d*(0.9+r*0.06),side=V3(-d.y,d.x,0)
-            trajectory.line(tip-d*0.18+side*0.12,tip,width:0.075,color:tint(0x214b4f))
-            trajectory.line(tip-d*0.18-side*0.12,tip,width:0.075,color:tint(0x214b4f))
-            trajectory.line(tip-d*0.18+side*0.12,tip+V3(0,0,0.01),width:0.035,color:tint(0xf9ffe0))
-            trajectory.line(tip-d*0.18-side*0.12,tip,width:0.035,color:tint(0xf9ffe0))
             drawMesh(trajectory)
         }
         // Water composites after the cube. The submerged fur and eyes acquire its tint.

@@ -74,12 +74,16 @@ public final class WaterField {
     /// continuing cold grows the interface into liquid, never lifts the player.
     public func freezeContact(at x:Float,bottom foot:Float) {
         let top=min(surface(at:x),foot-0.003)
-        for col in 0..<columns where abs(left+(Float(col)+0.5)*cell-x)<0.9 {
+        for col in 0..<columns where left+Float(col+1)*cell>x-0.9 && left+Float(col)*cell<x+0.9 {
             let i=rows*columns+col
-            if ice[i].solid { ice[i].cold=max(0.8,ice[i].cold);continue }
-            let minX=max(left+Float(col)*cell,left+max(0,-top+0.18)/1.625+0.025)
-            let maxX=min(left+Float(col+1)*cell,right-max(0,-top+0.18)/1.625-0.025)
+            let minX=max(left+Float(col)*cell,x-0.9,left+max(0,-top+0.18)/1.625+0.025)
+            let maxX=min(left+Float(col+1)*cell,x+0.9,right-max(0,-top+0.18)/1.625-0.025)
             guard maxX-minX>0.08 else { continue }
+            if ice[i].solid {
+                let old=ice[i]
+                reshapeSkin(i,height:old.height,left:min(old.center.x-old.size/2,minX),right:max(old.center.x+old.size/2,maxX))
+                ice[i].cold=max(0.8,ice[i].cold);continue
+            }
             let candidate=IceCell(center:Vec((minX+maxX)/2,top-0.08),size:maxX-minX,height:0.16,cold:1,solid:true)
             guard !solid(at:candidate.center) else { continue }
             let markers=liquid.extract(in:FluidBody(id:i,center:candidate.center,width:candidate.size,height:candidate.height))
@@ -90,16 +94,23 @@ public final class WaterField {
     /// Resize a phase boundary by taking only the newly frozen markers. Thawing
     /// returns only released mass, at the current local flow rather than its old
     /// pre-freeze velocity. This avoids a delayed impulse when the cube leaves.
-    private func reshapeSkin(_ index:Int,height:Float) {
+    private func reshapeSkin(_ index:Int,height:Float,left minX:Float?=nil,right maxX:Float?=nil) {
         let old=ice[index],top=old.center.y+old.height/2
-        let next=FluidBody(id:index,center:Vec(old.center.x,top-height/2),width:old.size,height:height)
+        let lo=minX ?? (old.center.x-old.size/2),hi=maxX ?? (old.center.x+old.size/2)
+        guard hi>lo,height>0 else { return }
+        guard abs(height-old.height)>0.00001 || abs(lo-(old.center.x-old.size/2))>0.00001 || abs(hi-(old.center.x+old.size/2))>0.00001 else { return }
+        let next=FluidBody(id:index,center:Vec((lo+hi)/2,top-height/2),width:hi-lo,height:height)
         var stored=frozenMarkers[index] ?? []
         let released=stored.filter { !next.contains($0.position) }
         stored.removeAll { !next.contains($0.position) }
         if !released.isEmpty { liquid.restoreAtRest(released) }
         stored.append(contentsOf:liquid.extract(in:next))
         frozenMarkers[index]=stored
-        ice[index].center=next.center;ice[index].height=height
+        ice[index].center=next.center;ice[index].height=height;ice[index].size=next.width
+    }
+    public func restoreShape(at index:Int,to shape:IceCell) {
+        reshapeSkin(index,height:shape.height,left:shape.center.x-shape.size/2,right:shape.center.x+shape.size/2)
+        ice[index]=shape
     }
     @discardableResult public func evaporate(around p:Vec, amount: Float, radius:Float=1.45)->Float {
         let removed=liquid.evaporate(at:p,amount:min(Float(totalVolume),max(0,amount)),radius:radius)
@@ -107,52 +118,56 @@ public final class WaterField {
         refreshSurface()
         return removed
     }
-    public func step(dt:Float, coldSource:Vec?, heatSource:Vec?, occupied:[Vec]) {
+    public func step(dt:Float, coldSource:Vec?, heatSource:Vec?, occupied:[Vec],coldFoot:Float?=nil) {
         refreshSurface()
         let previous=ice.map(\.solid)
         for i in ice.indices {
             let p=ice[i].center,col=i%columns
             if i>=rows*columns {
+                let gridLeft=left+Float(col)*cell,gridRight=gridLeft+cell
                 let dx=coldSource.map { abs($0.x-p.x) } ?? Float.greatestFiniteMagnitude
-                let near=coldSource.map { abs($0.y-(p.y+ice[i].height/2)-0.56)<0.65 } ?? false
-                let contact=near && dx<0.8
-                let leftIndex=i-1,rightIndex=i+1
-                let connected=(col>0 && previous[leftIndex]) || (col+1<columns && previous[rightIndex])
-                // Conduct heat out through a connected sheet. The freezing front
-                // takes time to travel sideways; it cannot seed remote ice.
-                let conducted=near && dx<1.8 && connected
+                let near=coldSource.map { abs((coldFoot ?? ($0.y-0.56))-(p.y+ice[i].height/2))<0.18 } ?? false
+                let contact=near && dx<0.72
+                let li=i-1,ri=i+1
+                let fromLeft=col>0 && previous[li] && ice[li].center.x+ice[li].size/2>=gridLeft-0.015
+                let fromRight=col+1<columns && previous[ri] && ice[ri].center.x-ice[ri].size/2<=gridRight+0.015
+                let connected=fromLeft || fromRight
+                let residence=coldSource.map { source in (0..<columns).filter { abs(left+(Float($0)+0.5)*cell-source.x)<0.75 }.map { contactTime[$0] }.max() ?? 0 } ?? 0
+                let reach=min(4.8,1.1+0.22*sqrt(residence))
+                let conducted=near && dx<reach && connected
                 if contact || conducted {
-                    let strength=contact ? 1 : max(0.05,(1.8-dx)*0.3)
+                    let strength:Float=contact ? 1 : max(0.08,(reach-dx)/max(1,reach)*0.65)
                     ice[i].cold=min(1,ice[i].cold+dt*strength*conductivity)
                     if ice[i].solid { contactTime[col]+=dt*strength*conductivity }
                 } else { ice[i].cold=max(0,ice[i].cold-dt/30) }
-                if let heat=heatSource,hypot(heat.x-p.x,heat.y-p.y)<1.5 { ice[i].cold=max(0,ice[i].cold-dt*2) }
+                let heat=heatSource.map { max(0,1-hypot($0.x-p.x,$0.y-p.y)/1.5) } ?? 0
+                ice[i].cold=max(0,ice[i].cold-dt*heat*2)
                 if !ice[i].solid && ice[i].cold>=0.6 && connected && near {
-                    // Match the neighbouring top instead of freezing a square at
-                    // an arbitrary grid height above the water.
-                    let neighbour=col>0 && previous[leftIndex] ? ice[leftIndex] : ice[rightIndex]
-                    let top=min(neighbour.center.y+neighbour.height/2,liquid.surfaceHeight(at:p.x)+0.04)
-                    let candidate=FluidBody(id:i,center:Vec(p.x,top-0.08),width:cell,height:0.16)
-                    if !solid(at:candidate.center,margin:0.05) && !occupied.contains(where:{ abs($0.x-p.x)<0.75 && abs($0.y-candidate.center.y)<0.67 }) {
+                    let neighbour=fromLeft ? ice[li] : ice[ri]
+                    let top=neighbour.center.y+neighbour.height/2
+                    let width:Float=0.12,centerX=fromLeft ? gridLeft+width/2 : gridRight-width/2
+                    let candidate=FluidBody(id:i,center:Vec(centerX,top-0.08),width:width,height:0.16)
+                    let blocked=occupied.contains { abs($0.x-centerX)<width/2+0.64 && $0.y+0.64>top-0.16 && $0.y-0.52<top }
+                    if !solid(at:candidate.center,margin:0.03) && !blocked {
                         let markers=liquid.extract(in:candidate)
-                        if !markers.isEmpty { ice[i].center=candidate.center;ice[i].height=0.16;ice[i].solid=true;frozenMarkers[i]=markers;contactTime[col]=0 }
+                        if !markers.isEmpty { ice[i].center=candidate.center;ice[i].height=0.16;ice[i].size=width;ice[i].solid=true;frozenMarkers[i]=markers;contactTime[col]=0 }
                     }
                 }
                 if ice[i].solid {
-                    if ice[i].cold<0.02 { deferSolid(at:i);contactTime[col]=0 }
-                    else {
-                        let top=ice[i].center.y+ice[i].height/2
-                        let maxDepth=min(1.4,max(0.16,top-floor(at:p.x)-0.04))
-                        // Stefan-type front: growth slows as the insulating layer
-                        // thickens (depth proportional to the square root of time).
-                        let target=min(maxDepth,0.16+0.24*sqrt(contactTime[col]))
-                        var height=ice[i].height
-                        if contact || conducted { height=min(target,height+dt*0.2) }
-                        else { height=max(0.035,height-dt*0.006) }
-                        let newBottom=top-height
-                        let blocked=occupied.contains { abs($0.x-p.x)<ice[i].size/2+0.62 && $0.y+0.65>newBottom && $0.y-0.65<top-ice[i].height }
-                        if !blocked || height<ice[i].height { reshapeSkin(i,height:height) }
+                    let c=ice[i],top=c.center.y+c.height/2
+                    let maxDepth=min(3.6,max(0.16,top-floor(at:c.center.x)-0.04))
+                    let target=min(maxDepth,0.16+0.24*sqrt(contactTime[col]))
+                    let chilling=(contact || conducted) && heat<0.15
+                    let height=chilling ? min(target,c.height+dt*0.20*conductivity) : max(0.02,c.height-dt*(0.004+heat*0.3))
+                    var lo=c.center.x-c.size/2,hi=c.center.x+c.size/2
+                    if chilling {
+                        let advance=dt*0.18*conductivity
+                        if lo>gridLeft+0.001 { lo=max(gridLeft,lo-advance) }
+                        if hi<gridRight-0.001 { hi=min(gridRight,hi+advance) }
                     }
+                    let blocked=occupied.contains { abs($0.x-(lo+hi)/2)<(hi-lo)/2+0.64 && $0.y+0.64>top-height && $0.y-0.52<top }
+                    if height<=0.025 { deferSolid(at:i);contactTime[col]=0 }
+                    else if !blocked || height<c.height { reshapeSkin(i,height:height,left:lo,right:hi) }
                 }
                 continue
             }

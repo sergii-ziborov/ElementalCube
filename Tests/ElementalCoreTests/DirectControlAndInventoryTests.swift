@@ -94,6 +94,8 @@ final class DirectControlAndInventoryTests:XCTestCase {
         XCTAssertEqual(a.parents.map(\.id),[ice.id,fire.id]);XCTAssertTrue(a.isHybrid)
         XCTAssertNotEqual(a.treeIdentity,b.treeIdentity)
         XCTAssertTrue(Set(a.tree.map(\.id)).isDisjoint(with:Set(ice.tree.map(\.id))))
+        XCTAssertTrue(a.learn(a.tree.first { $0.kind == .jump }!))
+        a.recordFinds(crystals:[0],relic:false)
         XCTAssertTrue(a.learn(a.tree.first { $0.kind == .momentum }!))
         XCTAssertFalse(b.learned.contains(.momentum));XCTAssertFalse(ice.learned.contains(.momentum))
     }

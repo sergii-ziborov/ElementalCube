@@ -16,6 +16,10 @@ import urllib.request
 from asc import BUNDLE, ROOT, call
 
 GALLERIES = {
+    "alpha9": {
+        "APP_IPHONE_61": [(f"iphone-{scene}.png", (1206,2622)) for scene in ("ice","skills","equipment","gesture")],
+        "APP_IPAD_PRO_3GEN_129": [(f"ipad-13-{scene}.png", (2064,2752)) for scene in ("skills","ice")],
+    },
     "skills8": {
         "APP_IPHONE_61": [(f"iphone-{scene}.png", (1206,2622)) for scene in ("skills","fire-skills","gesture","ice")],
     },
@@ -111,7 +115,7 @@ def apply(gallery, replace_earlier=False):
             existing = call("GET", f"/v1/appScreenshotSets/{screenshot_set['id']}/appScreenshots",
                             {"limit": 50})["data"]
             if replace_earlier and gallery != "alpha4":
-                order=("alpha4","physics6","gestures7","skills8")
+                order=("alpha4","physics6","gestures7","skills8","alpha9")
                 older=order[:order.index(gallery)]
                 old_names={n if old=="alpha4" else old+"-"+n for old in older for n,_ in GALLERIES[old].get(display,[])}
                 superseded.extend(asset["id"] for asset in existing if asset["attributes"]["fileName"] in old_names)
@@ -154,7 +158,7 @@ def apply(gallery, replace_earlier=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true")
-    parser.add_argument("--gallery",choices=GALLERIES,default="skills8")
+    parser.add_argument("--gallery",choices=GALLERIES,default="alpha9")
     parser.add_argument("--replace-earlier",action="store_true",help="Remove our known earlier assets only after the new gallery is COMPLETE")
     args = parser.parse_args()
     validate(args.gallery)

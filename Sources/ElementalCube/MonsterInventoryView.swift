@@ -18,7 +18,7 @@ struct MonsterInventoryView:View {
                     Button { session.forms=false } label:{ Image(systemName:"xmark").frame(width:36,height:36) }.buttonStyle(.plain).accessibilityLabel("Закрыть инвентарь").accessibilityIdentifier("inventory.close")
                 }
                 HStack(alignment:.top) {
-                    MonsterPortrait(form:monster.form).frame(width:58,height:66)
+                    MonsterPortrait(form:monster.form,wetness:Double(session.wetness),health:Double(session.health),burning:Double(session.burning),celebration:monster.learned.count+(monster.equippedCharm == nil ? 0 : 10),interactive:true).frame(width:58,height:66).accessibilityIdentifier("portrait.inventory")
                     VStack(alignment:.leading,spacing:6) {
                         Text(monster.name).font(.system(size:25,design:.serif))
                         Text(monster.typeName+" · "+(monster.form.hasFur ? "мягкая шерсть" : "без шерсти")).font(.system(size:12)).opacity(0.65)
@@ -47,9 +47,9 @@ struct MonsterInventoryView:View {
     }
     var skillTree:some View {
         VStack(alignment:.leading,spacing:16) {
-            MonsterSkillTree(monster:monster) { detail=$0 }
+            MonsterSkillTree(monster:monster,wetness:Double(session.wetness),health:Double(session.health),burning:Double(session.burning)) { detail=$0 }
             HStack(spacing:10) {
-                slot("Прыжок","arrow.up.right","ДВИЖЕНИЕ")
+                slot("Обычный прыжок","arrow.up","БАЗОВОЕ ДЕЙСТВИЕ")
                 slot(monster.form.ability,monster.form.symbol,"ПАССИВНАЯ")
             }
             Text("Находи кристаллы, чтобы открывать новые навыки. Дерево и прогресс принадлежат только этому кубику.")
@@ -82,30 +82,4 @@ struct MonsterInventoryView:View {
         }.padding(18).frame(maxWidth:.infinity,alignment:.leading).background(ink.opacity(0.05),in:RoundedRectangle(cornerRadius:18))
     }
 
-}
-struct MonsterPortrait:View {
-    var form:ElementForm
-    var color:Color {
-        switch form { case .ice:return Color(red:0.65,green:0.87,blue:0.96);case .water:return Color(red:0.32,green:0.72,blue:0.86);case .air:return mint;case .stone:return Color(red:0.64,green:0.63,blue:0.53);case .fire:return Color(red:1,green:0.61,blue:0.23) }
-    }
-    var body:some View {
-        GeometryReader { geo in
-            let w=geo.size.width
-            ZStack {
-                Ellipse().fill(ink.opacity(0.13)).frame(width:w*0.85,height:10).offset(y:30)
-                RoundedRectangle(cornerRadius:form == .stone ? 12 : 18).fill(LinearGradient(colors:[color.opacity(0.6),color],startPoint:.topLeading,endPoint:.bottomTrailing)).frame(width:w*0.85,height:w*0.85).rotationEffect(.degrees(-5))
-                if form.hasFur {
-                    ForEach(0..<28,id:\.self) { i in
-                        Capsule().fill(color.opacity(0.75)).frame(width:2,height:7).offset(y:-w*0.42).rotationEffect(.degrees(Double(i)*360/28))
-                    }
-                }
-                HStack(spacing:12) {
-                    ForEach(0..<2,id:\.self) { _ in
-                        ZStack(alignment:.topLeading) { Ellipse().fill(ink).frame(width:10,height:15);Circle().fill(.white).frame(width:4,height:4).offset(x:2,y:2) }
-                    }
-                }.offset(y:1)
-                Ellipse().fill(ink).frame(width:8,height:6).offset(y:16)
-            }.frame(width:geo.size.width,height:geo.size.height)
-        }.accessibilityHidden(true)
-    }
 }

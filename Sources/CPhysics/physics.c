@@ -122,10 +122,12 @@ bool ec_blocked(ECWorld *w,int id,float x,float y) {
     b2World_OverlapShape(w->world,&proxy,b2DefaultQueryFilter(),ec_overlap,&q);
     return q.blocked;
 }
-bool ec_space_clear(ECWorld *w,float x,float y,float width,float height) {
+bool ec_space_clear_ignoring(ECWorld *w,int id,float x,float y,float width,float height) {
     b2Vec2 points[4]={{x-width/2,y-height/2},{x+width/2,y-height/2},{x+width/2,y+height/2},{x-width/2,y+height/2}};
     b2ShapeProxy proxy=b2MakeProxy(points,4,0);
-    ECQuery q={b2_nullBodyId,false};
+    ECQuery q={id>=0 && id<w->count ? w->bodies[id] : b2_nullBodyId,false};
     b2World_OverlapShape(w->world,&proxy,b2DefaultQueryFilter(),ec_overlap,&q);
     return !q.blocked;
 }
+
+bool ec_space_clear(ECWorld *w,float x,float y,float width,float height) { return ec_space_clear_ignoring(w,-1,x,y,width,height); }

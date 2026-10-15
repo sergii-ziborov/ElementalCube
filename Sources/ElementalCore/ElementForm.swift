@@ -16,17 +16,16 @@ public enum ElementForm: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .ice: return "При первом касании воды сразу создаёт под кубом ледяную опору и не даёт погрузиться. Чем дольше куб стоит, тем толще становится лёд: холод постепенно идёт от места контакта в стороны и в глубину. Толстая корка растёт медленнее тонкой. Лёд не возникает внутри тела. Касание покрывает дерево и камень скользким инеем; вдали от холода лёд медленно тает."
         case .water: return "Мягкое водное тело держится на поверхности. Пассивная волна помогает плыть и снижает сопротивление воды. Касание карты задаёт направление, прыжок помогает выйти на берег. Шерсть намокает и слипается."
-        case .air: return "Скользит без качения. Воздушная подушка автоматически поддерживает над водой и сушей, пока хватает маны. При прыжке подушка отпускает куб, затем ловит у поверхности. Ветер особенно сильно влияет на лёгкое тело и его волокна."
+        case .air: return "Скользит без качения. Воздушная подушка автоматически поддерживает над водой и сушей, без расхода маны. При прыжке подушка отпускает куб, затем ловит у поверхности. Ветер особенно сильно влияет на лёгкое тело и его волокна."
         case .stone: return "Тяжёлое тело без шерсти тонет и проходит по дну под мостом. Пассивная устойчивость помогает идти против сопротивления воды. Под подвесным мостом спрятана глубинная реликвия. Вода не поддержит камень у поверхности — выходи по склону."
-        case .fire: return "Поджигает траву и деревянный ящик при контакте, оставляя обугленный след. В воде пламя испаряет воду вокруг куба: уровень падает, расходуются здоровье и мана. Небольшой водоём можно осушить, если хватит здоровья. При истощении маны вода быстро гасит пламя."
+        case .fire: return "Поджигает траву и деревянный ящик при контакте, оставляя обугленный след. В воде пламя испаряет воду вокруг куба: уровень падает, расходуется здоровье. Небольшой водоём можно осушить, если хватит здоровья. К огню эта форма невосприимчива; испарение воды всё равно расходует здоровье."
         }
     }
     public var density: Float {
         switch self { case .ice: return 0.75; case .water: return 0.82; case .air: return 0.18; case .stone: return 3.1; case .fire: return 0.52 }
     }
-    public var manaCost: Float {
-        switch self { case .ice: return 2.2; case .water: return 0.6; case .air: return 1.6; case .stone: return 0.4; case .fire: return 1.8 }
-    }
+    public var manaCost:Float { 0 }
+    public var fireImmune:Bool { self == .fire || self == .stone }
     public var hasFur: Bool { self == .ice || self == .water || self == .air }
 }
 
@@ -47,4 +46,11 @@ public struct MaterialPatch {
 public struct FrostMark {
     public var position: Vec
     public var cold: Float = 0
+}
+
+public struct FireSource {
+    public var position:Vec
+    public var radius:Float
+    public var intensity:Float
+    public init(_ position:Vec,radius:Float=1,intensity:Float=1) { self.position=position;self.radius=radius;self.intensity=intensity }
 }

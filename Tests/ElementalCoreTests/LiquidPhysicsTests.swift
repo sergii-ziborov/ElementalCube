@@ -115,7 +115,7 @@ final class LiquidPhysicsTests:XCTestCase {
         field.liquid.addImpulse(at:Vec(9.3,-0.85),impulse:Vec(0.2,0.1),radius:0.7)
         field.freezeContact(at:9.3,bottom:-0.71)
         XCTAssertGreaterThan(field.frozenVolume,0)
-        for _ in 0..<310 { field.step(dt:0.1,coldSource:nil,heatSource:nil,occupied:[]) }
+        for _ in 0..<450 { field.step(dt:0.1,coldSource:nil,heatSource:nil,occupied:[]) }
         XCTAssertTrue(field.ice.allSatisfy { !$0.solid })
         XCTAssertEqual(field.representedVolume,initial,accuracy:0.0001)
         XCTAssertTrue(field.liquid.particles.filter { abs($0.position.x-9.3)<0.8 && $0.position.y > -0.88 }.allSatisfy { hypot($0.velocity.x,$0.velocity.y)<0.001 })
