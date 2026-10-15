@@ -1,0 +1,41 @@
+{
+  "sourceCommit": "c5a48af5d3d0d5453c15fa4ce80b78a0a9b7b362",
+  "tag": "v0.1.0-alpha.14",
+  "version": "0.1.0",
+  "build": "14",
+  "ipaSHA256": "d4840b4132dbafc50188ce44b3096929af3eb1dde1f66ab78e070f94dd266643",
+  "bundleID": "com.weavatrix.elementalcube",
+  "minimumOSVersion": "16.0",
+  "deviceFamily": [
+    1,
+    2
+  ],
+  "strictSignatureVerified": true,
+  "illustrationCount": 20,
+  "ruleVersions": {
+    "schema": 1,
+    "physics": "sim-v14.1",
+    "forms": "forms-v2.1",
+    "inheritance": "inheritance-v2.1",
+    "balance": "progression-v14.1",
+    "controls": "gestures-v10.1",
+    "maps": "three-maps-v10.1",
+    "rigidBodies": "Box2D-3.1.1",
+    "policy": null,
+    "observations": null,
+    "seedManifest": null
+  },
+  "apple": {
+    "buildID": "7beb7611-5e03-48d8-b93f-ece927efd2c7",
+    "processingState": "VALID",
+    "internalBuildState": "IN_BETA_TESTING",
+    "externalBuildState": "READY_FOR_BETA_SUBMISSION",
+    "reviewSubmission": "ANOTHER_BUILD_IN_REVIEW"
+  },
+  "limits": [
+    "Local receipt only; no authoritative generation or MergeGrant",
+    "Development imprints latent; no trained controller or behavior transfer",
+    "No complete spell catalogue, typed local injuries, brick fracture or server arena",
+    "No physical-device thermal/FPS evidence; no official seed/replay manifest"
+  ]
+}
