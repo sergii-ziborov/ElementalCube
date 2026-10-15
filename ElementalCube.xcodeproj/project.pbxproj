@@ -23,6 +23,7 @@
 		9A2AEC224003DCC828E6660E /* ElementalCubeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 655FEDACA00A1414E978902E /* ElementalCubeApp.swift */; };
 		CE09702B7CEFC681ADF56B34 /* ElementalCore in Frameworks */ = {isa = PBXBuildFile; productRef = FB5057996CF37D2F9733E2B8 /* ElementalCore */; };
 		D7A6B962EA6F8411A6046CB4 /* MonsterInventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45FDB19C14061EC60CA49FFE /* MonsterInventoryView.swift */; };
+		D91EC89ED0F941130850CAB6 /* WaterRenderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3838B3A949861E097C0151E8 /* WaterRenderingTests.swift */; };
 		DF584476488943933C2C2721 /* MonsterPortraitGallery.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13F256399449FE2A0782472 /* MonsterPortraitGallery.swift */; };
 		E8E500AB556F8BF24D5BF68E /* CharacterPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF7C05E30092DE633FD1CE96 /* CharacterPreview.swift */; };
 		F2A6F9FCD391A1960ACCF7A7 /* DirectInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32855687569320763186F2E9 /* DirectInteractionTests.swift */; };
@@ -43,6 +44,7 @@
 		1548F9D511700BF8A3E44CF7 /* ElementalCube-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "ElementalCube-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A8880634436BF2F6E5FF0B2 /* HomeFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeFlowTests.swift; sourceTree = "<group>"; };
 		32855687569320763186F2E9 /* DirectInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectInteractionTests.swift; sourceTree = "<group>"; };
+		3838B3A949861E097C0151E8 /* WaterRenderingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterRenderingTests.swift; sourceTree = "<group>"; };
 		3CFD35AE5C340B06920CFE10 /* Renderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Renderer.swift; sourceTree = "<group>"; };
 		438C0E63FC590D7D069405AD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		45FDB19C14061EC60CA49FFE /* MonsterInventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonsterInventoryView.swift; sourceTree = "<group>"; };
@@ -83,6 +85,7 @@
 				32855687569320763186F2E9 /* DirectInteractionTests.swift */,
 				1A8880634436BF2F6E5FF0B2 /* HomeFlowTests.swift */,
 				5246294C5A43CEC72A790ACE /* PortraitAnimationTests.swift */,
+				3838B3A949861E097C0151E8 /* WaterRenderingTests.swift */,
 			);
 			name = ElementalCubeUITests;
 			path = Tests/ElementalCubeUITests;
@@ -269,6 +272,7 @@
 				F2A6F9FCD391A1960ACCF7A7 /* DirectInteractionTests.swift in Sources */,
 				5278B1EC015B920E61D8FB9B /* HomeFlowTests.swift in Sources */,
 				4AC2C2884C638BF8C8251A98 /* PortraitAnimationTests.swift in Sources */,
+				D91EC89ED0F941130850CAB6 /* WaterRenderingTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -408,7 +412,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = XMS5ZC28UJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ElementalCube;
@@ -470,7 +474,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = XMS5ZC28UJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ElementalCube;

@@ -41,10 +41,13 @@ struct RNG { var seed:UInt64=9349823; mutating func next()->Float { seed=seed &*
 func tint(_ hex:UInt32,_ alpha:Float=1)->C4 { C4(Float(hex>>16&255)/255,Float(hex>>8&255)/255,Float(hex&255)/255,alpha) }
 
 enum Geometry {
+    // Ice's coat fills this difference. Smooth Water must reach its 1.12 m
+    // collider itself, otherwise the waterline outlines an invisible larger box.
+    private static let waterScale:Float=1.12/0.96
     static func cube(form:ElementForm = .ice)->Mesh {
         var mesh=Mesh(),r=RNG()
         // Rounded solid cube: six subdivided faces, with physical depth.
-        let h:Float=0.48,round:Float=form == .stone ? 0.08 : (form == .water ? 0.36 : (form == .air ? 0.3 : 0.12)),n=form == .stone ? 18 : 12
+        let h:Float=0.48,round:Float=form == .stone ? 0.08 : (form == .water ? 0.18 : (form == .air ? 0.3 : 0.12)),n=form == .stone ? 18 : 12
         let colors:[ElementForm:UInt32]=[.ice:0xd9f6ff,.water:0x49c9ef,.air:0xdbf6f3,.stone:0x858a8e,.fire:0xffc263]
         let frames:[(V3,V3,V3)]=[(V3(0,0,1),V3(1,0,0),V3(0,1,0)),(V3(1,0,0),V3(0,0,-1),V3(0,1,0)),(V3(-1,0,0),V3(0,0,1),V3(0,1,0)),(V3(0,1,0),V3(1,0,0),V3(0,0,-1)),(V3(0,-1,0),V3(1,0,0),V3(0,0,1)),(V3(0,0,-1),V3(-1,0,0),V3(0,1,0))]
         func rounded(_ p:V3)->(V3,V3) { let q=simd_clamp(p,V3(repeating:-h+round),V3(repeating:h-round));let normal=simd_normalize(p-q);return(q+normal*round,normal) }
@@ -65,12 +68,6 @@ enum Geometry {
                         }
                         let edge=min(1,max(0,(0.48-max(abs(simd_dot(position,u)),abs(simd_dot(position,v))))/0.1))
                         position += normal*((sin(position.x*17+position.z*11)*sin(position.y*19)*0.012-depth)*edge)
-                    }
-                    if form == .water {
-                        let taper:Float=1-position.y*0.45
-                        position.x *= taper;position.z *= taper
-                        position.y += max(0,position.y-0.23)*0.35
-                        normal=simd_normalize(V3(normal.x,normal.y+0.15,normal.z))
                     }
                     return(position,normal)
                 }
@@ -163,6 +160,7 @@ enum Geometry {
             let p=mesh.vertices[i].position
             if let second=second { mesh.vertices[i].color=mix(mesh.vertices[i].color,second,0.1+(sin(p.x*6+p.y*4)+1)*0.12) }
             mesh.vertices[i].color *= SIMD4(1+variation*0.1,1-variation*0.03,1+variation*0.06,1)
+            if form == .water { mesh.vertices[i].position *= SIMD4(waterScale,waterScale,waterScale,1) }
         }
         return mesh
     }
@@ -189,6 +187,7 @@ enum Geometry {
                 for k in start..<m.vertices.count { m.vertices[k].normal.w = -2 }
             } }
         }
+        if form == .water { for i in m.vertices.indices { m.vertices[i].position *= SIMD4(waterScale,waterScale,waterScale,1) } }
         return m
     }
     static func face(blink:Float,mood:Mood,look:Float,wet:Float,form:ElementForm = .ice)->Mesh {
@@ -233,14 +232,15 @@ enum Geometry {
         }
         if form.hasFur && wet>0.2 { m.ellipse(center:V3(-0.36,0.3,0.61),rx:0.018,ry:0.038,color:tint(0xa0e9ff,0.9)) }
         if form == .water || form == .air {
-            let radius:Float=form == .water ? 0.36 : 0.30,inner:Float=0.48-radius
+            let radius:Float=form == .water ? 0.18 : 0.30,inner:Float=0.48-radius
             for i in m.vertices.indices {
-                let p=m.vertices[i].position,taper:Float=form == .water ? 1-p.y*0.45 : 1
-                let x=max(0,abs(p.x/taper)-inner),y=max(0,abs(p.y)-inner)
-                let surface=(inner+sqrt(max(0.001,radius*radius-x*x-y*y)))*taper
+                let p=m.vertices[i].position
+                let x=max(0,abs(p.x)-inner),y=max(0,abs(p.y)-inner)
+                let surface=inner+sqrt(max(0.001,radius*radius-x*x-y*y))
                 m.vertices[i].position.z-=0.48-surface
             }
         }
+        if form == .water { for i in m.vertices.indices { m.vertices[i].position *= SIMD4(waterScale,waterScale,waterScale,1) } }
         return m
     }
     static func terrain(patches:[MaterialPatch] = [],visible:WorldBounds=WorldBounds(-6,-8,29,11),definition:WorldDefinition=WorldMap.shore.definition)->Mesh {
@@ -411,7 +411,7 @@ enum Geometry {
                 if p.y<level && (fluid.staticSolid(p) || bodies.contains(where:{ $0.contains(p) })) { nodeValues[id]=max(nodeValues[id],0.85) }
             }
         }
-        func value(_ i:Int,_ j:Int)->Float { nodeValues[i*fluid.ny+j]-0.26 }
+        func value(_ i:Int,_ j:Int)->Float { nodeValues[i*fluid.ny+j]-0.5 }
         func clip(_ polygon:[V3],_ depth:(V3)->Float)->[V3] {
             guard !polygon.isEmpty else { return [] }
             var out:[V3]=[]
@@ -446,11 +446,11 @@ enum Geometry {
                 }
                 if edge.count==2 && edge.allSatisfy({ $0.x>=7 && $0.x<=17 && $0.y>field.floor(at:$0.x)+0.012 }) {
                     let a=edge[0],b=edge[1],mid=(a+b)/2
-                    // Only the actual upper free surface has depth. Extruding
-                    // every internal density edge produced floating blue plates
-                    // around bodies and evaporating pockets.
-                    if abs(mid.y-fluid.surfaceHeight(at:mid.x))<h*1.2 {
-                        mesh.quad(a,b,V3(b.x,b.y,-0.75),V3(a.x,a.y,-0.75),tint(0x9ce8e5,0.18),V3(0,1,0))
+                    // A density contour is a boundary in XY, not a rigid sheet
+                    // spanning the whole scene depth. Even a small airborne
+                    // fragment used to become a two-metre translucent plate.
+                    // Keep the meniscus on the actual front boundary instead.
+                    if abs(mid.y-fluid.surfaceHeight(at:mid.x))<h*1.2 && abs(a.x-b.x)>abs(a.y-b.y)*0.3 {
                         mesh.line(a+V3(0,0,0.01),b+V3(0,0,0.01),width:0.014,color:tint(0xdcfff4,0.8))
                     }
                 }

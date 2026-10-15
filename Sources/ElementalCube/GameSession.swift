@@ -105,6 +105,10 @@ final class GameSession: ObservableObject {
                 simulation.placeCube(Vec(41,-12.3));for _ in 0..<120 { simulation.step() }
             } else if args.contains("--preview-gesture") || args.contains("--preview-skills") || args.contains("--preview-equipment") {
                 for _ in 0..<120 { simulation.step() }
+            } else if args.contains("--preview-bank") {
+                simulation.wind=0;zoom=1.15
+                simulation.placeCrate(Vec(2,1));simulation.placeCube(Vec(14.5,-0.5));simulation.movement=1
+                for _ in 0..<100 { simulation.step() };simulation.movement=0
             } else if args.contains("--preview-splash") {
                 simulation.wind=0;zoom=0.9
                 simulation.placeCube(Vec(9.1,0.1))
@@ -147,7 +151,7 @@ final class GameSession: ObservableObject {
             }
         }
         abilityInfo=args.contains("--preview-ability");forms=args.contains("--preview-forms") || args.contains("--preview-skills") || args.contains("--preview-equipment")
-        if args.contains("--preview-fur-live") || args.contains("--preview-physics-live") { visualPreview=false }
+        if args.contains("--preview-fur-live") || args.contains("--preview-physics-live") || args.contains("--preview-live") { visualPreview=false }
         refresh()
     }
     func preparePreview() {

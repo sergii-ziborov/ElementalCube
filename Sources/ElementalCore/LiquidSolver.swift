@@ -71,15 +71,15 @@ public final class LiquidSolver {
         let i=max(0,min(nx-1,Int((p.x-origin.x)/spacing))),j=max(0,min(ny-1,Int((p.y-origin.y)/spacing)))
         return i*ny+j
     }
-    private func transfer(_ p:Vec,component:Int,value:Float) {
+    private func transfer(_ p:Vec,component:Int,value:Float,mass:Float=1) {
         let dx:Float=component==0 ? 0 : 0.5,dy:Float=component==1 ? 0 : 0.5
         let x=max(0,min(Float(nx-2),(p.x-origin.x)/spacing-dx)),y=max(0,min(Float(ny-2),(p.y-origin.y)/spacing-dy))
         let i=Int(x),j=Int(y),fx=x-Float(i),fy=y-Float(j)
         let ids=[i*ny+j,(i+1)*ny+j,(i+1)*ny+j+1,i*ny+j+1]
         let ws=[(1-fx)*(1-fy),fx*(1-fy),fx*fy,(1-fx)*fy]
         for k in 0..<4 {
-            if component==0 { u[ids[k]]+=value*ws[k];weightU[ids[k]]+=ws[k] }
-            else if component==1 { v[ids[k]]+=value*ws[k];weightV[ids[k]]+=ws[k] }
+            if component==0 { u[ids[k]]+=value*ws[k]*mass;weightU[ids[k]]+=ws[k]*mass }
+            else if component==1 { v[ids[k]]+=value*ws[k]*mass;weightV[ids[k]]+=ws[k]*mass }
             else { particleDensity[ids[k]]+=value*ws[k] }
         }
     }
@@ -114,8 +114,8 @@ public final class LiquidSolver {
         for p in particles where !p.isSpray {
             let id=index(p.position)
             if kind[id] != 0 { kind[id]=2;counts[id]+=p.volume/markerVolume }
-            transfer(p.position,component:0,value:p.velocity.x)
-            transfer(p.position,component:1,value:p.velocity.y)
+            transfer(p.position,component:0,value:p.velocity.x,mass:p.volume/markerVolume)
+            transfer(p.position,component:1,value:p.velocity.y,mass:p.volume/markerVolume)
             transfer(p.position,component:2,value:p.volume/markerVolume)
         }
         for i in u.indices {
@@ -213,13 +213,24 @@ public final class LiquidSolver {
         for i in particles.indices where !particles[i].isSpray {
             let p=particles[i].position
             let pic=velocity(at:p),before=Vec(sample(oldU,at:p,component:0),sample(oldV,at:p,component:1))
-            var velocity=Vec((particles[i].velocity.x+pic.x-before.x)*0.92+pic.x*0.08,
-                             (particles[i].velocity.y+pic.y-before.y)*0.92+pic.y*0.08)
+            // FLIP preserves motion in the bulk. More PIC near a moving wall
+            // dissipates unresolved, sub-cell vortices instead of carrying them
+            // out of the pond as a noisy sheet stuck to the departing body.
+            let nearWall=bodies.contains { $0.contains(p,margin:spacing*1.5) } || staticSolid(p,margin:spacing)
+            let blend:Float=nearWall ? 0.32 : 0.08
+            var velocity=Vec((particles[i].velocity.x+pic.x-before.x)*(1-blend)+pic.x*blend,
+                             (particles[i].velocity.y+pic.y-before.y)*(1-blend)+pic.y*blend)
             let speed=hypot(velocity.x,velocity.y),limit=spacing*0.75/dt
             if speed>limit { velocity.x*=limit/speed;velocity.y*=limit/speed }
             velocity.x*=exp(-dt*0.12);velocity.y*=exp(-dt*0.12)
             particles[i].velocity=velocity
-            particles[i].position.x+=velocity.x*dt;particles[i].position.y+=velocity.y*dt
+            // Midpoint transport follows the projected grid, not the noisy
+            // per-particle FLIP residual. The residual still carries momentum.
+            let midpoint=Vec(p.x+pic.x*dt*0.5,p.y+pic.y*dt*0.5)
+            var transport=self.velocity(at:midpoint)
+            let travelSpeed=hypot(transport.x,transport.y)
+            if travelSpeed>limit { transport.x*=limit/travelSpeed;transport.y*=limit/travelSpeed }
+            particles[i].position.x+=transport.x*dt;particles[i].position.y+=transport.y*dt
             collide(&particles[i],frozen:frozen)
         }
         stepNumber+=1
@@ -260,7 +271,6 @@ public final class LiquidSolver {
         for i in heads.indices { heads[i] = -1 }
         next=Array(repeating:-1,count:particles.count)
         for i in particles.indices where !particles[i].isSpray { let cell=index(particles[i].position);next[i]=heads[cell];heads[cell]=i }
-        let minimum=spacing*0.50
         for i in particles.indices where !particles[i].isSpray {
             let cell=index(particles[i].position),x=cell/ny,y=cell%ny
             for xx in max(0,x-1)...min(nx-1,x+1) { for yy in max(0,y-1)...min(ny-1,y+1) {
@@ -268,6 +278,7 @@ public final class LiquidSolver {
                 while j>=0 {
                     if j>i {
                         let dx=particles[j].position.x-particles[i].position.x,dy=particles[j].position.y-particles[i].position.y,d2=dx*dx+dy*dy
+                        let minimum=spacing*0.25*(sqrt(particles[i].volume/markerVolume)+sqrt(particles[j].volume/markerVolume))
                         if d2>0.0000001 && d2<minimum*minimum {
                             let d=sqrt(d2),shift=(minimum-d)*0.45/d
                             particles[i].position.x-=dx*shift;particles[i].position.y-=dy*shift
@@ -307,11 +318,47 @@ public final class LiquidSolver {
                 for i in a...b { surface[i]=max(surface[i],surface[a]+(surface[b]-surface[a])*Float(i-a)/Float(b-a)) }
             }
         }
-        for i in density.indices {
-            let x=i/ny,y=i%ny
-            var sum:Float=0,n:Float=0
-            for xx in max(0,x-1)...x { for yy in max(0,y-1)...y { sum+=min(1,counts[xx*ny+yy]/3.5);n+=1 } }
-            density[i]=sum/max(1,n)
+        reconstructDensity()
+    }
+    /// A few disconnected markers are drops, not another pressure-bearing
+    /// pond. Classify by connected water volume, rather than their own noisy
+    /// column maximum (which previously made a fragment its own "surface").
+    private func detachSmallFragments() {
+        var mass=Array(repeating:Float(0),count:nx*ny)
+        for p in particles where !p.isSpray { mass[index(p.position)]+=p.volume }
+        var labels=Array(repeating:-1,count:mass.count),volumes:[Float]=[]
+        for start in mass.indices where mass[start]>0 && labels[start]<0 {
+            let label=volumes.count;var queue=[start],head=0,total:Float=0;labels[start]=label
+            while head<queue.count {
+                let id=queue[head];head+=1;total+=mass[id]
+                let x=id/ny,y=id%ny
+                for neighbor in [x>0 ? id-ny : -1,x+1<nx ? id+ny : -1,y>0 ? id-1 : -1,y+1<ny ? id+1 : -1] where neighbor>=0 {
+                    if mass[neighbor]>0 && labels[neighbor]<0 { labels[neighbor]=label;queue.append(neighbor) }
+                }
+            }
+            volumes.append(total)
+        }
+        guard let largest=volumes.indices.max(by:{ volumes[$0]<volumes[$1] }) else { return }
+        for i in particles.indices where !particles[i].isSpray {
+            let label=labels[index(particles[i].position)]
+            if label != largest && label>=0 && volumes[label]<markerVolume*8 && hypot(particles[i].velocity.x,particles[i].velocity.y)>0.35 {
+                particles[i].isSpray=true;particles[i].sprayAge=0
+            }
+        }
+    }
+    /// Continuous, volume-weighted quadratic B-spline reconstruction. Cell
+    /// occupancy jumps by a whole cell when one marker crosses a grid line;
+    /// a compact particle kernel moves continuously with the actual water.
+    private func reconstructDensity() {
+        for i in density.indices { density[i]=0 }
+        let inv:Float=1/spacing,invArea=inv*inv
+        func weights(_ f:Float)->[Float] { [0.5*(1.5-f)*(1.5-f),0.75-(f-1)*(f-1),0.5*(f-0.5)*(f-0.5)] }
+        for p in particles where !p.isSpray {
+            let gx=(p.position.x-origin.x)*inv,gy=(p.position.y-origin.y)*inv
+            let x=Int((gx-0.5).rounded(.down)),y=Int((gy-0.5).rounded(.down)),wx=weights(gx-Float(x)),wy=weights(gy-Float(y))
+            for a in 0..<3 where x+a>=0 && x+a<nx { for b in 0..<3 where y+b>=0 && y+b<ny {
+                density[(x+a)*ny+y+b]+=p.volume*invArea*wx[a]*wy[b]
+            } }
         }
     }
     public func surfaceHeight(at x:Float)->Float {
@@ -377,12 +424,28 @@ public final class LiquidSolver {
         for (i,weight) in local { particles[i].velocity.y+=dt*min(1,max(0,strength))*0.8*(weight-mean) }
     }
     public func evaporate(at p:Vec,amount:Float,radius:Float)->Float {
-        var remaining=max(0,amount)
-        for i in particles.indices where hypot(particles[i].position.x-p.x,particles[i].position.y-p.y)<radius && remaining>0 {
-            let removed=min(remaining,particles[i].volume);particles[i].volume-=removed;remaining-=removed
+        var left:[(Int,Float)]=[],right:[(Int,Float)]=[]
+        for i in particles.indices {
+            let dx=particles[i].position.x-p.x,dy=particles[i].position.y-p.y,d2=dx*dx+dy*dy
+            if d2<radius*radius { if dx<0 { left.append((i,d2)) } else { right.append((i,d2)) } }
         }
-        particles.removeAll { $0.volume<0.0000001 }
-        return max(0,amount)-remaining
+        left.sort { $0.1<$1.1 };right.sort { $0.1<$1.1 }
+        // Remove real volume from the hottest, nearest markers on both sides.
+        // Eroding every marker's mass left low-density "water" occupying full
+        // pressure cells; array-order deletion cut a one-sided vertical trench.
+        func take(_ list:[(Int,Float)],_ requested:Float)->Float {
+            var remaining=max(0,requested)
+            for (i,_) in list where remaining>0 {
+                let volume=min(remaining,particles[i].volume);particles[i].volume-=volume;remaining-=volume
+            }
+            return max(0,requested)-remaining
+        }
+        let target=max(0,amount)
+        var removed=take(left,target/2)+take(right,target/2)
+        if removed<target { removed+=take(left,target-removed) }
+        if removed<target { removed+=take(right,target-removed) }
+        particles.removeAll { if $0.volume<0.0000001 { removed+=$0.volume;return true };return false }
+        return removed
     }
     public var divergenceRMS:Float {
         var sum:Float=0,n:Float=0
@@ -430,6 +493,7 @@ extension LiquidSolver {
                 particles[i].isSpray=false;particles[i].sprayAge=0;reentries.append(p)
             }
         }
+        detachSmallFragments()
         // A jet can also detach naturally from an already fast, sparse crest.
         var sprayCount=particles.reduce(0) { $0+($1.isSpray ? 1 : 0) }
         if sprayCount<120 {

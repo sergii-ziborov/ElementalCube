@@ -134,7 +134,7 @@ final class Renderer: NSObject, MTKViewDelegate {
         drawBuffer(terrain,terrainCount)
         var details=Mesh()
         let support=s.supportHeight(at:p.x),shadeAlpha=max(0.03,0.22-max(0,p.y-support-0.56)*0.035)
-        if p.y-support<5 { details.ellipse(center:V3(p.x,support+0.11,0.86),rx:0.67,ry:0.07,color:tint(0x254c46,shadeAlpha)) }
+        if !s.inWater && p.y-support>0.3 && p.y-support<5 { details.ellipse(center:V3(p.x,support+0.11,0.86),rx:0.67,ry:0.07,color:tint(0x254c46,shadeAlpha)) }
         if s.crateExists && s.crate.position.y>0 && (s.crate.position.x<7 || s.crate.position.x>17) {
             details.ellipse(center:V3(s.crate.position.x,0.12,0.82),rx:0.78,ry:0.09,color:tint(0x25443c,0.21))
         }
