@@ -101,7 +101,7 @@ final class AlphaNineTests:XCTestCase {
         let original=Set(field.ice.indices.filter { field.ice[$0].solid })
         var sawAdvancingEdge=false
         for _ in 0..<240 {
-            field.step(dt:1/30,coldSource:source,heatSource:nil,occupied:[source],coldFoot:-0.72)
+            field.step(dt:1/30,coldSource:source,heatSource:nil,occupied:[FluidBody(id:0,center:source,width:1.12,height:1.12)],coldFoot:-0.72)
             sawAdvancingEdge = sawAdvancingEdge || field.ice.indices.contains { !original.contains($0) && field.ice[$0].solid && field.ice[$0].size<field.cell-0.02 }
         }
         let frozen=field.ice.filter(\.solid),thickness=frozen.map(\.height).max()!

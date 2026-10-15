@@ -31,6 +31,39 @@ public struct FluidBody {
     public func contains(_ p:Vec,margin:Float=0)->Bool {
         let q=local(p);return abs(q.x)<width/2+margin && abs(q.y)<height/2+margin
     }
+    /// Separating-axis test for the actual oriented rectangles. A positive
+    /// clearance permits a small contact gap without treating it as penetration.
+    public func overlaps(_ other:FluidBody,clearance:Float=0)->Bool {
+        let delta=Vec(other.center.x-center.x,other.center.y-center.y)
+        let axes=[Vec(cosine,sine),Vec(-sine,cosine),Vec(other.cosine,other.sine),Vec(-other.sine,other.cosine)]
+        for axis in axes {
+            let a=width/2*abs(axis.x*cosine+axis.y*sine)+height/2*abs(-axis.x*sine+axis.y*cosine)
+            let b=other.width/2*abs(axis.x*other.cosine+axis.y*other.sine)+other.height/2*abs(-axis.x*other.sine+axis.y*other.cosine)
+            if abs(delta.x*axis.x+delta.y*axis.y)>=a+b-clearance { return false }
+        }
+        return true
+    }
+    /// Continuous segment/rectangle collision. Checking the endpoint alone lets
+    /// fast water cross a thin plank or ice edge between two solver steps.
+    public func sweep(from start:Vec,to end:Vec,radius:Float)->(point:Vec,normal:Vec,fraction:Float)? {
+        let bound=(width+height)/2+radius
+        if max(start.x,end.x)<center.x-bound || min(start.x,end.x)>center.x+bound || max(start.y,end.y)<center.y-bound || min(start.y,end.y)>center.y+bound { return nil }
+        let a=local(start),b=local(end),d=Vec(b.x-a.x,b.y-a.y)
+        let half=Vec(width/2+radius,height/2+radius)
+        var enter:Float=0,exit:Float=1,normal=Vec(0,0)
+        for axis in 0..<2 {
+            let p=axis==0 ? a.x : a.y,v=axis==0 ? d.x : d.y,h=axis==0 ? half.x : half.y
+            if abs(v)<0.000001 { if abs(p)>h { return nil };continue }
+            let t1=(-h-p)/v,t2=(h-p)/v,near=min(t1,t2),far=max(t1,t2)
+            if near>=enter { enter=near;normal=axis==0 ? Vec(v>0 ? -1 : 1,0) : Vec(0,v>0 ? -1 : 1) }
+            exit=min(exit,far)
+            if enter>exit { return nil }
+        }
+        guard enter>=0,enter<=1,exit>=0,normal != Vec(0,0) else { return nil }
+        let n=Vec(normal.x*cosine-normal.y*sine,normal.x*sine+normal.y*cosine)
+        let p=world(Vec(a.x+d.x*enter,a.y+d.y*enter))
+        return (Vec(p.x+n.x*0.0001,p.y+n.y*0.0001),n,enter)
+    }
     public func velocity(at p:Vec)->Vec { Vec(velocity.x-omega*(p.y-center.y),velocity.y+omega*(p.x-center.x)) }
     public func displaced(below level:Float,slope:Float=0)->(area:Float,centroid:Vec) {
         let input=corners

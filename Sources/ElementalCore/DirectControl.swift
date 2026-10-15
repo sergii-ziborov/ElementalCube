@@ -58,12 +58,11 @@ public struct DirectControl {
     }
     public mutating func end(time:TimeInterval=ProcessInfo.processInfo.systemUptime)->Release {
         guard gesture != nil else { return .none }
-        let duration=time-startedAt
         var release=Release.none
         if gesture == .aim {
             if hypot(drag.x,drag.y)>=12 { release = .aim(drag) }
             destination=nil
-        } else if -drag.y>=28 && -drag.y>=abs(drag.x)*0.7 && duration<=0.65 && !(onCube && heldCube) {
+        } else if -drag.y>=28 && -drag.y>=abs(drag.x)*0.7 && !(onCube && heldCube) {
             release = .swipeJump(Vec(max(-3.2,min(3.2,drag.x*0.055)),7.2));destination=nil
         } else if onCube { release = .pet;destination=nil }
         gesture=nil;drag=Vec(0,0);return release

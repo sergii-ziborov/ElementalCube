@@ -2,6 +2,18 @@ import XCTest
 @testable import ElementalCore
 
 final class DirectControlAndInventoryTests:XCTestCase {
+    func testLongScreenSwipeStillJumpsWhileStationaryCubeHoldStillPets() {
+        var input=DirectControl()
+        input.begin(screen:Vec(100,900),worldX:0,onCube:false,canJump:true,time:0)
+        input.update(screen:Vec(100,300),worldX:0,time:1.2)
+        guard case .swipeJump(let jump)=input.end(time:1.3) else { return XCTFail("A tablet-sized upward stroke must not expire") }
+        XCTAssertGreaterThan(jump.y,0)
+        input.begin(screen:Vec(100,900),worldX:0,onCube:true,canJump:true,time:2)
+        input.update(screen:Vec(100,900),worldX:0,time:2.4)
+        input.update(screen:Vec(100,300),worldX:0,time:3)
+        XCTAssertEqual(input.end(time:3.1),.pet)
+    }
+
     func testDirectAimPreservesAllQuadrantsAndSkillLimit() {
         for d in [Vec(70,-90),Vec(-70,-90),Vec(70,90),Vec(-70,90),Vec(100,0),Vec(0,-100)] {
             let v=AimPlanner.directImpulse(dx:d.x,dy:d.y,maximumSpeed:9)

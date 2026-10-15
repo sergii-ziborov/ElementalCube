@@ -11,6 +11,9 @@ public struct BreakableDefinition {
 public struct BreakableObject:Identifiable {
     public let id:Int32,width:Float,height:Float,material:BreakMaterial
     public var state:BodyState,fuel:Float=1
+    public var masonry:String?=nil
+    public var brickIndex:Int?=nil
+    public var restMass:Float=0
 }
 public struct DebrisPiece:Identifiable {
     public let id:Int32,origin:String,width:Float,height:Float,material:BreakMaterial

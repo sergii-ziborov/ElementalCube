@@ -49,6 +49,11 @@ public struct WorldDefinition {
         if map == .forge { return [BreakableDefinition(Vec(23.9,3.7),0.7,1,.brick),BreakableDefinition(Vec(37,-2.9),0.7,1.1,.wood)] }
         return [BreakableDefinition(Vec(23.9,3.7),0.7,1,.brick)]
     }
+    /// Optional submerged masonry beside the grotto relic, with a route above
+    /// it for swimmers. It is physical geometry, including after fracture.
+    public var masonry:[MasonryDefinition] {
+        map == .grotto ? [MasonryDefinition(id:"grotto/old-sluice",base:Vec(13.6,-4))] : []
+    }
     public var relicPosition:Vec? { map == .shore || map == .grotto ? Vec(12,-3.3) : nil }
     public let campfires:[FireSource]
     public var terrain:[Platform] { platforms.enumerated().compactMap { i,p in !p.boundary && i != 5 && i != 6 ? p : nil } }

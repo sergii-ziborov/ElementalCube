@@ -16,6 +16,10 @@ import urllib.request
 from asc import BUNDLE, ROOT, call
 
 GALLERIES = {
+    "alpha16": {
+        "APP_IPHONE_61": [(f"iphone-{scene}.png", (1206,2622)) for scene in ("wall","splash","water","journey")],
+        "APP_IPAD_PRO_3GEN_129": [(f"ipad-13-{scene}.png", (2064,2752)) for scene in ("wall","water")],
+    },
     "alpha15": {
         "APP_IPHONE_61": [(f"iphone-{scene}.png", (1206,2622)) for scene in ("journey","learned","relic","shatter")],
         "APP_IPAD_PRO_3GEN_129": [(f"ipad-13-{scene}.png", (2064,2752)) for scene in ("journey","relic")],

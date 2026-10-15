@@ -31,12 +31,13 @@ public final class LiquidSolver {
     public private(set) var pressureLoads:[Int:(velocity:Vec,omega:Float)]=[:]
     private let platforms:[Platform]
     private var bodies:[FluidBody]=[]
+    private var sweptBoundaries:[FluidBody]=[]
     public private(set) var foam:[SurfaceFoam]=[]
     private var splashCooldown:[Int:Float]=[:]
     private var foamClock:Float=0
     private var stepNumber=0
     public var markerVolume:Float { spacing*spacing/4 }
-    public init(platforms:[Platform]) {
+    public init(platforms:[Platform],displaced:[FluidBody]=[]) {
         self.platforms=platforms.filter { $0.x+$0.width/2>6.8 && $0.x-$0.width/2<17.2 && $0.y-$0.height/2<3 && $0.y+$0.height/2 > -4.2 }
         let n=66*46
         u=Array(repeating:0,count:n);v=u;oldU=u;oldV=u;weightU=u;weightV=u;pressure=u;counts=u;density=u
@@ -49,7 +50,7 @@ public final class LiquidSolver {
             var y:Float = -4+step/2
             while y < -0.72 {
                 let p=Vec(x,y)
-                if !staticSolid(p,margin:step*0.35) { particles.append(LiquidParticle(position:p,velocity:Vec(0,0),volume:step*step)) }
+                if !staticSolid(p,margin:step*0.35) && !displaced.contains(where:{ $0.contains(p) }) { particles.append(LiquidParticle(position:p,velocity:Vec(0,0),volume:step*step)) }
                 y+=step
             }
             x+=step
@@ -105,11 +106,21 @@ public final class LiquidSolver {
         return kind[id]==2 || (p.y<surface[max(0,min(nx-1,id/ny))] && kind[id] != 0 && counts[id]>0.15)
     }
     private func rebuildGrid(frozen:[FluidBody]) {
+        // Conservative voxelisation for a static boundary thinner than a MAC
+        // cell. Particle collisions still use its exact physical dimensions.
+        let frozenVoxels=frozen.map { body -> FluidBody in
+            var b=body;b.width=max(spacing*1.001,b.width);b.height=max(spacing*1.001,b.height);return b
+        }
+        let solids=bodies.map { body -> FluidBody in
+            var b=body
+            if b.mass==0 { b.width=max(spacing*1.001,b.width);b.height=max(spacing*1.001,b.height) }
+            return b
+        }
         for i in u.indices { u[i]=0;v[i]=0;weightU[i]=0;weightV[i]=0;counts[i]=0;pressure[i]=0;particleDensity[i]=0;kind[i]=1;solidVelocity[i]=Vec(0,0);owner[i] = -1 }
         for i in 0..<nx { for j in 0..<ny {
             let id=i*ny+j,p=Vec(origin.x+(Float(i)+0.5)*spacing,origin.y+(Float(j)+0.5)*spacing)
-            if i==0 || i==nx-1 || j==0 || staticSolid(p) || frozen.contains(where:{ $0.contains(p) }) { kind[id]=0 }
-            else if let k=bodies.firstIndex(where:{ $0.contains(p) }) { kind[id]=0;owner[id]=k;solidVelocity[id]=bodies[k].velocity(at:p) }
+            if i==0 || i==nx-1 || j==0 || staticSolid(p) || frozenVoxels.contains(where:{ $0.contains(p) }) { kind[id]=0 }
+            else if let k=solids.firstIndex(where:{ $0.contains(p) }) { kind[id]=0;owner[id]=k;solidVelocity[id]=bodies[k].velocity(at:p) }
         } }
         for p in particles where !p.isSpray {
             let id=index(p.position)
@@ -210,6 +221,7 @@ public final class LiquidSolver {
             solidVelocity[i]=self.bodies[k].velocity(at:point)
         }
         boundaries()
+        sweptBoundaries=self.bodies+frozen+platforms.map { FluidBody(id:-1,center:Vec($0.x,$0.y),width:$0.width,height:$0.height) }
         for i in particles.indices where !particles[i].isSpray {
             let p=particles[i].position
             let pic=velocity(at:p),before=Vec(sample(oldU,at:p,component:0),sample(oldV,at:p,component:1))
@@ -231,12 +243,25 @@ public final class LiquidSolver {
             let travelSpeed=hypot(transport.x,transport.y)
             if travelSpeed>limit { transport.x*=limit/travelSpeed;transport.y*=limit/travelSpeed }
             particles[i].position.x+=transport.x*dt;particles[i].position.y+=transport.y*dt
+            constrainTravel(&particles[i],from:p,frozen:frozen)
             collide(&particles[i],frozen:frozen)
         }
         stepNumber+=1
         if stepNumber%2==0 { separate(frozen:frozen) }
         updateSurface()
         advanceSecondaryWater(dt:dt,gravity:gravity,impactBodies:bodies,energyBefore:energyBefore,frozen:frozen)
+    }
+    private func constrainTravel(_ particle:inout LiquidParticle,from start:Vec,frozen:[FluidBody]) {
+        let radius=spacing*0.16,end=particle.position
+        var first:(point:Vec,normal:Vec,fraction:Float)?,wall:FluidBody?
+        for body in sweptBoundaries {
+            if let hit=body.sweep(from:start,to:end,radius:radius),hit.fraction<(first?.fraction ?? 2) { first=hit;wall=body }
+        }
+        guard let hit=first,let body=wall else { return }
+        particle.position=hit.point
+        let velocity=body.velocity(at:hit.point),normal=hit.normal
+        let inward=(particle.velocity.x-velocity.x)*normal.x+(particle.velocity.y-velocity.y)*normal.y
+        if inward<0 { particle.velocity.x-=inward*normal.x;particle.velocity.y-=inward*normal.y }
     }
     private func collide(_ particle:inout LiquidParticle,frozen:[FluidBody]) {
         let radius=spacing*0.16
@@ -472,11 +497,13 @@ extension LiquidSolver {
         var reentries:[Vec]=[]
         for i in particles.indices where particles[i].isSpray {
             particles[i].sprayAge+=dt
+            let start=particles[i].position
             particles[i].velocity.y-=gravity*dt
             particles[i].velocity.x*=exp(-dt*0.16)
             particles[i].position.x+=particles[i].velocity.x*dt
             particles[i].position.y+=particles[i].velocity.y*dt
             let before=particles[i].velocity
+            constrainTravel(&particles[i],from:start,frozen:frozen)
             collide(&particles[i],frozen:frozen)
             // Drops hitting rigid bodies return their momentum to that body.
             if before != particles[i].velocity {

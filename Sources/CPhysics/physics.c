@@ -9,6 +9,11 @@ ECWorld *ec_create(void) {
     w->world = b2CreateWorld(&def); return w;
 }
 void ec_destroy(ECWorld *w) { b2DestroyWorld(w->world); free(w); }
+int ec_available_bodies(ECWorld *w) {
+    int available=512-w->count;
+    for(int i=0;i<w->count;i++) if(!b2Body_IsValid(w->bodies[i])) available++;
+    return available;
+}
 int ec_box(ECWorld *w, float x, float y, float width, float height, float density, bool dynamic, bool fixed) {
     int index=-1;
     for(int i=0;i<w->count;i++) if(!b2Body_IsValid(w->bodies[i])) { index=i;break; }
@@ -34,6 +39,14 @@ void ec_resize_static(ECWorld *w,int id,float x,float y,float width,float height
     b2Shape_SetPolygon(shape,&poly);
 }
 void ec_remove(ECWorld *w, int id) { if(b2Body_IsValid(w->bodies[id])) b2DestroyBody(w->bodies[id]); }
+float ec_shape_mass(ECWorld *w,int id) {
+    b2ShapeId shape;
+    if(!b2Body_IsValid(w->bodies[id]) || b2Body_GetShapes(w->bodies[id],&shape,1)<1) return 0;
+    return b2Shape_GetMassData(shape).mass;
+}
+void ec_make_dynamic(ECWorld *w,int id) {
+    if(b2Body_IsValid(w->bodies[id])) { b2Body_SetType(w->bodies[id],b2_dynamicBody);b2Body_SetFixedRotation(w->bodies[id],false);b2Body_SetAwake(w->bodies[id],true); }
+}
 void ec_step(ECWorld *w, float dt) { b2World_Step(w->world,dt,4); }
 ECState ec_state(ECWorld *w,int id) {
     b2BodyId body=w->bodies[id]; b2Vec2 p=b2Body_GetPosition(body),v=b2Body_GetLinearVelocity(body);

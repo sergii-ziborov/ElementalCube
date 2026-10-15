@@ -99,8 +99,8 @@ final class ElementsTests:XCTestCase {
     }
     func testIceGrowsUpDownAndConservesWaterVolume() {
         let field=WaterField(platforms:[]),initial=field.volume,source=Vec(10,-2)
-        field.step(dt:0.1,coldSource:source,heatSource:nil,occupied:[source]);XCTAssertFalse(field.ice.contains { $0.solid })
-        for _ in 0..<40 { field.step(dt:0.1,coldSource:source,heatSource:nil,occupied:[source]) }
+        field.step(dt:0.1,coldSource:source,heatSource:nil,occupied:[FluidBody(id:0,center:source,width:1.12,height:1.12)]);XCTAssertFalse(field.ice.contains { $0.solid })
+        for _ in 0..<40 { field.step(dt:0.1,coldSource:source,heatSource:nil,occupied:[FluidBody(id:0,center:source,width:1.12,height:1.12)]) }
         let solid=field.ice.filter { $0.solid }
         XCTAssertFalse(solid.isEmpty)
         XCTAssertTrue(solid.contains { $0.center.y>source.y+0.5 });XCTAssertTrue(solid.contains { $0.center.y<source.y-0.5 })

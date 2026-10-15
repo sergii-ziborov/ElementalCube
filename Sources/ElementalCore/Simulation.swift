@@ -87,6 +87,7 @@ public final class Simulation {
     private var cubeID:Int32=0,crateID:Int32=0
     private var platformIDs:[Int32]=[]
     private var bridgeIDs:[Int32]=[]
+    private var masonry:[MasonryState]=[]
     private var bridgeFuel:[Float]=Array(repeating:1,count:6),bridgeBurning:[Float]=Array(repeating:0,count:6)
     public private(set) var boilingStrength:Float=0
     private var bridgeWidths:[Float]=[]
@@ -167,7 +168,7 @@ public final class Simulation {
         movementSpeed=form.motion.speed;hoverHeight=form.motion.hoverHeight
         let profile=CreatureForm(form);creatureForm=profile;freezesOnContact=profile.freezesOnContact;burnsOnContact=profile.burnsOnContact;heatImmune=profile.heatImmune;compresses=profile.compresses
         platforms=definition.platforms
-        waterField=WaterField(platforms:platforms)
+        waterField=WaterField(platforms:platforms,displaced:definition.masonry.flatMap(\.bricks))
         patches=[]
         for p in definition.terrain where p.surface == .grass || p.surface == .wood {
             for i in 0..<Int(p.width/0.5) { patches.append(MaterialPatch(surface:p.surface,x:p.x-p.width/2+(Float(i)+0.5)*0.5,y:p.y+p.height/2)) }
@@ -194,7 +195,16 @@ public final class Simulation {
         crateID=ec_box(world,5.1,0.7,1.25,1.25,0.48,true,false)
         for object in definition.obstacles {
             let id=ec_box(world,object.position.x,object.position.y,object.width,object.height,object.material.density,false,false)
-            if id>=0 { obstacles.append(BreakableObject(id:id,width:object.width,height:object.height,material:object.material,state:state(id))) }
+            if id>=0 { obstacles.append(BreakableObject(id:id,width:object.width,height:object.height,material:object.material,state:state(id),restMass:ec_shape_mass(world,id))) }
+        }
+        for wall in definition.masonry {
+            var ids:[Int32]=[]
+            for brick in wall.bricks {
+                let id=ec_box(world,brick.center.x,brick.center.y,brick.width,brick.height,BreakMaterial.brick.density,false,true)
+                ids.append(id)
+                obstacles.append(BreakableObject(id:id,width:brick.width,height:brick.height,material:.brick,state:state(id),masonry:wall.id,brickIndex:brick.id,restMass:ec_shape_mass(world,id)))
+            }
+            masonry.append(MasonryState(definition:wall,bodies:ids,bonds:MasonryBonds(columns:wall.columns,rows:wall.rows)))
         }
         let points=(0...6).map { i -> Vec in
             let t=Float(i)/6;return Vec(10.1+3.8*t,-0.2-sin(t*Float.pi)*0.12)
@@ -321,7 +331,7 @@ public final class Simulation {
             if passiveEquipped && !dead && form == .ice {
                 let foot=fluidBodies[0].corners.map(\.y).min()!,level=waterLevel
                 if cube.position.x>7 && cube.position.x<17 && foot>level-0.12 && foot+min(0,cube.velocity.y)*dt<level+0.035 && level>waterField.floor(at:cube.position.x)+0.05 {
-                    waterField.freezeContact(at:cube.position.x,bottom:foot);syncIceColliders()
+                    waterField.freezeContact(at:cube.position.x,bottom:foot,occupied:fluidBodies);syncIceColliders()
                 }
             }
         }
@@ -482,7 +492,10 @@ public final class Simulation {
             if trails.count>180 { trails.removeFirst(trails.count-180) }
         }
     }
-    private func fragment(id:Int32,origin:String,body:BodyState,width:Float,height:Float,material:BreakMaterial,mass:Float,fuel:Float=1,kick:Vec=Vec(0,0),spreadEnergy:Float=0) {
+    @discardableResult private func fragment(id:Int32,origin:String,body:BodyState,width:Float,height:Float,material:BreakMaterial,mass:Float,fuel:Float=1,kick:Vec=Vec(0,0),spreadEnergy:Float=0)->Bool {
+        // Reserve the complete replacement before changing either physics or
+        // phase ownership. A full body pool must leave the original intact.
+        guard ec_available_bodies(world)>=5 else { return false }
         ec_remove(world,id)
         let cols=3,rows=2,w=width/Float(cols),h=height/Float(rows),c=cos(body.angle),s=sin(body.angle)
         var created:[Int32]=[]
@@ -509,33 +522,37 @@ public final class Simulation {
             ec_velocity(world,fragment,q.velocity.x+d.x*spread,q.velocity.y+d.y*spread,q.angularVelocity)
             debris.append(DebrisPiece(id:fragment,origin:origin,width:w,height:h,material:material,state:state(fragment),fuel:fuel))
         }
-        emit(body.position,kind:0,count:25);record(.landed(impact:0.9,surface:material == .wood ? .wood : .stone))
+        emit(body.position,kind:0,count:25);record(.landed(impact:0.9,surface:material == .wood ? .wood : .stone));return true
     }
     private func updateBreakables(previous:BodyState,previousCrate:BodyState,dt:Float) {
         func linearEnergy(_ b:BodyState)->Float { 0.5*b.mass*(b.velocity.x*b.velocity.x+b.velocity.y*b.velocity.y) }
         let cubeInertia=cube.mass*(cubeWidth*cubeWidth+cubeHeight*cubeHeight)/12
         let cubeLoss=linearEnergy(previous)-linearEnergy(cube)-0.5*cubeInertia*(cube.angularVelocity*cube.angularVelocity-previous.angularVelocity*previous.angularVelocity)
         let impactGain:Float=form == .stone && mobilityUnlocked ? 1.25 : 1
+        var budget=max(0,cubeLoss)
         if crateExists {
             let speed=ec_contact_speed(world,cubeID,crateID)
-            if 0.5*cube.mass*speed*speed*impactGain>20 {
+            if 0.5*cube.mass*speed*speed*impactGain>20 && ec_available_bodies(world)>=5 {
                 let body=crate!;crateExists=false;crateWasShattered=true;crateBurning=0
                 let inertia=body.mass*2*1.25*1.25/12
                 let lost=max(0,cubeLoss+linearEnergy(previousCrate)-linearEnergy(body)-0.5*inertia*(body.angularVelocity*body.angularVelocity-previousCrate.angularVelocity*previousCrate.angularVelocity))
                 fragment(id:crateID,origin:"crate",body:body,width:1.25,height:1.25,material:.wood,mass:body.mass,fuel:crateFuel,spreadEnergy:lost*0.2)
+                budget=max(0,budget-lost*0.2)
             }
         }
+        updateMasonry(previous:previous,impactGain:impactGain,budget:&budget)
         var broken:[Int]=[]
         for i in obstacles.indices {
+            if obstacles[i].masonry != nil { continue }
             let object=obstacles[i],speed=ec_contact_speed(world,cubeID,object.id)
-            if 0.5*cube.mass*speed*speed*impactGain>object.material.energy {
-                let radius=min(0.08,min(object.width,object.height)*0.2)
-                let mass=(object.width*object.height-(4-Float.pi)*radius*radius)*object.material.density
+            if 0.5*cube.mass*speed*speed*impactGain>object.material.energy && ec_available_bodies(world)>=5 {
+                let mass=object.restMass
                 let raw=Vec((previous.velocity.x-cube.velocity.x)*cube.mass/mass,(previous.velocity.y-cube.velocity.y)*cube.mass/mass)
-                let limit=sqrt(2*max(0,cubeLoss)*0.7/mass),speed=hypot(raw.x,raw.y)
+                let limit=sqrt(2*budget*0.7/mass),speed=hypot(raw.x,raw.y)
                 let gain=min(1,limit/max(0.0001,speed)),kick=Vec(raw.x*gain,raw.y*gain)
                 broken.append(i)
-                fragment(id:object.id,origin:"obstacle/"+String(object.id),body:object.state,width:object.width,height:object.height,material:object.material,mass:mass,fuel:object.fuel,kick:kick,spreadEnergy:max(0,cubeLoss)*0.15)
+                fragment(id:object.id,origin:"obstacle/"+String(object.id),body:object.state,width:object.width,height:object.height,material:object.material,mass:mass,fuel:object.fuel,kick:kick,spreadEnergy:budget*0.15)
+                budget=0
             } else if object.material == .wood {
                 let wet=waterEnabled && waterField.contains(object.state.position)
                 let heat=burnsOnContact && passiveWorking && hypot(cube.position.x-object.state.position.x,cube.position.y-object.state.position.y)<1.3
@@ -553,6 +570,40 @@ public final class Simulation {
             if debris[i].fuel<=0 { ec_remove(world,debris[i].id);ash.append(i) }
         }
         for i in ash.reversed() { debris.remove(at:i) }
+    }
+    public var attachedMasonryBricks:Int { masonry.reduce(0) { $0+$1.bonds.attached.count } }
+    private func updateMasonry(previous:BodyState,impactGain:Float,budget:inout Float) {
+        guard budget>0 else { return }
+        // Read all contacts before releasing bodies: mutation invalidates the
+        // old contact manifold. Stable ordering makes one impact reproducible.
+        for wallIndex in masonry.indices {
+            let contacts=masonry[wallIndex].bonds.attached.sorted().compactMap { index -> (Int,Float)? in
+                let speed=ec_contact_speed(world,cubeID,masonry[wallIndex].bodies[index])
+                return speed>0 ? (index,0.5*cube.mass*speed*speed*impactGain) : nil
+            }.sorted { $0.1 == $1.1 ? $0.0<$1.0 : $0.1>$1.1 }
+            for (index,energy) in contacts {
+                let cost=masonry[wallIndex].bonds.fractureCost(at:index)
+                guard energy>cost,budget>=cost else { continue }
+                budget-=cost
+                let released=masonry[wallIndex].bonds.detach(index).sorted()
+                let releasedIDs=Set(released.map { masonry[wallIndex].bodies[$0] })
+                let pieces=obstacles.filter { releasedIDs.contains($0.id) }
+                var totalMass:Float=0
+                for piece in pieces { ec_make_dynamic(world,piece.id);totalMass+=state(piece.id).mass }
+                // One shared contact-energy budget, including all unsupported
+                // bricks. A falling cluster cannot multiply the launch energy.
+                let energyToMotion=budget*0.45,speed=sqrt(2*energyToMotion/max(0.0001,totalMass))
+                let direction=Vec(previous.velocity.x-cube.velocity.x,previous.velocity.y-cube.velocity.y),length=hypot(direction.x,direction.y)
+                let kick=length>0.001 ? Vec(direction.x/length*speed,direction.y/length*speed) : Vec(0,0)
+                for piece in pieces {
+                    ec_velocity(world,piece.id,kick.x,kick.y,0)
+                    debris.append(DebrisPiece(id:piece.id,origin:masonry[wallIndex].definition.id+"/brick/"+String(piece.brickIndex!),width:piece.width,height:piece.height,material:.brick,state:state(piece.id)))
+                }
+                budget-=length>0.001 ? energyToMotion : 0
+                obstacles.removeAll { releasedIDs.contains($0.id) }
+                if let piece=pieces.first { emit(piece.state.position,kind:0,count:16);record(.landed(impact:0.85,surface:.stone)) }
+            }
+        }
     }
     private func updateBurning(dt:Float) {
         guard !heatImmune else { burning=0;burnTime=0;ignitionHeat=0;return }
@@ -642,7 +693,7 @@ public final class Simulation {
         if materialClock>=1/30 {
             // Retained water adds mass and rotational inertia to furry forms.
             if form.hasFur { ec_density(world,cubeID,form.density*(1+wetness*0.16)) }
-            waterField.step(dt:materialClock,coldSource:cold && waterEnabled ? cube.position : nil,heatSource:fire ? cube.position : nil,occupied:fluidBodies.map(\.center),coldFoot:fluidBodies[0].corners.map(\.y).min())
+            waterField.step(dt:materialClock,coldSource:cold && waterEnabled ? cube.position : nil,heatSource:fire ? cube.position : nil,occupied:fluidBodies,coldFoot:fluidBodies[0].corners.map(\.y).min())
             materialClock=0
             syncIceColliders()
             // A cold contact changes the actual body's friction as well as its appearance.
@@ -676,6 +727,7 @@ public final class Simulation {
             guard ec_space_clear(world,cell.center.x,cell.center.y,cell.size-0.012,max(0.002,cell.height-0.012)) else { waterField.deferSolid(at:i);continue }
             let id=ec_box(world,cell.center.x,cell.center.y,cell.size,cell.height,0,false,true)
             if id>=0 { ec_material(world,id,0.015,0.02);iceIDs[i]=id;iceShapes[i]=cell }
+            else { waterField.deferSolid(at:i) }
         }
         for (i,id) in iceIDs where iceShapes[i]?.center != waterField.ice[i].center || iceShapes[i]?.height != waterField.ice[i].height || iceShapes[i]?.size != waterField.ice[i].size {
             let c=waterField.ice[i]
@@ -690,6 +742,7 @@ public final class Simulation {
         for body in fluidBodies {
             guard body.center.x+body.width>7,body.center.x-body.width<17 else { continue }
             let mass=body.mass
+            guard mass>0 else { continue }
             if let load=waterField.liquid.pressureLoads[body.id] {
                 ec_force(world,Int32(body.id),mass*load.velocity.x/dt,mass*load.velocity.y/dt)
                 ec_torque(world,Int32(body.id),body.inertia*load.omega/dt)

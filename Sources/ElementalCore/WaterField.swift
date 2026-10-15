@@ -18,9 +18,9 @@ public final class WaterField {
     /// Thermal conductivity multiplier supplied by this monster's learned skill.
     public var conductivity:Float=1
     public var frozenVolume:Float { Float(frozenMarkers.values.reduce(Double(0)) { $0+$1.reduce(Double(0)) { $0+Double($1.volume) } }) }
-    public init(platforms: [Platform]) {
+    public init(platforms: [Platform],displaced:[FluidBody]=[]) {
         self.platforms=platforms.filter { $0.x+$0.width/2>6.8 && $0.x-$0.width/2<17.2 && $0.y-$0.height/2<3 && $0.y+$0.height/2 > -4.2 }
-        liquid=LiquidSolver(platforms:platforms)
+        liquid=LiquidSolver(platforms:platforms,displaced:displaced)
         heights=Array(repeating:-0.72,count:columns)
         totalVolume=liquid.particles.reduce(Double(0)) { $0+Double($1.volume) }
         for row in 0..<rows { for col in 0..<columns {
@@ -72,7 +72,7 @@ public final class WaterField {
     }
     /// Capture a thin skin at the current free surface. Its top stays fixed:
     /// continuing cold grows the interface into liquid, never lifts the player.
-    public func freezeContact(at x:Float,bottom foot:Float) {
+    public func freezeContact(at x:Float,bottom foot:Float,occupied:[FluidBody]=[]) {
         let top=min(surface(at:x),foot-0.003)
         for col in 0..<columns where left+Float(col+1)*cell>x-0.9 && left+Float(col)*cell<x+0.9 {
             let i=rows*columns+col
@@ -80,19 +80,20 @@ public final class WaterField {
             let maxX=min(left+Float(col+1)*cell,x+0.9,right-max(0,-top+0.18)/1.625-0.025)
             guard maxX-minX>0.08 else { continue }
             if ice[i].solid {
-                let old=ice[i]
-                reshapeSkin(i,height:old.height,left:min(old.center.x-old.size/2,minX),right:max(old.center.x+old.size/2,maxX))
+                let old=ice[i],lo=min(old.center.x-old.size/2,minX),hi=max(old.center.x+old.size/2,maxX)
+                let shape=FluidBody(id:i,center:Vec((lo+hi)/2,old.center.y),width:hi-lo,height:old.height)
+                if !blocked(shape,by:occupied) { reshapeSkin(i,height:old.height,left:lo,right:hi) }
                 ice[i].cold=max(0.8,ice[i].cold);continue
             }
             let candidate=IceCell(center:Vec((minX+maxX)/2,top-0.08),size:maxX-minX,height:0.16,cold:1,solid:true)
-            guard !solid(at:candidate.center) else { continue }
+            guard !blocked(FluidBody(id:i,center:candidate.center,width:candidate.size,height:candidate.height),by:occupied) else { continue }
             let markers=liquid.extract(in:FluidBody(id:i,center:candidate.center,width:candidate.size,height:candidate.height))
             guard !markers.isEmpty else { continue }
             frozenMarkers[i]=markers;ice[i]=candidate;contactTime[col]=0
         }
     }
     /// Resize a phase boundary by taking only the newly frozen markers. Thawing
-    /// returns only released mass, at the current local flow rather than its old
+    /// returns only released mass, at rest rather than with its old
     /// pre-freeze velocity. This avoids a delayed impulse when the cube leaves.
     private func reshapeSkin(_ index:Int,height:Float,left minX:Float?=nil,right maxX:Float?=nil) {
         let old=ice[index],top=old.center.y+old.height/2
@@ -108,6 +109,14 @@ public final class WaterField {
         frozenMarkers[index]=stored
         ice[index].center=next.center;ice[index].height=height;ice[index].size=next.width
     }
+    /// Phase growth never claims water inside a rigid body or across a bank.
+    /// In particular a thin bridge plank must not reserve a cube-sized void,
+    /// and a rotated crate must reserve its corners, not just its centre.
+    private func blocked(_ shape:FluidBody,by occupied:[FluidBody])->Bool {
+        if shape.corners.contains(where:{ $0.x<left || $0.x>right || $0.y<floor(at:$0.x) }) { return true }
+        if platforms.contains(where:{ shape.overlaps(FluidBody(id:-1,center:Vec($0.x,$0.y),width:$0.width,height:$0.height),clearance:0.012) }) { return true }
+        return occupied.contains { shape.overlaps($0,clearance:0.012) }
+    }
     public func restoreShape(at index:Int,to shape:IceCell) {
         reshapeSkin(index,height:shape.height,left:shape.center.x-shape.size/2,right:shape.center.x+shape.size/2)
         ice[index]=shape
@@ -118,7 +127,7 @@ public final class WaterField {
         refreshSurface()
         return removed
     }
-    public func step(dt:Float, coldSource:Vec?, heatSource:Vec?, occupied:[Vec],coldFoot:Float?=nil) {
+    public func step(dt:Float, coldSource:Vec?, heatSource:Vec?, occupied:[FluidBody],coldFoot:Float?=nil) {
         refreshSurface()
         let previous=ice.map(\.solid),previousCold=ice.map(\.cold)
         for i in ice.indices {
@@ -147,15 +156,15 @@ public final class WaterField {
                     let top=neighbour.center.y+neighbour.height/2
                     let width:Float=0.12,centerX=fromLeft ? gridLeft+width/2 : gridRight-width/2
                     let candidate=FluidBody(id:i,center:Vec(centerX,top-0.08),width:width,height:0.16)
-                    let blocked=occupied.contains { abs($0.x-centerX)<width/2+0.64 && $0.y+0.64>top-0.16 && $0.y-0.52<top }
-                    if !solid(at:candidate.center,margin:0.03) && !blocked {
+                    if !blocked(candidate,by:occupied) {
                         let markers=liquid.extract(in:candidate)
                         if !markers.isEmpty { ice[i].center=candidate.center;ice[i].height=0.16;ice[i].size=width;ice[i].solid=true;frozenMarkers[i]=markers;contactTime[col]=0 }
                     }
                 }
                 if ice[i].solid {
                     let c=ice[i],top=c.center.y+c.height/2
-                    let maxDepth=min(3.6,max(0.16,top-floor(at:c.center.x)-0.04))
+                    let edgeFloor=max(floor(at:c.center.x-c.size/2),floor(at:c.center.x+c.size/2))
+                    let maxDepth=min(3.6,max(0.16,top-edgeFloor-0.04))
                     let target=min(maxDepth,0.16+0.24*sqrt(contactTime[col]))
                     let chilling=(contact || conducted) && heat<0.15
                     let height=chilling ? min(target,c.height+dt*0.20*conductivity) : max(0.02,c.height-dt*(0.004+heat*0.3))
@@ -165,9 +174,10 @@ public final class WaterField {
                         if lo>gridLeft+0.001 { lo=max(gridLeft,lo-advance) }
                         if hi<gridRight-0.001 { hi=min(gridRight,hi+advance) }
                     }
-                    let blocked=occupied.contains { abs($0.x-(lo+hi)/2)<(hi-lo)/2+0.64 && $0.y+0.64>top-height && $0.y-0.52<top }
+                    let next=FluidBody(id:i,center:Vec((lo+hi)/2,top-height/2),width:hi-lo,height:height)
                     if height<=0.025 { deferSolid(at:i);contactTime[col]=0 }
-                    else if !blocked || height<c.height { reshapeSkin(i,height:height,left:lo,right:hi) }
+                    else if !blocked(next,by:occupied) { reshapeSkin(i,height:height,left:lo,right:hi) }
+                    else if height<c.height { reshapeSkin(i,height:height) }
                 }
                 continue
             }
@@ -175,7 +185,11 @@ public final class WaterField {
                 ice[i].cold=0;deferSolid(at:i);continue
             }
             var chilling=false
-            if let source=coldSource,source.y<liquid.surfaceHeight(at:source.x)-0.15 {
+            if let source=coldSource,
+               // A wave crest around the feet is not a submerged source. Bulk
+               // ice requires the whole body below water; surface contact grows
+               // its existing skin downwards instead of spawning a block halo.
+               (coldFoot.map { 2*source.y-$0<liquid.surfaceHeight(at:source.x)-0.05 } ?? (source.y<liquid.surfaceHeight(at:source.x)-0.15)) {
                 let distance=hypot(p.x-source.x,p.y-source.y)
                 let touched=abs(p.x-source.x)<0.99 && abs(p.y-source.y)<0.99
                 let connected=[i-1,i+1,i-columns,i+columns].contains { j in
@@ -189,7 +203,7 @@ public final class WaterField {
             // Keep a horizontal escape band around a submerged cold source.
             // Cold grows above and below it instead of sealing a rigid box in.
             let escape=coldSource.map { abs($0.y-p.y)<0.80 && abs($0.x-p.x)<1.6 } ?? false
-            let overlaps=escape || occupied.contains { abs($0.x-p.x)<0.78 && abs($0.y-p.y)<0.78 }
+            let overlaps=escape || blocked(FluidBody(id:i,center:p,width:cell,height:cell),by:occupied)
             // No static collider is born intersecting a moving rigid body.
             let now=previous[i] ? ice[i].cold>0.02 : ice[i].cold>=0.82 && !overlaps
             if now && !previous[i] {

@@ -99,6 +99,7 @@ final class GameSession: ObservableObject {
         }
         if args.contains("--preview-glacier") { adventure.map = .glacier }
         if args.contains("--preview-forge") { adventure.map = .forge }
+        if args.contains("--preview-wall") || args.contains("--preview-wall-intact") { adventure.map = .grotto }
         if args.contains("--preview-gesture"),let node=inventory.selected.tree.first(where:{ $0.kind == .jump }) { _=inventory.learn(node,monsterID:inventory.selectedID) }
         simulation=Simulation(form:form,map:adventure.map);simulation.applySkills(of:inventory.selected)
         simulation.restoreFinds(crystals:adventure.foundCrystals(on:adventure.map),coins:adventure.foundCoins(on:adventure.map),relic:inventory.selected.deepRelic)
@@ -113,7 +114,11 @@ final class GameSession: ObservableObject {
         // Reproducible local QA scenes, never enabled by a normal launch.
         if visualPreview && !home {
             simulation.equipPassive(true)
-            if args.contains("--preview-shatter") {
+            if args.contains("--preview-wall") || args.contains("--preview-wall-intact") {
+                simulation.wind=0;zoom=1.5
+                simulation.placeCube(Vec(11.9,-2.8),velocity:args.contains("--preview-wall") ? Vec(10,0) : Vec(0,0))
+                if args.contains("--preview-wall") { for _ in 0..<18 { simulation.step() } }
+            } else if args.contains("--preview-shatter") {
                 simulation.wind=0;zoom=1.45
                 for _ in 0..<30 { simulation.step() }
                 simulation.placeCube(Vec(3.65,0.7),velocity:Vec(7,0))
@@ -173,7 +178,7 @@ final class GameSession: ObservableObject {
             } else {
                 simulation.placeCube(Vec(10,-1));for _ in 0..<360 { simulation.step() }
                 if args.contains("--preview-wet") { simulation.placeCube(Vec(6,0.7));for _ in 0..<30 { simulation.step() } }
-                else if args.contains("--preview-ice") { simulation.placeCube(Vec(10.7,-0.2));for _ in 0..<150 { simulation.step() } }
+                else if args.contains("--preview-ice") { simulation.placeCube(Vec(9.3,0.5));for _ in 0..<150 { simulation.step() } }
             }
         }
         abilityInfo=args.contains("--preview-ability");forms=args.contains("--preview-forms") || args.contains("--preview-skills") || args.contains("--preview-equipment")
