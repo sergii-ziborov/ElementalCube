@@ -143,7 +143,7 @@ def apply(gallery, replace_earlier=False):
             existing = call("GET", f"/v1/appScreenshotSets/{screenshot_set['id']}/appScreenshots",
                             {"limit": 50})["data"]
             if replace_earlier and gallery != "alpha4":
-                order=("alpha4","physics6","gestures7","skills8","alpha9","alpha10","alpha11","alpha12","alpha13","alpha14","alpha15")
+                order=("alpha4","physics6","gestures7","skills8","alpha9","alpha10","alpha11","alpha12","alpha13","alpha14","alpha15","alpha16")
                 older=order[:order.index(gallery)]
                 old_names={n if old=="alpha4" else old+"-"+n for old in older for n,_ in GALLERIES[old].get(display,[])}
                 superseded.extend(asset["id"] for asset in existing if asset["attributes"]["fileName"] in old_names)

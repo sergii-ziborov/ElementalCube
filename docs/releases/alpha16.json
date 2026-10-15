@@ -1,0 +1,141 @@
+{
+  "sourceCommit": "65b276e2c6d0508a7adcd72f989febb03ea242a4",
+  "version": "0.1.0",
+  "build": "16",
+  "minimumOS": "16.0",
+  "deviceFamilies": [
+    1,
+    2
+  ],
+  "strictSignature": true,
+  "artworkCount": 22,
+  "artworkAllMatch": true,
+  "ipaSHA256": "013857b9d2cd69cf49f122ca3111d31fd0f68b9c8c0cee2b169e64aee4c29ee1",
+  "buildID": "de999061-50a0-4edc-b09c-4cdc92a9580c",
+  "processingState": "VALID",
+  "reviewState": "APPROVED",
+  "internalBuildState": "IN_BETA_TESTING",
+  "externalBuildState": "IN_BETA_TESTING",
+  "publicLinkEnabled": true,
+  "publicLink": "https://testflight.apple.com/join/snm99FQh",
+  "externalVersions": [
+    "16"
+  ],
+  "screenshots": [
+    {
+      "locale": "ru",
+      "file": "iphone-wall.png",
+      "state": "COMPLETE",
+      "md5": "96758385250a73fdfb1642b2adde95d2"
+    },
+    {
+      "locale": "ru",
+      "file": "iphone-splash.png",
+      "state": "COMPLETE",
+      "md5": "434ccf70dc43b0ab68c6851a47735e37"
+    },
+    {
+      "locale": "ru",
+      "file": "iphone-water.png",
+      "state": "COMPLETE",
+      "md5": "cade8d3683b14ce4f146e1ea8276ca3b"
+    },
+    {
+      "locale": "ru",
+      "file": "iphone-journey.png",
+      "state": "COMPLETE",
+      "md5": "3331d217a058e71f0449fea68fea9fce"
+    },
+    {
+      "locale": "ru",
+      "file": "ipad-13-wall.png",
+      "state": "COMPLETE",
+      "md5": "364795d8d361c8db185308b76fe16de9"
+    },
+    {
+      "locale": "ru",
+      "file": "ipad-13-water.png",
+      "state": "COMPLETE",
+      "md5": "9657978ac4beee398563d0707614207d"
+    },
+    {
+      "locale": "en-US",
+      "file": "iphone-wall.png",
+      "state": "COMPLETE",
+      "md5": "96758385250a73fdfb1642b2adde95d2"
+    },
+    {
+      "locale": "en-US",
+      "file": "iphone-splash.png",
+      "state": "COMPLETE",
+      "md5": "434ccf70dc43b0ab68c6851a47735e37"
+    },
+    {
+      "locale": "en-US",
+      "file": "iphone-water.png",
+      "state": "COMPLETE",
+      "md5": "cade8d3683b14ce4f146e1ea8276ca3b"
+    },
+    {
+      "locale": "en-US",
+      "file": "iphone-journey.png",
+      "state": "COMPLETE",
+      "md5": "3331d217a058e71f0449fea68fea9fce"
+    },
+    {
+      "locale": "en-US",
+      "file": "ipad-13-wall.png",
+      "state": "COMPLETE",
+      "md5": "364795d8d361c8db185308b76fe16de9"
+    },
+    {
+      "locale": "en-US",
+      "file": "ipad-13-water.png",
+      "state": "COMPLETE",
+      "md5": "9657978ac4beee398563d0707614207d"
+    }
+  ],
+  "metadataLocalesMatch": true,
+  "coreVerification": {
+    "currentUniqueCoreMethods": 143,
+    "allHavePassingEvidence": true,
+    "evidenceLogs": [
+      "alpha16-core-final.log",
+      "alpha16-interface-core.log",
+      "alpha16-gesture-core.log",
+      "alpha16-vertical-core.log"
+    ],
+    "fullRun": {
+      "count": 140,
+      "failures": 0,
+      "seconds": 258.794
+    },
+    "finalInterfaceSubset": {
+      "count": 25,
+      "failures": 0,
+      "seconds": 46.84
+    },
+    "finalControlSubset": {
+      "count": 12,
+      "failures": 0,
+      "seconds": 0.01
+    }
+  },
+  "finalNativeChecks": [
+    {
+      "model": "iPad Pro 13-inch (M4)",
+      "os": "26.5",
+      "passedMethods": 3,
+      "failedMethods": 0
+    },
+    {
+      "model": "iPhone 16 Pro",
+      "os": "26.5",
+      "passedMethods": 3,
+      "failedMethods": 0
+    }
+  ],
+  "githubActionsEnabled": false,
+  "existingInternalTesterAssigned": true,
+  "date": "2026-10-16"
+}
