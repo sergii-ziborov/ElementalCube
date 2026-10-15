@@ -10,7 +10,13 @@ struct CharacterPreviewState {
 /// UI and gameplay share the actual mesh, materials, coat shader and face.
 /// Only the small portrait is rendered; this never advances a game simulation.
 private final class PortraitGPU {
-    static let shared:PortraitGPU? = try? PortraitGPU()
+    static let shared:PortraitGPU? = {
+        do { return try PortraitGPU() }
+        catch {
+            if ProcessInfo.processInfo.arguments.contains("--ui-testing") { fputs("Portrait GPU: \(error)\n",stderr) }
+            return nil
+        }
+    }()
     let device:MTLDevice,queue:MTLCommandQueue
     let scene:MTLRenderPipelineState,coat:MTLRenderPipelineState,fiber:MTLRenderPipelineState,depth:MTLDepthStencilState
     init() throws {
@@ -40,8 +46,9 @@ private final class CharacterPreviewRenderer:NSObject,MTKViewDelegate {
     var state:CharacterPreviewState
     private var bodyBuffer:MTLBuffer?,bodyCount=0,identity="",fur:FurPhysics?
     private let inFlight=DispatchSemaphore(value:2)
-    init(view:MTKView,state:CharacterPreviewState,gpu:PortraitGPU) {
+    init(view:MTKView?=nil,state:CharacterPreviewState,gpu:PortraitGPU) {
         self.gpu=gpu;self.state=state;super.init()
+        guard let view=view else { return }
         view.device=gpu.device;view.colorPixelFormat = .bgra8Unorm;view.depthStencilPixelFormat = .depth32Float;view.sampleCount=4
         view.clearColor=MTLClearColor(red:0,green:0,blue:0,alpha:0)
         view.isPaused=true;view.enableSetNeedsDisplay=true
@@ -54,13 +61,18 @@ private final class CharacterPreviewRenderer:NSObject,MTKViewDelegate {
     }
     func mtkView(_ view:MTKView,drawableSizeWillChange size:CGSize) { view.draw() }
     func draw(in view:MTKView) {
+        guard let drawable=view.currentDrawable,let pass=view.currentRenderPassDescriptor,
+              let cb=encode(pass:pass,size:view.drawableSize,logicalWidth:view.bounds.width) else { return }
+        cb.present(drawable);cb.commit()
+    }
+    private func encode(pass:MTLRenderPassDescriptor,size:CGSize,logicalWidth:CGFloat)->MTLCommandBuffer? {
         let s=state,key=s.form.rawValue+String(s.seed)+String(s.stage)+(s.secondary?.rawValue ?? "")
         if key != identity {
             let mesh=Geometry.character(form:s.form,secondary:s.secondary,seed:s.seed)
             bodyBuffer=gpu.device.makeBuffer(bytes:mesh.vertices,length:mesh.vertices.count*MemoryLayout<Vertex>.stride,options:.storageModeShared);bodyCount=mesh.vertices.count
             fur=FurPhysics(form:s.form);identity=key
         }
-        guard let body=bodyBuffer,let drawable=view.currentDrawable,let pass=view.currentRenderPassDescriptor,let cb=gpu.queue.makeCommandBuffer(),let e=cb.makeRenderCommandEncoder(descriptor:pass) else { return }
+        guard let body=bodyBuffer,let cb=gpu.queue.makeCommandBuffer(),let e=cb.makeRenderCommandEncoder(descriptor:pass) else { return nil }
         inFlight.wait();cb.addCompletedHandler { [inFlight] _ in inFlight.signal() }
         let t=s.reduced ? 0 : s.time,reaction=s.reactionAge>=0 && s.reactionAge<1.2
         let hover:Float=s.form == .air ? 0.05+sin(t*2.2)*0.035 : 0
@@ -69,7 +81,7 @@ private final class CharacterPreviewRenderer:NSObject,MTKViewDelegate {
         let amount:Float=s.form == .stone ? 0.003 : (s.form == .water ? 0.027 : 0.013),breath=sin(t*2.4)*amount
         let stretch=SIMD3<Float>(1-breath,1+breath,1),lift=hover+hop*(s.form == .stone ? 0.2 : 1)
         let model=translation(V3(-0.12,lift-0.10,0))*rotationZ(angle)*rotationY(0.12)*scale(stretch)
-        let height:Float=2.0,width=height*Float(view.drawableSize.width/max(1,view.drawableSize.height))
+        let height:Float=2.0,width=height*Float(size.width/max(1,size.height))
         let sx=2/max(1.5,width),sy=2/height
         let projection=simd_float4x4(columns:(SIMD4(sx,0,0.0075,0),SIMD4(0,sy,-0.007,0),SIMD4(sx*0.30,-sy*0.28,-0.025,0),SIMD4(0,0,0.5,1)))
         var u=Uniforms(projection:projection,model:model,animation:SIMD4(t,s.wetness,0,0),camera:SIMD4(0,width,height,1),support:SIMD4(0,0,0,0),world:SIMD4(0,0,Float(s.stage),0))
@@ -99,7 +111,7 @@ private final class CharacterPreviewRenderer:NSObject,MTKViewDelegate {
                 var coat=SIMD4<Float>(Float(layer)/11,sin(t)*0.5,0,0);e.setVertexBytes(&coat,length:MemoryLayout<SIMD4<Float>>.stride,index:2)
                 draw(body,bodyCount,model)
             }
-            if view.bounds.width>75,let fur=fur {
+            if logicalWidth>75,let fur=fur {
                 for _ in 0..<2 { fur.step(dt:1/120,center:V3(0,lift,0),angle:angle,stretch:stretch,wind:sin(t)*0.5,water:{ _ in s.wetness>0.5 },solid:{ _ in false }) }
                 e.setRenderPipelineState(gpu.fiber);mesh(Geometry.fur(fur,form:s.form),translation(V3(-0.12,-0.10,0)))
             }
@@ -115,18 +127,58 @@ private final class CharacterPreviewRenderer:NSObject,MTKViewDelegate {
             var sparks=Mesh()
             for i in 0..<2 { sparks.diamond(V3(Float(i)*1.25-0.64,0.4+s.reactionAge*0.15,0.55),size:0.045,color:tint(0xefbd54,max(0,1-s.reactionAge/1.2))) };mesh(sparks)
         }
-        e.endEncoding();cb.present(drawable);cb.commit()
+        e.endEncoding();return cb
     }
+    #if os(macOS)
+    private var rasterColor:MTLTexture?,rasterDepth:MTLTexture?,rasterResolve:MTLTexture?
+    func rasterize(size:CGSize,scale:CGFloat)->CGImage? {
+        let width=max(1,min(1024,Int(ceil(size.width*scale)))),height=max(1,min(1024,Int(ceil(size.height*scale))))
+        if rasterResolve?.width != width || rasterResolve?.height != height {
+            func texture(_ format:MTLPixelFormat,_ samples:Int,_ shared:Bool=false)->MTLTexture? {
+                let d=MTLTextureDescriptor.texture2DDescriptor(pixelFormat:format,width:width,height:height,mipmapped:false)
+                d.sampleCount=samples;d.textureType=samples>1 ? .type2DMultisample : .type2D
+                d.storageMode=shared ? .shared : .private;d.usage = .renderTarget
+                return gpu.device.makeTexture(descriptor:d)
+            }
+            rasterColor=texture(.bgra8Unorm,4);rasterDepth=texture(.depth32Float,4);rasterResolve=texture(.bgra8Unorm,1,true)
+        }
+        guard let color=rasterColor,let depth=rasterDepth,let resolve=rasterResolve else { return nil }
+        let pass=MTLRenderPassDescriptor()
+        pass.colorAttachments[0].texture=color;pass.colorAttachments[0].resolveTexture=resolve
+        pass.colorAttachments[0].loadAction = .clear;pass.colorAttachments[0].storeAction = .multisampleResolve
+        pass.colorAttachments[0].clearColor=MTLClearColor(red:0,green:0,blue:0,alpha:0)
+        pass.depthAttachment.texture=depth;pass.depthAttachment.loadAction = .clear;pass.depthAttachment.storeAction = .dontCare;pass.depthAttachment.clearDepth=1
+        guard let cb=encode(pass:pass,size:CGSize(width:width,height:height),logicalWidth:size.width) else { return nil }
+        cb.commit();cb.waitUntilCompleted();guard cb.status == .completed else { return nil }
+        var pixels=[UInt8](repeating:0,count:width*height*4)
+        resolve.getBytes(&pixels,bytesPerRow:width*4,from:MTLRegionMake2D(0,0,width,height),mipmapLevel:0)
+        guard let data=CGDataProvider(data:Data(pixels) as CFData) else { return nil }
+        return CGImage(width:width,height:height,bitsPerComponent:8,bitsPerPixel:32,bytesPerRow:width*4,space:CGColorSpaceCreateDeviceRGB(),bitmapInfo:CGBitmapInfo(rawValue:CGImageAlphaInfo.premultipliedFirst.rawValue).union(.byteOrder32Little),provider:data,decode:nil,shouldInterpolate:true,intent:.defaultIntent)
+    }
+    #endif
 }
 #if os(macOS)
-struct CharacterPreview:NSViewRepresentable {
-    var state:CharacterPreviewState
-    func makeCoordinator()->Coordinator { Coordinator() }
-    func makeNSView(context:Context)->MTKView {
-        let view=MTKView();if let gpu=PortraitGPU.shared { context.coordinator.renderer=CharacterPreviewRenderer(view:view,state:state,gpu:gpu) };return view
+// AppKit sheets can omit an embedded CAMetalLayer when compositing SwiftUI.
+// Render the same mesh offscreen, then let SwiftUI compose its alpha image.
+// Small portraits update on MonsterPortrait's clock; gameplay is never stepped.
+private final class PortraitRasterizer:ObservableObject {
+    private var renderer:CharacterPreviewRenderer?
+    func image(_ state:CharacterPreviewState,size:CGSize)->NSImage? {
+        guard size.width>0,size.height>0,let gpu=PortraitGPU.shared else { return nil }
+        if renderer == nil { renderer=CharacterPreviewRenderer(state:state,gpu:gpu) }
+        renderer?.state=state
+        guard let cg=renderer?.rasterize(size:size,scale:NSScreen.main?.backingScaleFactor ?? 2) else { return nil }
+        return NSImage(cgImage:cg,size:size)
     }
-    func updateNSView(_ view:MTKView,context:Context) { context.coordinator.renderer?.state=state;view.draw() }
-    final class Coordinator { fileprivate var renderer:CharacterPreviewRenderer? }
+}
+struct CharacterPreview:View {
+    var state:CharacterPreviewState
+    @StateObject private var raster=PortraitRasterizer()
+    var body:some View {
+        GeometryReader { bounds in
+            if let image=raster.image(state,size:bounds.size) { Image(nsImage:image).resizable().interpolation(.high).scaledToFit() }
+        }
+    }
 }
 #else
 struct CharacterPreview:UIViewRepresentable {

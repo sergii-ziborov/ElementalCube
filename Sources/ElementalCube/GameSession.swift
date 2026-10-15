@@ -88,6 +88,8 @@ final class GameSession: ObservableObject {
         simulation=Simulation(form:form,map:adventure.map);simulation.applySkills(of:inventory.selected)
         let storedWind=UserDefaults.standard.object(forKey:"elementalcube.wind") as? Double ?? 1
         wind=storedWind.isFinite ? max(-3,min(3,storedWind)) : 1;simulation.wind=Float(wind)
+        // Isolate the vertical gesture regression from saved wind settings.
+        if args.contains("--ui-testing") && args.contains("--test-calm") { simulation.wind=0 }
         let stored = visualPreview ? PlaygroundSettings() : settingsStore.load()
         gravity=stored.gravity;power=stored.power;zoom=stored.zoom;water=stored.water
         debug=stored.debug;haptics=stored.haptics
@@ -285,10 +287,10 @@ final class GameSession: ObservableObject {
         form=child.form;persistAdventure();reset(preserveFinds:false)
         homeMessage="Из двух историй родился \(child.name).";return child
     }
-    func learn(_ node:SkillNode,for id:UUID) {
-        guard inventory.learn(node,monsterID:id) else { return }
+    @discardableResult func learn(_ node:SkillNode,for id:UUID)->Bool {
+        guard inventory.learn(node,monsterID:id) else { return false }
         if id==inventory.selectedID { simulation.applySkills(of:inventory.selected) }
-        persistAdventure()
+        persistAdventure();return true
     }
     func saveInventory() {
         adventure.recordFinds(simulation.collected,relic:simulation.deepRelic)

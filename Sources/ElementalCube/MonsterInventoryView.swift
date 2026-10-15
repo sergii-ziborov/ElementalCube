@@ -5,55 +5,61 @@ struct MonsterInventoryView:View {
     @ObservedObject var session:GameSession
     @State private var tab=0
     @State private var detail:SkillNode?
+    @State private var learnedMessage=""
     var monster:MonsterRecord { session.inventory.selected }
     var body:some View {
-        ScrollView {
+        VStack(spacing:0) {
+            header.padding(.horizontal,20).padding(.top,18).padding(.bottom,12)
+            if !learnedMessage.isEmpty {
+                Label(learnedMessage,systemImage:"checkmark.circle.fill").font(.system(size:13,weight:.medium)).foregroundStyle(ink).padding(13).frame(maxWidth:610,alignment:.leading).background(mint,in:RoundedRectangle(cornerRadius:14)).padding(.horizontal,20).padding(.bottom,10).accessibilityIdentifier("skill.learned.feedback")
+            }
+            ScrollView {
             VStack(alignment:.leading,spacing:16) {
-                HStack {
-                    VStack(alignment:.leading,spacing:5) {
-                        Text("Мой кубик").font(.system(size:25,design:.serif))
-                        Text("МАЛЕНЬКИЙ КУБ. СВОЙ ПУТЬ.").font(.system(size:9,weight:.bold)).tracking(1.8).opacity(0.55)
-                    }
-                    Spacer()
-                    Button { session.forms=false } label:{ Image(systemName:"xmark").frame(width:36,height:36) }.buttonStyle(.plain).accessibilityLabel("Закрыть инвентарь").accessibilityIdentifier("inventory.close")
-                }
                 HStack(alignment:.top) {
-                    MonsterPortrait(form:monster.form,secondary:monster.secondaryForm,seed:monster.appearanceSeed,stage:monster.evolutionStage,wetness:Double(session.wetness),health:Double(session.health),burning:Double(session.burning),celebration:monster.learned.count+(monster.equippedCharm == nil ? 0 : 10),interactive:true).frame(width:58,height:66).accessibilityIdentifier("portrait.inventory")
+                    MonsterPortrait(form:monster.form,secondary:monster.secondaryForm,seed:monster.appearanceSeed,stage:monster.evolutionStage,wetness:Double(session.wetness),health:Double(session.health),burning:Double(session.burning),celebration:monster.learned.count+(monster.equippedCharm == nil ? 0 : 10),interactive:true).frame(width:72,height:82).accessibilityIdentifier("portrait.inventory")
                     VStack(alignment:.leading,spacing:6) {
-                        Text(monster.name).font(.system(size:25,design:.serif))
+                        Text(monster.name).font(.system(size:25,design:.serif)).lineLimit(2)
                         Text(monster.stageName+" · "+monster.typeName+" · "+(monster.form.hasFur ? "мягкая шерсть" : "без шерсти")).font(.system(size:12)).opacity(0.65)
-                        Text(String(format:"Предел прицела %.1f м/с",monster.jumpSkill.maximumSpeed)).font(.system(size:12)).monospacedDigit()
+                        Text(monster.learned.contains(.jump) ? String(format:"Прицельный прыжок · %.1f м/с",monster.jumpSkill.maximumSpeed) : "Свайп вверх — базовый прыжок").font(.system(size:12)).monospacedDigit()
                     }
                     Spacer()
                     Button { session.showHome(.collection) } label: { Image(systemName:"square.stack.3d.up").frame(width:40,height:40) }.buttonStyle(.plain).accessibilityLabel("Коллекция кубиков").accessibilityIdentifier("collection.open")
                 }
-                Picker("Раздел инвентаря",selection:$tab) { Text("Навыки").tag(0);Text("Снаряжение").tag(1);Text("Материалы").tag(2) }.pickerStyle(.segmented)
+                Picker("Раздел инвентаря",selection:$tab) { Text("Навыки").tag(0);Text("Снаряжение").tag(1);Text("Материалы").tag(2) }.pickerStyle(.segmented).labelsHidden()
                 if tab==0 { skillTree } else if tab==1 { equipment } else { findings }
-            }.padding(20).frame(maxWidth:650).foregroundStyle(ink)
+            }.padding(.horizontal,20).padding(.bottom,20).frame(maxWidth:650).foregroundStyle(ink)
+            }
         }.frame(maxWidth:.infinity).frame(idealHeight:900).background(cream)
         .sheet(item:$detail) { node in
-            SkillDetailView(session:session,owner:monster.id,kind:node.kind)
+            SkillDetailView(session:session,owner:monster.id,kind:node.kind) { title in withAnimation(.easeOut(duration:0.3)) { learnedMessage="Изучено: "+title } }
                 #if os(iOS)
-                .presentationDetents([.medium,.large]).presentationDragIndicator(.visible)
+                .presentationDetents([.large]).presentationDragIndicator(.visible)
                 #else
-                .frame(width:460,height:480)
+                .frame(width:560,height:740)
                 #endif
         }
+        .task(id:learnedMessage) {
+            guard !learnedMessage.isEmpty else { return };try? await Task.sleep(nanoseconds:3_000_000_000)
+            if !Task.isCancelled { withAnimation { learnedMessage="" } }
+        }
         .onAppear { session.saveInventory();if ProcessInfo.processInfo.arguments.contains("--preview-equipment") { tab=1 } }
+    }
+    private var header:some View {
+        HStack {
+            VStack(alignment:.leading,spacing:5) {
+                Text("Мой кубик").font(.system(size:25,design:.serif))
+                Text("МАЛЕНЬКИЙ КУБ. СВОЙ ПУТЬ.").font(.system(size:9,weight:.bold)).tracking(1.8).opacity(0.55)
+            }
+            Spacer()
+            Button { session.forms=false } label:{ Image(systemName:"xmark").frame(width:36,height:36) }.buttonStyle(.plain).accessibilityLabel("Закрыть инвентарь").accessibilityIdentifier("inventory.close")
+        }
     }
     var skillTree:some View {
         VStack(alignment:.leading,spacing:16) {
             MonsterSkillTree(monster:monster,wetness:Double(session.wetness),health:Double(session.health),burning:Double(session.burning)) { detail=$0 }
-            HStack(spacing:10) {
-                slot("Свайп вверх","arrow.up","БАЗОВЫЙ ПРЫЖОК")
-                slot(monster.passiveName,monster.form.symbol,"ПАССИВНАЯ")
-            }
             Text("Находи кристаллы, чтобы открывать новые навыки. Дерево и прогресс принадлежат только этому кубику.")
                 .font(.system(size:12)).lineSpacing(4).foregroundStyle(ink.opacity(0.6))
         }
-    }
-    func slot(_ title:String,_ symbol:String,_ subtitle:String)->some View {
-        HStack(spacing:9) { Image(systemName:symbol).font(.system(size:20));VStack(alignment:.leading,spacing:4) { Text(subtitle).font(.system(size:8,weight:.bold)).tracking(0.7).opacity(0.6);Text(title).font(.system(size:12)) } }.frame(maxWidth:.infinity,alignment:.leading).padding(13).background(ink.opacity(0.07),in:RoundedRectangle(cornerRadius:14))
     }
     var equipment:some View {
         VStack(alignment:.leading,spacing:16) {

@@ -1,176 +1,170 @@
 import SwiftUI
 import ElementalCore
 
-private struct SkillPalette {
-    let accent:Color
-    let background=Color(red:0.07,green:0.18,blue:0.20)
-    let paper=Color(red:0.91,green:0.96,blue:0.90)
-    init(_ form:ElementForm) {
-        switch form {
-        case .ice:accent=Color(red:0.49,green:0.86,blue:1)
-        case .water:accent=Color(red:0.37,green:0.73,blue:1)
-        case .air:accent=Color(red:0.47,green:0.94,blue:0.78)
-        case .stone:accent=Color(red:0.87,green:0.77,blue:0.51)
-        case .fire:accent=Color(red:1,green:0.63,blue:0.34)
-        }
-    }
-}
-
-/// Two actual prerequisite chains. The paths sit behind native, labelled buttons,
-/// so the diagram remains usable with VoiceOver and without motion effects.
 struct MonsterSkillTree:View {
     var monster:MonsterRecord
     var wetness:Double=0
     var health:Double=100
     var burning:Double=0
     var select:(SkillNode)->Void
+    @Environment(\.dynamicTypeSize) private var typeSize
     private var palette:SkillPalette { SkillPalette(monster.form) }
-    private let rows:[[SkillNode.Kind?]] = [[.jump,.passive],[.momentum,.mastery],[.doubleJump,.affinity],[.control,nil]]
     var body:some View {
-        VStack(spacing:0) {
-            HStack(alignment:.top) {
-                VStack(alignment:.leading,spacing:5) {
-                    Text("Дерево навыков").font(.system(size:23,weight:.medium,design:.serif))
-                    Text("\(monster.learned.count) ИЗ \(monster.tree.count) ОТКРЫТО").font(.system(size:9,weight:.semibold)).tracking(1.6).opacity(0.5)
+        VStack(alignment:.leading,spacing:20) {
+            HStack(spacing:14) {
+                MonsterPortrait(form:monster.form,secondary:monster.secondaryForm,seed:monster.appearanceSeed,stage:monster.evolutionStage,wetness:wetness,health:health,burning:burning,celebration:monster.learned.count,interactive:true)
+                    .frame(width:66,height:76).accessibilityIdentifier("portrait.tree")
+                VStack(alignment:.leading,spacing:7) {
+                    Text(monster.isHybrid ? "Путь гибрида" : "Дерево навыков").font(.system(size:23,weight:.medium,design:.serif))
+                    Text("\(monster.learned.count) из \(monster.tree.count) изучено").font(.system(size:12)).foregroundStyle(palette.paper.opacity(0.6))
+                    HStack(spacing:4) { ForEach(0..<monster.tree.count,id:\.self) { i in Capsule().fill(i<monster.learned.count ? palette.accent : palette.paper.opacity(0.12)).frame(width:12,height:3) } }
                 }
-                Spacer(minLength:4)
-                Label("\(monster.skillPoints)",systemImage:"sparkle").font(.system(size:15,weight:.semibold)).monospacedDigit()
-                    .foregroundStyle(palette.accent).padding(.horizontal,13).padding(.vertical,9)
-                    .background(palette.accent.opacity(0.1),in:Capsule())
-                    .overlay(Capsule().stroke(palette.accent.opacity(0.25)))
-                    .accessibilityLabel("Очков навыков: \(monster.skillPoints)")
-            }.padding(.horizontal,20).padding(.top,22)
-            GeometryReader { geo in
-                let w=geo.size.width
-                ZStack(alignment:.topLeading) {
-                    ornament(width:w)
-                    ForEach(0..<2,id:\.self) { branch in
-                        let x=w*(branch==0 ? 0.25 : 0.75)
-                        connection(from:CGPoint(x:w/2,y:78),to:CGPoint(x:x,y:108),active:true)
-                        ForEach(0..<rows.count-1,id:\.self) { row in
-                            if let kind=rows[row+1][branch],let node=monster.tree.first(where:{ $0.kind==kind }) {
-                            // Bow outwards around the labels, then back into the next node.
-                            branchConnection(x:x,y:CGFloat(138+row*126),side:branch==0 ? -1 : 1,
-                                             active:monster.learned.contains(node.kind),available:monster.canLearn(node))
-                            }
-                        }
-                    }.allowsHitTesting(false).accessibilityHidden(true)
-                    ZStack {
-                        Circle().stroke(palette.accent.opacity(0.16),lineWidth:1).frame(width:88,height:88)
-                        Circle().stroke(palette.accent.opacity(0.35),lineWidth:1).frame(width:73,height:73)
-                        Circle().fill(palette.accent.opacity(0.12)).frame(width:64,height:64)
-                        MonsterPortrait(form:monster.form,secondary:monster.secondaryForm,seed:monster.appearanceSeed,stage:monster.evolutionStage,wetness:wetness,health:health,burning:burning,celebration:monster.learned.count,interactive:true).frame(width:52,height:58).accessibilityIdentifier("portrait.tree")
-                    }.position(x:w/2,y:47)
-                    ForEach(0..<rows.count,id:\.self) { row in
-                        ForEach(0..<2,id:\.self) { branch in
-                            if let kind=rows[row][branch],let node=monster.tree.first(where:{ $0.kind==kind }) {
-                            skill(node,width:w*0.44)
-                                .position(x:w*(branch==0 ? 0.25 : 0.75),y:CGFloat(138+row*126)+28)
-                            }
-                        }
-                    }
-                    Text("ДВИЖЕНИЕ").position(x:w*0.22,y:77)
-                    Text("СТИХИЯ").position(x:w*0.78,y:77)
-                }.font(.system(size:8,weight:.semibold)).tracking(0.8)
-            }.frame(height:626)
-            HStack(spacing:16) {
-                legend("Изучено",symbol:"checkmark.circle.fill",color:palette.accent)
-                legend("Доступно",symbol:"plus.circle",color:palette.paper)
-                legend("Закрыто",symbol:"lock",color:palette.paper.opacity(0.38))
-            }.padding(.bottom,22)
-        }
-        .foregroundStyle(palette.paper)
-        .background {
-            RoundedRectangle(cornerRadius:26).fill(LinearGradient(colors:[Color(red:0.12,green:0.27,blue:0.28),palette.background],startPoint:.topLeading,endPoint:.bottomTrailing))
-                .overlay(RoundedRectangle(cornerRadius:26).stroke(palette.accent.opacity(0.22)))
-        }
-        .clipShape(RoundedRectangle(cornerRadius:26))
-    }
-    private func skill(_ node:SkillNode,width:CGFloat)->some View {
-        let known=monster.learned.contains(node.kind),available=monster.canLearn(node)
-        let color=known || available ? palette.accent : palette.paper.opacity(0.32)
-        return Button { select(node) } label: {
-            VStack(spacing:6) {
-                ZStack {
-                    Circle().fill(palette.background).frame(width:62,height:62)
-                    Circle().fill(LinearGradient(colors:[color.opacity(known ? 0.4 : 0.13),color.opacity(0.02)],startPoint:.topLeading,endPoint:.bottomTrailing)).frame(width:58,height:58)
-                    Circle().stroke(color.opacity(known ? 0.95 : (available ? 0.7 : 0.3)),lineWidth:known ? 2 : 1).frame(width:58,height:58)
-                    Circle().stroke(color.opacity(0.12),lineWidth:1).frame(width:68,height:68)
-                    Image(systemName:node.symbol).font(.system(size:25,weight:.light)).foregroundStyle(color)
-                    Image(systemName:known ? "checkmark" : (available ? "plus" : "lock.fill"))
-                        .font(.system(size:8,weight:.bold)).foregroundStyle(known ? palette.background : color)
-                        .frame(width:17,height:17).background(known ? palette.accent : palette.background,in:Circle())
-                        .overlay(Circle().stroke(color.opacity(0.55))).offset(x:23,y:23)
-                }.frame(height:68).shadow(color:color.opacity(known ? 0.17 : 0),radius:12)
-                Text(node.title).font(.system(size:12,weight:.medium)).tracking(0)
-                    .multilineTextAlignment(.center).lineLimit(2).frame(height:32).foregroundStyle(palette.paper.opacity(known || available ? 1 : 0.55))
-                Text(known ? (node.kind == .passive ? "ПАССИВНАЯ" : "ИЗУЧЕНО") : "\(node.cost) ОЧК.")
-                    .font(.system(size:8,weight:.semibold)).tracking(1).foregroundStyle(color)
-            }.frame(width:width,height:118).contentShape(Rectangle())
-        }.buttonStyle(.plain).accessibilityIdentifier("skill.\(node.kind.rawValue)")
-            .accessibilityLabel(node.title).accessibilityValue(known ? "Изучено" : (available ? "Доступно, \(node.cost) очков" : "Закрыто, \(node.cost) очков"))
-    }
-    private func connection(from:CGPoint,to:CGPoint,active:Bool)->some View {
-        Path { p in p.move(to:from);p.addCurve(to:to,control1:CGPoint(x:from.x,y:to.y-7),control2:CGPoint(x:to.x,y:from.y+8)) }
-            .stroke(palette.accent.opacity(active ? 0.5 : 0.1),lineWidth:1)
-    }
-    private func branchConnection(x:CGFloat,y:CGFloat,side:CGFloat,active:Bool,available:Bool)->some View {
-        Path { p in
-            p.move(to:CGPoint(x:x+side*30,y:y+5))
-            p.addCurve(to:CGPoint(x:x,y:y+96),control1:CGPoint(x:x+side*65,y:y+38),control2:CGPoint(x:x+side*54,y:y+73))
-        }.stroke(palette.accent.opacity(active ? 0.8 : (available ? 0.35 : 0.14)),style:StrokeStyle(lineWidth:active ? 1.7 : 1,dash:active || available ? [] : [3,5]))
-    }
-    private func legend(_ title:String,symbol:String,color:Color)->some View {
-        Label(title,systemImage:symbol).font(.system(size:9)).foregroundStyle(color)
-    }
-    private func ornament(width:CGFloat)->some View {
-        ZStack {
-            Circle().stroke(palette.accent.opacity(0.045),lineWidth:1).frame(width:width*0.9,height:width*0.9).position(x:width/2,y:240)
-            Path { p in p.move(to:CGPoint(x:width/2,y:99));p.addLine(to:CGPoint(x:width/2,y:413)) }.stroke(palette.paper.opacity(0.05),style:StrokeStyle(lineWidth:1,dash:[2,7]))
-            ForEach(0..<14,id:\.self) { i in
-                Circle().fill(palette.accent.opacity(i%3==0 ? 0.35 : 0.12)).frame(width:i%3==0 ? 2 : 1,height:i%3==0 ? 2 : 1)
-                    .position(x:CGFloat((i*71+19)%100)/100*width,y:CGFloat((i*83+33)%440))
+                Spacer(minLength:0)
+                VStack(spacing:3) { Text("\(monster.skillPoints)").font(.system(size:26,weight:.medium,design:.serif)).monospacedDigit();Text("ОЧК.").font(.system(size:8,weight:.bold)).tracking(1.2) }
+                    .foregroundStyle(palette.accent).frame(width:53,height:62).background(palette.accent.opacity(0.09),in:RoundedRectangle(cornerRadius:16))
+                    .overlay(RoundedRectangle(cornerRadius:16).stroke(palette.accent.opacity(0.25)))
+                    .accessibilityElement(children:.ignore).accessibilityLabel("Очков навыков: \(monster.skillPoints)")
             }
-        }.allowsHitTesting(false).accessibilityHidden(true)
+            Text("Свайп вверх уже прыгает бесплатно. Новые приёмы изучаются здесь, улучшения действуют автоматически.")
+                .font(.system(size:12)).lineSpacing(4).foregroundStyle(palette.paper.opacity(0.65)).fixedSize(horizontal:false,vertical:true)
+            if typeSize.isAccessibilitySize {
+                branch(SkillCatalog.movement,title:"Движение",subtitle:"От первого прицела до руля в полёте")
+                branch(SkillCatalog.elemental,title:monster.isHybrid ? "Природа гибрида" : "Сила стихии",subtitle:monster.passiveName)
+            } else {
+                HStack(alignment:.top,spacing:14) {
+                    branch(SkillCatalog.movement,title:"Движение",subtitle:"Новые приёмы")
+                    branch(SkillCatalog.elemental,title:monster.isHybrid ? "Гибрид" : "Стихия",subtitle:"Растущая сила")
+                }
+            }
+            HStack(alignment:.top,spacing:9) {
+                Image(systemName:"diamond.fill").font(.system(size:12)).foregroundStyle(palette.accent)
+                Text("Первая находка каждого кристалла даёт этому кубику 1 очко. Изученные навыки сохраняются вместе с ним.")
+                    .font(.system(size:11)).lineSpacing(4).foregroundStyle(palette.paper.opacity(0.58))
+            }
+        }.padding(20).foregroundStyle(palette.paper)
+            .background {
+                RoundedRectangle(cornerRadius:26).fill(LinearGradient(colors:[Color(red:0.11,green:0.25,blue:0.27),palette.background],startPoint:.topLeading,endPoint:.bottomTrailing))
+                    .overlay(alignment:.topTrailing) { Circle().fill(palette.accent.opacity(0.06)).frame(width:190,height:190).blur(radius:40).offset(x:70,y:-60) }
+                    .overlay(RoundedRectangle(cornerRadius:26).stroke(palette.accent.opacity(0.18)))
+            }.clipShape(RoundedRectangle(cornerRadius:26))
     }
+    private func branch(_ kinds:[SkillNode.Kind],title:String,subtitle:String)->some View {
+        VStack(spacing:0) {
+            VStack(spacing:5) { Text(title.uppercased()).font(.system(size:10,weight:.bold)).tracking(1.3);Text(subtitle).font(.system(size:10)).foregroundStyle(palette.paper.opacity(0.45)) }.frame(height:39)
+            ForEach(Array(kinds.enumerated()),id:\.element) { index,kind in
+                if let node=monster.tree.first(where:{ $0.kind==kind }) {
+                    if index>0 {
+                        let unlocked=monster.learned.contains(kind) || monster.canLearn(node)
+                        VStack(spacing:3) { Capsule().fill(palette.accent.opacity(unlocked ? 0.65 : 0.18)).frame(width:1.5,height:11);Circle().fill(palette.accent.opacity(unlocked ? 0.7 : 0.2)).frame(width:3,height:3) }.frame(height:23).accessibilityHidden(true)
+                    }
+                    skill(node)
+                }
+            }
+        }.frame(maxWidth:.infinity)
+    }
+    private func skill(_ node:SkillNode)->some View {
+        let known=monster.learned.contains(node.kind),available=monster.canLearn(node)
+        let prerequisite=node.prerequisite.flatMap { id in monster.tree.first { $0.id==id } }
+        let locked=prerequisite.map { !monster.learned.contains($0.kind) } ?? false
+        return Button { select(node) } label: {
+            VStack(spacing:9) {
+                HStack {
+                    Text(node.kind == .passive ? "ПАССИВНАЯ" : (node.kind == .jump || node.kind == .doubleJump ? "ПРИЁМ" : "УЛУЧШЕНИЕ"))
+                        .font(.system(size:7,weight:.bold)).tracking(0.8).foregroundStyle(palette.paper.opacity(0.45))
+                    Spacer(minLength:0)
+                    Image(systemName:known ? "checkmark" : (locked ? "lock.fill" : "plus"))
+                        .font(.system(size:10,weight:.semibold)).foregroundStyle(known || available ? palette.accent : palette.paper.opacity(0.35))
+                }
+                SkillArtwork(monster:monster,kind:node.kind,size:80).saturation(locked ? 0.5 : 1).opacity(locked ? 0.78 : 1)
+                Text(node.title).font(.system(size:13,weight:.semibold)).multilineTextAlignment(.center).lineLimit(2).frame(maxWidth:.infinity,minHeight:34)
+                    .foregroundStyle(palette.paper.opacity(locked ? 0.78 : 1))
+                Text(node.summary).font(.system(size:10)).lineSpacing(2).multilineTextAlignment(.center).lineLimit(3).frame(maxWidth:.infinity,minHeight:35)
+                    .foregroundStyle(palette.paper.opacity(0.55))
+                Text(known ? "Изучено" : (locked ? "После предыдущего" : (available ? "Изучить · \(node.cost) очк." : "Нужно \(node.cost) очк.")))
+                    .font(.system(size:10,weight:known || available ? .semibold : .regular)).foregroundStyle(known || available ? palette.accent : palette.paper.opacity(0.4))
+                    .padding(.horizontal,9).frame(height:25).background(palette.accent.opacity(known ? 0.12 : (available ? 0.08 : 0.025)),in:Capsule())
+            }.padding(12).frame(maxWidth:.infinity,minHeight:230,alignment:.top)
+                .background(RoundedRectangle(cornerRadius:20).fill(palette.paper.opacity(known ? 0.055 : 0.023)))
+                .overlay(RoundedRectangle(cornerRadius:20).stroke(palette.accent.opacity(known ? 0.58 : (available ? 0.3 : 0.10)),lineWidth:known ? 1.3 : 1))
+                .contentShape(RoundedRectangle(cornerRadius:20))
+        }.buttonStyle(SkillPressStyle()).accessibilityIdentifier("skill.\(node.kind.rawValue)")
+            .accessibilityLabel(node.title+". "+node.summary)
+            .accessibilityValue(known ? "Изучено" : (locked ? "Сначала "+(prerequisite?.title ?? "предыдущий навык") : (available ? "Доступно, \(node.cost) очков" : "Нужно \(node.cost) очков")))
+    }
+}
+
+private struct SkillPressStyle:ButtonStyle {
+    func makeBody(configuration:Configuration)->some View { configuration.label.scaleEffect(configuration.isPressed ? 0.97 : 1).animation(.easeOut(duration:0.16),value:configuration.isPressed) }
 }
 
 struct SkillDetailView:View {
     @ObservedObject var session:GameSession
     var owner:UUID
     var kind:SkillNode.Kind
+    var didLearn:((String)->Void)?=nil
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduced
     private var monster:MonsterRecord { session.inventory.monsters.first { $0.id==owner } ?? session.inventory.selected }
     private var node:SkillNode { monster.tree.first { $0.kind==kind }! }
     private var palette:SkillPalette { SkillPalette(monster.form) }
+    private var known:Bool { monster.learned.contains(kind) }
+    private var prerequisite:SkillNode? { node.prerequisite.flatMap { id in monster.tree.first { $0.id==id } } }
+    private var needsParent:Bool { prerequisite.map { !monster.learned.contains($0.kind) } ?? false }
     var body:some View {
         ScrollView {
-            VStack(alignment:.leading,spacing:18) {
+            VStack(alignment:.leading,spacing:22) {
                 HStack {
-                    Image(systemName:node.symbol).font(.system(size:29,weight:.light)).foregroundStyle(ink).frame(width:62,height:62)
-                        .background(palette.accent.opacity(0.25),in:Circle())
+                    Text(kind == .passive ? "ПАССИВНАЯ СПОСОБНОСТЬ" : (kind == .jump || kind == .doubleJump ? "ИЗУЧАЕМЫЙ ПРИЁМ" : "УЛУЧШЕНИЕ НАВЫКОВ"))
+                        .font(.system(size:9,weight:.semibold)).tracking(1.2).foregroundStyle(palette.paper.opacity(0.5))
                     Spacer()
-                    Button { dismiss() } label:{ Image(systemName:"xmark").frame(width:40,height:40).background(ink.opacity(0.06),in:Circle()) }
+                    Button { dismiss() } label: { Image(systemName:"xmark").font(.system(size:16)).frame(width:42,height:42).background(palette.paper.opacity(0.07),in:Circle()) }
                         .buttonStyle(.plain).accessibilityLabel("Закрыть описание").accessibilityIdentifier("skill.detail.close")
                 }
-                VStack(alignment:.leading,spacing:7) {
-                    Text(monster.name.uppercased()+" · "+(kind == .passive ? "ПАССИВНАЯ" : "НАВЫК")).font(.system(size:9,weight:.bold)).tracking(1.4).opacity(0.55)
-                    Text(node.title).font(.system(size:28,weight:.medium,design:.serif))
+                TimelineView(.animation(minimumInterval:1/24,paused:reduced)) { time in
+                    let phase=reduced ? 0 : sin(time.date.timeIntervalSinceReferenceDate*1.7)
+                    SkillArtwork(monster:monster,kind:kind,size:146).scaleEffect(1+phase*0.025).rotationEffect(.degrees(phase*1.4)).frame(maxWidth:.infinity).frame(height:158)
                 }
-                Text(node.explanation).font(.system(size:15)).lineSpacing(5).fixedSize(horizontal:false,vertical:true)
-                if monster.learned.contains(kind) {
-                    Label(kind == .passive ? "В пассивном слоте · действует автоматически" : "Изучено этим кубиком",systemImage:"checkmark.circle.fill").font(.system(size:12)).opacity(0.65)
-                } else {
-                    if let prerequisite=node.prerequisite,let parent=monster.tree.first(where:{ $0.id==prerequisite }),!monster.learned.contains(parent.kind) {
-                        Label("Сначала изучи «\(parent.title)»",systemImage:"lock").font(.system(size:12)).opacity(0.6)
-                    } else if monster.skillPoints<node.cost {
-                        Text("Найди ещё \(node.cost-monster.skillPoints) очк. навыков в кристаллах мира.").font(.system(size:12)).opacity(0.6)
+                VStack(alignment:.leading,spacing:8) {
+                    Text(monster.name+" · "+monster.typeName).font(.system(size:11)).foregroundStyle(palette.accent.opacity(0.8))
+                    Text(node.title).font(.system(size:30,weight:.medium,design:.serif)).fixedSize(horizontal:false,vertical:true)
+                    Text(node.summary).font(.system(size:14)).foregroundStyle(palette.accent).lineSpacing(3)
+                }
+                VStack(spacing:0) {
+                    HStack { Text(needsParent ? "ПОСЛЕ ПРЕДЫДУЩИХ УЗЛОВ" : "ЭФФЕКТ");Spacer();Text(kind == .passive ? "УЖЕ РАБОТАЕТ" : (known ? "БЫЛО     СЕЙЧАС" : (needsParent ? "ДО     ПОСЛЕ" : "СЕЙЧАС     ПОСЛЕ"))) }.font(.system(size:8,weight:.bold)).tracking(0.7).foregroundStyle(palette.paper.opacity(0.4)).padding(.bottom,12)
+                    ForEach(monster.effects(of:kind)) { effect in
+                        HStack(alignment:.firstTextBaseline,spacing:8) {
+                            Text(effect.label).font(.system(size:12)).foregroundStyle(palette.paper.opacity(0.7)).frame(maxWidth:.infinity,alignment:.leading)
+                            if !effect.before.isEmpty { Text(effect.before).foregroundStyle(palette.paper.opacity(0.4));Image(systemName:"chevron.right").font(.system(size:8)).foregroundStyle(palette.paper.opacity(0.25)) }
+                            Text(effect.after).foregroundStyle(palette.accent).fontWeight(.semibold)
+                        }.font(.system(size:12)).monospacedDigit().padding(.vertical,11)
+                        if effect.id != monster.effects(of:kind).last?.id { Rectangle().fill(palette.paper.opacity(0.06)).frame(height:1) }
                     }
-                    Button { session.learn(node,for:owner);dismiss() } label: {
-                        HStack { Text("Изучить");Spacer();Label("\(node.cost) очк.",systemImage:"sparkle") }.padding(.horizontal,6).frame(maxWidth:.infinity)
-                    }.buttonStyle(PillButton()).disabled(!monster.canLearn(node)).opacity(monster.canLearn(node) ? 1 : 0.4).accessibilityIdentifier("skill.learn")
+                }.padding(16).background(palette.paper.opacity(0.04),in:RoundedRectangle(cornerRadius:18)).accessibilityIdentifier("skill.effects")
+                Text(node.explanation).font(.system(size:14)).lineSpacing(6).foregroundStyle(palette.paper.opacity(0.75)).fixedSize(horizontal:false,vertical:true)
+                if kind != .jump && kind != .doubleJump { Label("Действует автоматически · не расходует ману",systemImage:"checkmark.seal").font(.system(size:11)).foregroundStyle(palette.accent.opacity(0.8)) }
+                if !known {
+                    VStack(alignment:.leading,spacing:9) {
+                        Text("ДЛЯ ИЗУЧЕНИЯ").font(.system(size:8,weight:.bold)).tracking(1.2).foregroundStyle(palette.paper.opacity(0.4))
+                        if let parent=prerequisite { Label(parent.title,systemImage:needsParent ? "lock" : "checkmark.circle.fill").foregroundStyle(needsParent ? palette.paper.opacity(0.6) : palette.accent) }
+                        Label("\(node.cost) очк. навыков · у кубика \(monster.skillPoints)",systemImage:"sparkle").foregroundStyle(monster.skillPoints>=node.cost ? palette.accent : palette.paper.opacity(0.6))
+                        if monster.skillPoints<node.cost { Text("Первая находка кристалла даёт 1 очко этому кубику.").font(.system(size:11)).foregroundStyle(palette.paper.opacity(0.45)) }
+                    }.font(.system(size:12))
                 }
-            }.padding(26).frame(maxWidth:520,alignment:.leading).foregroundStyle(ink)
-        }.frame(maxWidth:.infinity).background(cream)
+            }.padding(24).frame(maxWidth:560,alignment:.leading).frame(maxWidth:.infinity)
+        }.safeAreaInset(edge:.bottom,spacing:0) {
+            VStack(spacing:10) {
+                if known {
+                    Label(kind == .passive ? "Занимает пассивный слот · 0 маны" : "Изучено этим кубиком",systemImage:"checkmark.circle.fill").font(.system(size:12)).foregroundStyle(palette.accent).padding(.vertical,9)
+                } else {
+                    Button {
+                        if session.learn(node,for:owner) { didLearn?(node.title);dismiss() }
+                    } label: {
+                        HStack { Text(needsParent ? "Сначала изучи предыдущий навык" : "Изучить навык");Spacer(minLength:8);if !needsParent { Text("\(node.cost) очк.").monospacedDigit() } }
+                            .font(.system(size:14,weight:.semibold)).padding(.horizontal,20).frame(maxWidth:.infinity,minHeight:52)
+                            .foregroundStyle(palette.background).background(palette.accent,in:RoundedRectangle(cornerRadius:17))
+                    }.buttonStyle(SkillPressStyle()).disabled(!monster.canLearn(node)).opacity(monster.canLearn(node) ? 1 : 0.4).accessibilityIdentifier("skill.learn")
+                }
+            }.frame(maxWidth:512).padding(.horizontal,24).padding(.vertical,16).frame(maxWidth:.infinity).background(palette.background.opacity(0.98))
+        }.foregroundStyle(palette.paper).background(LinearGradient(colors:[Color(red:0.11,green:0.24,blue:0.26),palette.background],startPoint:.topLeading,endPoint:.bottomTrailing))
     }
 }

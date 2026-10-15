@@ -77,7 +77,9 @@ public final class Simulation {
     private var randomSeed:UInt64=8251
     private var feedback:[SimulationFeedback]=[]
     private var ticks=0
-    public private(set) var directionalJumpUnlocked=false,doubleJumpUnlocked=false
+    public private(set) var directionalJumpUnlocked=false,doubleJumpUnlocked=false,airManeuverUnlocked=false
+    public private(set) var swimSpeedMultiplier:Float=1,dryingMultiplier:Float=1,regenerationRate:Float=0,rollingMultiplier:Float=1,evaporationMultiplier:Float=1,windForceMultiplier:Float=1
+    private var recoveryClock:Float=0
     private var airJumpUsed=false
     public private(set) var airControlMultiplier:Float=1
     private var lastSupportTime:Float = -10
@@ -88,6 +90,9 @@ public final class Simulation {
         guard monster.form==form else { return }
         hybridStyle=monster.hybridStyle;evolutionStage=monster.evolutionStage;hopImpulse=monster.hopImpulse
         directionalJumpUnlocked=monster.learned.contains(.jump);doubleJumpUnlocked=monster.learned.contains(.doubleJump);airControlMultiplier=monster.airControlMultiplier
+        airManeuverUnlocked=monster.learned.contains(.control)
+        swimSpeedMultiplier=monster.swimSpeedMultiplier;dryingMultiplier=monster.dryingMultiplier;regenerationRate=monster.regenerationRate
+        rollingMultiplier=monster.rollingMultiplier;evaporationMultiplier=monster.evaporationMultiplier;windForceMultiplier=monster.windForceMultiplier
         jumpSkill=monster.jumpSkill;waterField.conductivity=monster.conductivity
         manaCostMultiplier=monster.manaMultiplier;landingDamageMultiplier=monster.landingDamageMultiplier;fireDamageMultiplier=monster.fireDamageMultiplier
     }
@@ -219,7 +224,7 @@ public final class Simulation {
         let factor=length>0 ? min(jumpSkill.maximumSpeed,scaled)/length : 0
         let impulse=Vec(request.x*factor,request.y*factor)
         if inWater && !cube.grounded && form != .stone {
-            let speed=hypot(impulse.x,impulse.y)*1.2
+            let speed=hypot(impulse.x,impulse.y)*1.2*swimSpeedMultiplier
             let gain=speed>0 ? min(jumpSkill.strokeMaximumSpeed,speed)/max(0.0001,length*factor) : 0
             return Vec(cube.velocity.x+impulse.x*gain,cube.velocity.y+impulse.y*gain-min(0,cube.velocity.y))
         }
@@ -284,8 +289,8 @@ public final class Simulation {
         shakeTime=max(0,shakeTime-dt);shakeCooldown=max(0,shakeCooldown-dt)
         if !dead {
             if form == .air {
-                ec_drive(world,cubeID,movement,0.85*airControlMultiplier,true)
-                ec_force(world,cubeID,windVelocity*cube.mass*0.5,0)
+                ec_drive(world,cubeID,movement,0.85*airControlMultiplier*(airManeuverUnlocked ? 1.4 : 1),true)
+                ec_force(world,cubeID,windVelocity*cube.mass*0.5*windForceMultiplier,0)
                 if passiveWorking && cooldown<=0 {
                     let height=max(supportHeight(at:cube.position.x),supportHeight(at:cube.position.x+movement*0.9))
                     let gap=cube.position.y-height-0.76
@@ -295,14 +300,18 @@ public final class Simulation {
                     }
                 }
             } else if cube.grounded {
-                ec_drive(world,cubeID,movement,surface == .ice ? 0.55 : (form == .stone && passiveWorking ? 1.6 : 1),form != .stone)
+                ec_drive(world,cubeID,movement,surface == .ice ? 0.55 : (form == .stone && passiveWorking ? 1.6*rollingMultiplier : 1),form != .stone)
                 if form == .water && abs(movement)>0.15 && !compressed && hopClock<=0 && !inWater {
                     ec_impulse(world,cubeID,0,hopImpulse);hopClock=0.35;squash = -0.12
                 }
             } else if inWater {
                 // Stone keeps its rolling motor in water: loss of a floor contact
                 // for one step must not turn a heavy walker into a weak swimmer.
-                ec_drive(world,cubeID,movement,form == .stone ? (passiveWorking ? 1.6 : 1) : 0.85,form != .stone)
+                ec_drive(world,cubeID,movement*swimSpeedMultiplier,form == .stone ? (passiveWorking ? 1.6*rollingMultiplier : 1) : 0.85,form != .stone)
+            } else if airManeuverUnlocked {
+                // A learned air rudder changes horizontal momentum only. It
+                // neither removes gravity nor grants another jump charge.
+                ec_drive(world,cubeID,movement,0.28,true)
             }
         }
         if !dead && form != .stone && form != .air && abs(movement)>0.1 {
@@ -317,9 +326,9 @@ public final class Simulation {
             }
         }
         if waterEnabled { applyLiquidForces(dt:dt) }
-        if form != .air { ec_force(world,cubeID,windVelocity*cube.mass*0.035,0) }
+        if form != .air { ec_force(world,cubeID,windVelocity*cube.mass*0.035*windForceMultiplier,0) }
         ec_step(world,dt);sync();if cube.grounded { lastSupportTime=time;if cooldown<=0 && cube.velocity.y<0.3 { airJumpUsed=false } };if inWater { airJumpUsed=false }
-        wetness=inWater ? min(1,wetness+dt*2) : max(0,wetness-dt*0.065)
+        wetness=inWater ? min(1,wetness+dt*2) : max(0,wetness-dt*0.065*dryingMultiplier)
         if form == .fire { wetness=0 }
         if !wasInWater && inWater {
             waterField.liquid.addFoam(at:Vec(cube.position.x,waterLevel),strength:min(1,abs(old.velocity.y)*0.1))
@@ -355,6 +364,7 @@ public final class Simulation {
         updateTrails(dt:dt)
         updateBurning(dt:dt)
         updateMaterials(dt:dt)
+        updateRecovery(dt:dt)
         if !dead {
             for i in shards.indices where !collected.contains(i) {
                 let p=shards[i],d=cube.position
@@ -389,6 +399,13 @@ public final class Simulation {
         guard !dead else { return }
         petTime=1.2;mood = .delighted;emotionTime=1.8;squash = -0.07
         emit(Vec(cube.position.x,cube.position.y+0.45),kind:6,count:5)
+    }
+    private func updateRecovery(dt:Float) {
+        let wetRecovery=form == .water && inWater
+        let mistRecovery=hybridStyle == .mist && waterEnabled && waterField.volume>0.01 && cube.position.x>7 && cube.position.x<17 && hovering
+        guard !dead,passiveWorking,burning<0.01,health<100,regenerationRate>0,wetRecovery || mistRecovery else { recoveryClock=0;return }
+        health=min(100,health+dt*regenerationRate);recoveryClock+=dt
+        if recoveryClock>0.7 { recoveryClock=0;particles.append(Mote(position:Vec(cube.position.x+0.5,cube.position.y+0.2),velocity:Vec(0,0.3),life:0.9,kind:8)) }
     }
     private func updateWaterShape() {
         guard form == .water else { return }
@@ -462,8 +479,9 @@ public final class Simulation {
         let liquidSurface=waterField.liquid.surfaceHeight(at:cube.position.x)
         let touchingWater=inWater || (cube.position.y-cubeHeight/2<=liquidSurface+0.07 && cube.position.y-cubeHeight/2>=waterField.floor(at:cube.position.x)-0.05)
         if fire && !dead && waterEnabled && cube.position.x>7 && cube.position.x<17 && touchingWater {
-            let removed=waterField.evaporate(around:cube.position,amount:dt*1.9)
-            boilingStrength=min(1,removed/max(0.00001,dt*1.9))
+            let amount=dt*1.9*evaporationMultiplier
+            let removed=waterField.evaporate(around:cube.position,amount:amount)
+            boilingStrength=min(1,removed/max(0.00001,amount))
             if boilingStrength>0 && !inWater { damage(dt*2.4*fireDamageMultiplier*0.35) }
             if boilingStrength>0 { waterField.liquid.heatCirculation(at:cube.position,dt:dt,strength:boilingStrength) }
         }

@@ -1,6 +1,6 @@
 # ElementalCube — материалы карточки Apple
 
-Альфа **0.1.0 (12)**. [Фактический статус](TESTFLIGHT.md) · [Нативные снимки](../Previews/alpha12).
+Альфа **0.1.0 (13)**. [Фактический статус](TESTFLIGHT.md) · [Нативные снимки](../Previews/alpha13).
 
 Apple ID `6822921592` · `com.weavatrix.elementalcube` · Games / Puzzle / Adventure.
 
@@ -38,24 +38,34 @@ Apple ID `6822921592` · `com.weavatrix.elementalcube` · Games / Puzzle / Adven
 Тихий берег, Хрустальные высоты и Сад тёплых искр предлагают разные маршруты, по 12 кристаллов и собственный финиш. Двигай физический ящик, нагружай подвесной мост, наблюдай волны, брызги и постепенное замерзание. Живые портреты дышат и моргают даже в меню. У Льдинки сохранён мягкий голубой портрет. Остальные стихии изображаются объёмно: у воды гладкое кубическое тело из воды с мягкими углами, у воздуха завихрения, у камня неровные грани, а язычки огня покрывают всё огненное тело.
 
 Ранняя альфа для iPhone и iPad, портретной и горизонтальной ориентаций. Интерфейс на русском. Без регистрации, рекламы, покупок и игрового сервера. Коллекция, валюта, предметы и навыки сохраняются на устройстве. Жидкость моделируется в двухмерной плоскости с объёмным изображением.
+
+В личном дереве две ветки и восемь навыков с отдельными иллюстрациями, условиями изучения и сравнением параметров. Стихии и гибриды имеют свои завершающие свойства.
 ```
 
 ### betaDescription
 
 ```text
-ElementalCube 0.1.0 (12)
+ElementalCube 0.1.0 (13)
 
 Свайп вверх — базовый прыжок, карта — движение, кубик — поглаживание. Прицельный после изучения: удержать кубика и потянуть.
 
 Главный экран, бесплатный первый выбор или случайный друг, платная смена за игровую валюту. Три карты, эволюция, мердж с подтверждением и наследованием.
 
 Разные движения стихий и гибридов, водная деформация для прохода половинной высоты. Бесплатные пассивки, личные навыки и предметы. Ранняя альфа; интерфейс на русском.
+
+Альфа 13: новое дерево из восьми навыков, 20 отдельных иллюстраций, сравнение параметров до/после и свои завершающие свойства у стихий и гибридов.
 ```
 
 ### whatToTest
 
 ```text
-Альфа 0.1.0 (12).
+Альфа 0.1.0 (13).
+
+• Открой личное дерево: восемь навыков в двух ветках, живой портрет и новые рисунки. У заблокированных узлов доступны описание, числа и условия; изучение недоступно.
+• Изучи навык: очки списываются один раз, появляется подтверждение, эффект применяется сразу и сохраняется после перезапуска.
+• Водное мастерство усиливает реальное плавание и толчок. Воздушный манёвр открывает горизонтальный руль в полёте.
+• Завершающие свойства: лёд быстрее сохнет, вода лечится в воде, воздух смягчает посадку, камень получает тягу качения, огонь усиливает кипение. Проверь их условия и гибриды. Пассивки и автоматические улучшения не расходуют ману.
+• Сверь «АЛЬФА · 13». Проверь iPhone/iPad, поворот, закрытие инвентаря после прокрутки и описание навыка.
 
 • Водный — гладкий куб из воды с мягкими углами, без шерсти. Проверь в меню и на карте.
 • Вода: выход на оба берега, падение ящика, волны под мостом, капли и локальное кипение. Полупрозрачных пластин за персонажем быть не должно.
@@ -65,7 +75,7 @@ ElementalCube 0.1.0 (12)
 • Лёд скользит со следом, вода скачет, воздух парит, камень катится, огонь течёт и обжигает. Водой пройди под низкой крышей восточнее пруда: тело сплющится и распрямится снаружи.
 • В лаборатории вырасти кубика и объедини двух друзей. Проверь предупреждение о расходе родителей, потомка, предметы, навыки и сохранение после перезапуска.
 • Открой все три карты с главного экрана, проверь поворот, воду, мост, ящик, замерзание и выход на берег.
-• Сверь «АЛЬФА · 12». Укажи устройство, форму и место проблемы.
+• Сверь «АЛЬФА · 13». Укажи устройство, форму и место проблемы.
 • Проверь мягкий голубой портрет Льдинки и объёмные материалы остальных стихий. Вода без шерсти; у огня язычки по бокам, снизу, сверху и спереди.
 • Горят только трава и дерево в месте контакта: поверхности постепенно обугливаются, мокрый мост тушится. На камне и в воздухе нет рисованного огненного следа. В воде проверь локальное кипение, пузырьки, пар и течение.
 ```
@@ -104,24 +114,34 @@ The home screen holds your collection, personal inventory and laboratory. Your f
 Quiet Shore, Crystal Heights and Garden of Warm Sparks have different routes, twelve crystals each and separate finish flags. Push a physical crate, load a suspended bridge and watch waves, splashes and gradual freezing. UI portraits breathe and blink even in menus. Ice keeps its soft blue animated portrait. Other forms use the world’s dimensional character: Water a smooth cube of water with soft corners and no fur, Air wind wisps, Stone irregular facets, and Fire curved flame tufts across its entire body.
 
 Early alpha for iPhone and iPad in portrait and landscape. The interface is currently Russian. No account, ads, purchases or game server. Collection, currency, items and skills save on the device. Fluid is simulated in a two-dimensional plane with dimensional visuals.
+
+The personal tree contains two branches and eight skills with distinct illustrations, learning requirements and real before/after stats. Elements and hybrids have signature upgrades.
 ```
 
 ### betaDescription
 
 ```text
-ElementalCube 0.1.0 (12)
+ElementalCube 0.1.0 (13)
 
 Swipe up to jump, tap the map to move, stroke the cube to pet it. Learn precise jumping, then hold and drag the cube.
 
 Home screen, free first choice or random friend, later switches use earned currency. Three maps, evolution and confirmed merging with inheritance.
 
 Distinct element and hybrid movement, Water deformation through half-height gaps. Free passives, personal skills and items. Early alpha; Russian interface.
+
+Alpha 13: eight personal skills, 20 distinct illustrations, real before/after stats and elemental or hybrid signature upgrades.
 ```
 
 ### whatToTest
 
 ```text
-Alpha 0.1.0 (12).
+Alpha 0.1.0 (13).
+
+• Open the personal tree: eight skills in two branches, live portrait and painted emblems. Locked nodes explain stats and prerequisites but cannot be purchased.
+• Learn once: points spend once, confirmation appears, effects apply immediately and survive relaunch.
+• Water mastery strengthens actual swimming/strokes; Air Maneuver adds horizontal steering while falling.
+• Signature upgrades: Ice dries faster, Water heals while immersed, Air softens landing, Stone increases rolling traction, Fire strengthens boiling. Check requirements and hybrid variants. Passives/automatic upgrades never use mana.
+• Verify build 13. Check iPhone/iPad, rotation, inventory close after scrolling and skill details.
 
 • Water is a smooth cube of water with soft corners, without fur. Check the menu and world.
 • Test both bank exits, crate impacts, waves beneath the bridge, detached drops and local boiling. No translucent plates should follow the character.
@@ -131,16 +151,7 @@ Alpha 0.1.0 (12).
 • Ice slides with a trail, Water hops, Air hovers, Stone rolls and Fire flows/scorches. Take Water through the low roof east of the pond; it flattens and expands outside.
 • Evolve and merge in the lab. Check the parent-consumption warning, child, items, skills and saved state after relaunch.
 • Open all three maps; test rotation, water, bridge, crate, freezing and getting back onto a bank.
-• Verify the badge shows 12. Include device, form and location.
+• Verify the badge shows 13. Include device, form and location.
 • Check the restored soft blue Ice portrait and dimensional materials of other forms. Water has no fur; Fire has flame tufts on all faces, including front and bottom.
 • Only contacted grass and wood ignite and gradually char; submerged bridge wood extinguishes. No painted fire trail on stone or in air. Check local water boiling, bubbles, vapor and circulation.
 ```
-
-## Ручное обновление
-
-```sh
-python3 scripts/app-store-metadata.py --apply --build 12
-python3 scripts/app-store-screenshots.py --gallery alpha12 --apply --replace-earlier
-```
-
-Исходные нативные PNG RGB без альфы. Служебная галерея и GIF в Apple не загружаются. Публичный App Store-релиз не отправляется, приглашения тестерам не рассылаются, CI/CD нет.

@@ -163,7 +163,10 @@ final class Renderer: NSObject, MTKViewDelegate {
         for particle in s.particles {
             let color:[C4]=[tint(0xe4deba),tint(0xb8f5ee),tint(0xc2f9ff),tint(0xfaf0b4),tint(0xffab4d),tint(0xdfece5,0.55),tint(0xf3a8be)]
             let alpha=min(1,particle.life*2),at=V3(particle.position.x,particle.position.y,particle.kind==1 || particle.kind==6 ? 1.5 : 0.9)
-            if particle.kind==7 {
+            if particle.kind==8 {
+                details.line(at+V3(-0.035,0,0),at+V3(0.035,0,0),width:0.018,color:tint(0xa9f5ca,alpha))
+                details.line(at+V3(0,-0.035,0),at+V3(0,0.035,0),width:0.018,color:tint(0xa9f5ca,alpha))
+            } else if particle.kind==7 {
                 let radius:Float=0.025+max(0,2-particle.life)*0.012
                 for j in 0..<16 {
                     let a=Float(j)*2*Float.pi/16,b=Float(j+1)*2*Float.pi/16

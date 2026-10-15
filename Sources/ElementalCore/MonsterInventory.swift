@@ -1,11 +1,12 @@
 import Foundation
 
 public struct SkillNode:Identifiable,Equatable {
-    public enum Kind:String,Codable { case passive,jump,momentum,mastery,control,affinity,doubleJump }
+    public enum Kind:String,Codable { case passive,jump,momentum,mastery,control,affinity,doubleJump,resilience }
     public var id:String
     public var kind:Kind
     public var title:String
     public var explanation:String
+    public var summary:String
     public var symbol:String
     public var cost:Int
     public var prerequisite:String?
@@ -70,7 +71,7 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
         child.evolutionStage=max(first.evolutionStage,second.evolutionStage)
         var random=seed==0 ? 1 : seed
         func inherits()->Bool { random ^= random<<13;random ^= random>>7;random ^= random<<17;return random&1==0 }
-        for kind in [SkillNode.Kind.jump,.momentum,.mastery,.doubleJump,.control,.affinity] {
+        for kind in [SkillNode.Kind.jump,.momentum,.mastery,.doubleJump,.control,.affinity,.resilience] {
             let a=first.learned.contains(kind) && inherits(),b=second.learned.contains(kind) && inherits()
             if a || b { child.learned.insert(kind) }
         }
@@ -78,6 +79,7 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
         if child.learned.contains(.control) { child.learned.insert(.doubleJump) }
         if child.learned.contains(.doubleJump) { child.learned.insert(.momentum) }
         if child.learned.contains(.momentum) { child.learned.insert(.jump) }
+        if child.learned.contains(.resilience) { child.learned.insert(.affinity) }
         if child.learned.contains(.affinity) { child.learned.insert(.mastery) }
         return child
     }
@@ -105,53 +107,13 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
     public var isHybrid:Bool { !parents.isEmpty }
     public var typeName:String { isHybrid ? parents.map { $0.form.name }.joined(separator:" + ") : form.name }
     public var treeIdentity:String { id.uuidString+"/"+form.rawValue+"/"+parents.map { $0.id.uuidString }.joined(separator:"+") }
-    public var tree:[SkillNode] {
-        func node(_ kind:SkillNode.Kind,_ title:String,_ text:String,_ symbol:String,_ cost:Int,_ prerequisite:SkillNode.Kind?)->SkillNode {
-            SkillNode(id:treeIdentity+"/"+kind.rawValue,kind:kind,title:title,explanation:text,symbol:symbol,cost:cost,prerequisite:prerequisite.map { treeIdentity+"/"+$0.rawValue })
-        }
-        let mobility:(String,String)
-        var mastery:(String,String),affinity:(String,String)
-        switch form {
-        case .ice:
-            mobility=("Ледяной разбег","Сила прицельного прыжка +1,7 м/с.")
-            mastery=("Глубокий холод","Теплопроводность морозного касания +25%: лёд быстрее нарастает в глубину и в стороны.")
-            affinity=("Сердце зимы","Ещё +25% к теплопроводности и −15% к расходу маны активными приёмами.")
-        case .water:
-            mobility=("Упругая капля","Сила прицельного прыжка +1,7 м/с.")
-            mastery=("Сильная волна","Предельная скорость толчка в воде +15%.")
-            affinity=("Течение","Ещё +15% к пределу толчка в воде и −15% к расходу маны активными приёмами.")
-        case .air:
-            mobility=("Попутный ветер","Сила прицельного прыжка +1,7 м/с.")
-            mastery=("Тихое парение","Управляемость и сила воздушной подушки +20%.")
-            affinity=("Долгий полёт","Ещё +20% к управляемости подушкой и −15% к расходу маны активными приёмами.")
-        case .stone:
-            mobility=("Разгон валуна","Сила прицельного прыжка +1,7 м/с.")
-            mastery=("Крепкая порода","Урон от жёстких приземлений снижен на 20%.")
-            affinity=("Монолит","Ещё −20% к урону от приземлений и −15% к расходу маны активными приёмами.")
-        case .fire:
-            mobility=("Искра ввысь","Сила прицельного прыжка +1,7 м/с.")
-            mastery=("Жаркое ядро","Испарение воды расходует на 15% меньше здоровья.")
-            affinity=("Неугасимый","Ещё −15% к потере здоровья при испарении и −15% к расходу маны активными приёмами.")
-        }
-        if let style=hybridStyle {
-            switch style {
-            case .crystal,.slush,.blizzard:
-                mastery=("Растущий кристалл","Теплопроводность собственного холодного касания +25%.")
-                affinity=("Память снежинки","Ещё +25% к теплопроводности и −15% к мане активных приёмов.")
-            case .magma:
-                mastery=("Сердце вулкана","Горячий камень испаряет воду с потерей на 15% меньше здоровья.")
-                affinity=("Живая лава","Ещё −15% к потере здоровья при испарении и −15% к мане активных приёмов.")
-            default:break
-            }
-        }
-        let lineage=isHybrid ? " · "+parents.map(\.form.name).joined(separator:"/") : ""
-        return [node(.passive,passiveName,passiveExplanation,form.symbol,0,nil),
-                node(.jump,"Направленный прыжок", "Удержи кубика и потяни: пунктир задаёт направление и силу. Начальный предел 8 м/с, дальнейшие узлы усиливают прыжок. Расход: 6 маны. Базовый свайп вверх по экрану доступен без изучения и бесплатен.","arrow.up.right",1,nil),
-                node(.momentum,mobility.0+lineage,mobility.1,"arrow.up.forward",1,.jump),
-                node(.mastery,mastery.0+lineage,mastery.1,form.symbol,1,.passive),
-                node(.doubleJump,"Двойной прыжок","После обычного или направленного прыжка позволяет один дополнительный толчок в воздухе. Второй свайп вверх — дополнительный толчок. Расход дополнительного толчка: 10 маны; восстанавливается при приземлении.","arrow.up",2,.momentum),
-                node(.control,"Свободная траектория"+lineage,"Ещё +1,7 м/с к пределу прицельного прыжка.","point.topleft.down.to.point.bottomright.curvepath",2,.doubleJump),
-                node(.affinity,affinity.0+lineage,affinity.1,"sparkles",2,.mastery)]
+    public var tree:[SkillNode] { SkillCatalog.tree(for:self) }
+    // Used only to derive truthful before/after descriptions; purchases still
+    // pass through canLearn and learn, including owner, cost and prerequisites.
+    func learningPreview(_ kind:SkillNode.Kind,remove:Bool=false)->Self {
+        var copy=self
+        if remove { copy.learned.remove(kind) } else { copy.learned.insert(kind) }
+        return copy
     }
     public func canLearn(_ node:SkillNode)->Bool {
         guard tree.contains(node),!learned.contains(node.kind),skillPoints>=node.cost else { return false }
@@ -180,13 +142,13 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
     }
     public var conductivity:Float {
         guard form == .ice || hybridStyle == .crystal else { return 1 }
-        return (hybridStyle == .blizzard ? 1.2 : (hybridStyle == .crystal ? 1.1 : 1))*(1+Float(masteryRanks)*0.25)
+        return (hybridStyle == .blizzard ? 1.2 : (hybridStyle == .crystal ? 1.1 : 1))*(1+Float(masteryRanks)*0.25)*coldSignatureMultiplier
     }
-    public var hopImpulse:Float { hybridStyle == .geyser ? 2.0 : (hybridStyle == .mud ? 1.2 : (hybridStyle == .steam ? 1.45 : 1.6)) }
+    public var hopImpulse:Float { (hybridStyle == .geyser ? 2.0 : (hybridStyle == .mud ? 1.2 : (hybridStyle == .steam ? 1.45 : 1.6)))*(signature == .spring && learned.contains(.resilience) ? 1.35 : 1) }
     public var manaMultiplier:Float { (equippedCharm == .deepRelic ? 0.9 : 1)*(learned.contains(.affinity) ? 0.85 : 1) }
     public var airControlMultiplier:Float { form == .air ? 1+Float(masteryRanks)*0.2 : 1 }
     fileprivate mutating func migrateStarterJump() { learned.remove(.jump) }
-    public var landingDamageMultiplier:Float { (form == .stone ? 1-Float(masteryRanks)*0.2 : 1)*(equippedCharm == .deepRelic ? 0.8 : (equippedCharm == .travelerCharm ? 0.9 : 1)) }
+    public var landingDamageMultiplier:Float { (form == .stone ? 1-Float(masteryRanks)*0.2 : 1)*(signature == .softLanding && learned.contains(.resilience) ? 0.65 : 1)*(equippedCharm == .deepRelic ? 0.8 : (equippedCharm == .travelerCharm ? 0.9 : 1)) }
     public var fireDamageMultiplier:Float { (form == .fire || hybridStyle == .magma) ? 1-Float(masteryRanks)*0.15 : 1 }
 }
 public struct MonsterInventory:Codable,Equatable {

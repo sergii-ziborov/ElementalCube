@@ -4,7 +4,7 @@ final class DirectInteractionTests:XCTestCase {
     var app:XCUIApplication!
     override func setUpWithError() throws {
         continueAfterFailure=false;XCUIDevice.shared.orientation = .portrait
-        app=XCUIApplication();app.launchArguments=["--ui-testing"];app.launch()
+        app=XCUIApplication();app.launchArguments=["--ui-testing","--test-calm"];app.launch()
         XCTAssertTrue(app.otherElements["game.cube"].waitForExistence(timeout:15))
         sleep(2)
     }
