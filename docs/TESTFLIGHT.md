@@ -1,47 +1,49 @@
-# ElementalCube — alpha 0.1.0 (12)
+# ElementalCube — alpha 0.1.0 (13)
 
-Капля — гладкий куб из воды с мягкими углами, без шерсти. Обновлены перенос жидкости, её поверхность, отделение капель и испарение. Прозрачные пластины за волной удалены; вода заполняет испарённую полость через расчёт течения. [Физика и источники](PHYSICS.md#сборка-12-поверхность-и-перенос-воды).
+Восемь личных навыков в двух ветках, 20 отдельных иллюстраций и реальные сравнения параметров до/после. Изучение сохраняется у своего кубика; у стихий и гибридов появились завершающие свойства. Пассивки бесплатны, базовый прыжок доступен сразу. [Правила](INVENTORY.md) · [Иллюстрации и промпты](SKILL-ART.md).
 
 ## Статус — 15 октября 2026
 
-Сборка **0.1.0 (12)** загружена и обработана Apple: **VALID**. Build ID `f706392b-2394-42ba-a8f8-b667d0b5d44a`.
+Сборка **0.1.0 (13)** загружена и обработана Apple: **VALID**. Build ID `b09fb218-ccc6-4768-9608-6528e02e47d7`.
 
 - **ElementalCube Internal**: **IN_BETA_TESTING**. Группа и прямое назначение существующему внутреннему тестеру подтверждены. Новых приглашений нет; прежние сборки сохранены.
-- **ElementalCube Alpha**: 12 заменила 11 во внешней группе; статус **READY_FOR_BETA_SUBMISSION**.
+- **ElementalCube Alpha**: 13 заменила 12 во внешней группе; статус **READY_FOR_BETA_SUBMISSION**.
 - **Внешняя проверка**: Отправка получила `422 ANOTHER_BUILD_IN_REVIEW`: Apple ещё проверяет другую сборку этой версии. Старая проверка не отменялась. Внешняя установка ждёт Apple.
 
 [Карточка Apple](https://appstoreconnect.apple.com/apps/6822921592/testflight) · [Внешняя группа](https://testflight.apple.com/join/snm99FQh).
 
 ## Установка
 
-TestFlight → ElementalCube → **0.1.0 (12)**. Если нужно: **Предыдущие сборки → 0.1.0 → 12 → Установить**. В игре должно быть **АЛЬФА · 12**. Снимок с отметкой 8 показывает прежнюю установленную версию.
+TestFlight → ElementalCube → **0.1.0 (13)**. Если нужно: **Предыдущие сборки → 0.1.0 → 13 → Установить**. В игре должно быть **АЛЬФА · 13**.
 
 ## Карточка и снимки
 
-Русское и английское описания и What to Test сборки 12 обновлены. Notes описывают управление и воду этой сборки отдельно от прежней 4; частные контакты не менялись.
+Русское и английское описания и What to Test сборки 13 обновлены. Notes объясняют навыки и управление этой сборки отдельно от прежней 4; частные контакты не менялись.
 
-Apple подтвердила **COMPLETE для 12 снимков**: четыре iPhone и два iPad 13″ на каждом языке. Только после этого заменены 16 прежних собственных снимков. GIF — запись реальной симуляции для GitHub, в Apple не загружалась.
+Apple подтвердила **COMPLETE для 12 новых снимков**: четыре iPhone и два iPad 13″ на каждом языке. Только после этого заменены 12 прежних собственных снимков. Контактная таблица рисунков используется только в GitHub, в карточку Apple не загружалась.
 
-[Нативные снимки и запись воды](../Previews/alpha12) · [Тексты карточки](APP_STORE_CARD.md) · [Проверки](QA-ALPHA12.md).
+[Нативные снимки](../Previews/alpha13) · [Тексты карточки](APP_STORE_CARD.md) · [Проверки](QA-ALPHA13.md).
 
 ## Артефакты
 
-- Исходники: f6762bbb6e0f7ceeb45ccb4be015f5888a4907f6, тег `v0.1.0-alpha.12`.
-- Архив: `build/alpha12/ElementalCube.xcarchive`.
-- IPA: `build/alpha12/Export/ElementalCube-iOS.ipa`.
-- SHA-256: 4b8b94d7726f44406564dd5fdeb5bd053857eb3b02e9d77101ab044e722d4075.
-- Bundle `com.weavatrix.elementalcube`, версия `0.1.0`, build `12`, iPhone/iPad `[1,2]`, iOS 16+.
-- Строгая подпись, ARCHIVE, EXPORT, VERIFY и UPLOAD подтверждены без ошибок; хеш IPA после загрузки не изменился.
+- Исходники: `c8a1aadc26fd72cc7ffb701396d6d0c4d93dc0cb`, тег `v0.1.0-alpha.13`.
+- Архив: `build/alpha13/ElementalCube.xcarchive`.
+- IPA: `build/alpha13/Export/ElementalCube-iOS.ipa`.
+- SHA-256: `d74fc90e1194e41cc882bb34682daa7ff8074e2be046ea2b44e94768ef0d86bf`.
+- Bundle `com.weavatrix.elementalcube`, версия `0.1.0`, build `13`, iPhone/iPad `[1,2]`, iOS 16+.
+- Строгая подпись, ARCHIVE, EXPORT, VERIFY и UPLOAD подтверждены без ошибок; хеш IPA после загрузки не изменился. Все 20 упакованных иллюстраций сверены с исходниками.
 
 ```sh
-ELEMENTAL_BUILD_NUMBER=12 ELEMENTAL_RELEASE_DIR=build/alpha12 ./scripts/testflight.sh prepare
-ELEMENTAL_RELEASE_DIR=build/alpha12 ./scripts/testflight.sh validate
-ELEMENTAL_RELEASE_DIR=build/alpha12 ./scripts/testflight.sh upload
+ELEMENTAL_BUILD_NUMBER=13 ELEMENTAL_RELEASE_DIR=build/alpha13 ./scripts/testflight.sh prepare
+ELEMENTAL_RELEASE_DIR=build/alpha13 ./scripts/testflight.sh validate
+ELEMENTAL_RELEASE_DIR=build/alpha13 ./scripts/testflight.sh upload
 ```
 
-Ключи и бинарные файлы не входят в Git. CI/CD нет, GitHub Actions выключен. Временный iPad этой задачи удалён, исходный iPhone-симулятор возвращён в выключенное состояние. Mac-версия 12 собрана отдельно и сохранена.
+Ключи и бинарные файлы не входят в Git. CI/CD нет, GitHub Actions выключен. Временный iPad этой задачи удалён, исходный iPhone-симулятор возвращён в выключенное состояние. Mac-версия 13 собрана отдельно и сохранена.
 
 ## Предыдущие сборки
+
+**12**: Build ID `f706392b-2394-42ba-a8f8-b667d0b5d44a`, исходники `f6762bbb6e0f7ceeb45ccb4be015f5888a4907f6`, тег `v0.1.0-alpha.12`, SHA-256 `4b8b94d7726f44406564dd5fdeb5bd053857eb3b02e9d77101ab044e722d4075`. Обновление воды и гладкого водного куба; сохраняется во внутренней группе. [Проверки](QA-ALPHA12.md) · [Снимки](../Previews/alpha12).
 
 **11**: Build ID `dcc81c74-0a16-4e5d-9681-dd0d70463d05`, тег `v0.1.0-alpha.11`, SHA-256 `42a56074bc3e784bb027b6055f8c665d91ba7ad0b246b1333c800e85e5046e4d`. Сохраняется во внутренней группе. [Проверки](QA-ALPHA11.md) · [Снимки](../Previews/alpha11).
 
