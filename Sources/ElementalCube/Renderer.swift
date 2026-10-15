@@ -6,6 +6,7 @@ struct Uniforms { var projection:simd_float4x4;var model:simd_float4x4;var anima
 final class Renderer: NSObject, MTKViewDelegate {
     let device:MTLDevice,queue:MTLCommandQueue
     let scenePipeline:MTLRenderPipelineState,backgroundPipeline:MTLRenderPipelineState
+    let coatPipeline:MTLRenderPipelineState,fiberPipeline:MTLRenderPipelineState
     let depthWrite:MTLDepthStencilState,depthRead:MTLDepthStencilState
     let session:GameSession
     var terrain:MTLBuffer,cube:MTLBuffer,crate:MTLBuffer
@@ -32,15 +33,17 @@ final class Renderer: NSObject, MTKViewDelegate {
             library=try d.makeLibrary(source:String(contentsOf:url),options:nil)
         } else if let compiled=d.makeDefaultLibrary() { library=compiled }
         else { throw NSError(domain:"Не удалось загрузить шейдеры",code:2) }
-        func pipeline(_ vertex:String,_ fragment:String,depth:Bool)->MTLRenderPipelineState {
+        func pipeline(_ vertex:String,_ fragment:String,depth:Bool,coverage:Bool=false)->MTLRenderPipelineState {
             let p=MTLRenderPipelineDescriptor();p.vertexFunction=library.makeFunction(name:vertex);p.fragmentFunction=library.makeFunction(name:fragment)
             p.colorAttachments[0].pixelFormat=view.colorPixelFormat;p.depthAttachmentPixelFormat = .depth32Float;p.rasterSampleCount=4
-            p.colorAttachments[0].isBlendingEnabled=true
+            p.colorAttachments[0].isBlendingEnabled = !coverage;p.isAlphaToCoverageEnabled=coverage
             p.colorAttachments[0].sourceRGBBlendFactor = .sourceAlpha;p.colorAttachments[0].destinationRGBBlendFactor = .oneMinusSourceAlpha
             p.colorAttachments[0].sourceAlphaBlendFactor = .one;p.colorAttachments[0].destinationAlphaBlendFactor = .oneMinusSourceAlpha
             return try! d.makeRenderPipelineState(descriptor:p)
         }
         scenePipeline=pipeline("scene_vertex","scene_fragment",depth:true);backgroundPipeline=pipeline("background_vertex","background_fragment",depth:false)
+        coatPipeline=pipeline("coat_vertex","coat_fragment",depth:true,coverage:true)
+        fiberPipeline=pipeline("scene_vertex","scene_fragment",depth:true,coverage:true)
         let dw=MTLDepthStencilDescriptor();dw.depthCompareFunction = .lessEqual;dw.isDepthWriteEnabled=true;depthWrite=d.makeDepthStencilState(descriptor:dw)!
         dw.isDepthWriteEnabled=false;depthRead=d.makeDepthStencilState(descriptor:dw)!
         let t=Geometry.terrain(),c=Geometry.cube(),box=Geometry.crate()
@@ -91,13 +94,13 @@ final class Renderer: NSObject, MTKViewDelegate {
         else if s.surface == .wood { floorHeight=s.crate.position.y+0.625 }
         else if p.x>7 && p.x<9.4 { floorSlope = -1.625;floorHeight = -(p.x-7)*1.625 }
         else if p.x>14.6 && p.x<17 { floorSlope=1.625;floorHeight = -(17-p.x)*1.625 }
-        else if s.surface == .stone { floorHeight = -0.1 }
+        else if s.surface == .stone { floorHeight = p.y < -1 ? s.waterField.floor(at:p.x) : -0.1 }
         var u=Uniforms(projection:projection(),model:matrix_identity_float4x4,animation:SIMD4(s.time,s.wetness,s.squash,s.cube.velocity.x),camera:SIMD4(cameraX,worldWidth,worldHeight,0),support:SIMD4(s.cube.grounded ? 1 : 0,floorHeight,floorSlope,p.x))
         e.setRenderPipelineState(backgroundPipeline);e.setDepthStencilState(depthRead)
         e.setFragmentBytes(&u,length:MemoryLayout<Uniforms>.stride,index:1);e.drawPrimitives(type:.triangle,vertexStart:0,vertexCount:3)
         e.setRenderPipelineState(scenePipeline);e.setDepthStencilState(depthWrite)
-        func drawBuffer(_ buffer:MTLBuffer,_ count:Int,_ model:simd_float4x4=matrix_identity_float4x4,character:Bool=false) {
-            u.model=model;u.camera.w=character ? 1 : 0
+        func drawBuffer(_ buffer:MTLBuffer,_ count:Int,_ model:simd_float4x4=matrix_identity_float4x4,character:Bool=false,furSurface:Bool=false) {
+            u.model=model;u.camera.w=furSurface ? 2 : (character ? 1 : 0)
             e.setVertexBytes(&u,length:MemoryLayout<Uniforms>.stride,index:1);e.setFragmentBytes(&u,length:MemoryLayout<Uniforms>.stride,index:1);e.setVertexBuffer(buffer,offset:0,index:0)
             e.drawPrimitives(type:.triangle,vertexStart:0,vertexCount:count)
         }
@@ -154,8 +157,18 @@ final class Renderer: NSObject, MTKViewDelegate {
             var ash=Mesh();ash.box(center:V3(s.crate.position.x,s.crate.position.y-0.5,0.65),size:V3(0.9,0.12,0.7),color:tint(0x383936));drawMesh(ash)
         }
         let model=translation(V3(p.x,p.y,0.55))*rotationZ(s.bodyAngle)*rotationY(0.12)*scale(s.bodyStretch)
-        drawBuffer(cube,cubeCount,model,character:true)
-        drawMesh(Geometry.fur(s.fur,form:s.form))
+        drawBuffer(cube,cubeCount,model,character:true,furSurface:s.form.hasFur)
+        if s.form.hasFur {
+            e.setRenderPipelineState(coatPipeline)
+            for layer in 1...10 {
+                var coat=SIMD4<Float>(Float(layer)/11,s.windVelocity,0,0)
+                e.setVertexBytes(&coat,length:MemoryLayout<SIMD4<Float>>.stride,index:2)
+                drawBuffer(cube,cubeCount,model,character:true)
+            }
+            e.setRenderPipelineState(fiberPipeline)
+            drawMesh(Geometry.fur(s.fur,form:s.form))
+            e.setRenderPipelineState(scenePipeline)
+        }
         if s.form == .fire && !s.dead { drawMesh(Geometry.flames(time:s.time,active:s.passiveWorking),model) }
         let blinkPhase=s.time.truncatingRemainder(dividingBy:4.7)
         let mood:Mood=session.aiming ? .focused : (s.won ? .delighted : s.mood)

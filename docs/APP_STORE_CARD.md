@@ -1,6 +1,6 @@
 # ElementalCube — материалы карточки Apple
 
-Версия альфы: **0.1.0 (4)**. Одно приложение для iPhone и iPad. Карточка [App Store Connect](https://appstoreconnect.apple.com/apps/6822921592/testflight) заполнена на русском и английском, включая задания тестерам и 12 снимков экрана. Внутреннее тестирование запущено 15 октября 2026; [внешняя альфа](https://testflight.apple.com/join/snm99FQh) ожидает проверки Apple.
+Версия альфы: **0.1.0 (5)**. Одно приложение для iPhone и iPad. Карточка [App Store Connect](https://appstoreconnect.apple.com/apps/6822921592/testflight) заполнена на русском и английском, включая задания тестерам и 12 снимков экрана. Внутреннее тестирование запущено 15 октября 2026; [внешняя альфа](https://testflight.apple.com/join/snm99FQh) ожидает проверки Apple.
 
 ## Данные приложения
 
@@ -67,7 +67,7 @@
 ### Описание TestFlight
 
 ```text
-Добро пожаловать в альфу ElementalCube 0.1.0 (4)!
+Добро пожаловать в альфу ElementalCube 0.1.0 (5)!
 
 Пять форм меняют способ движения и взаимодействия с миром: лёд постепенно замораживает, вода плавает, воздух скользит, камень исследует дно, огонь сжигает и испаряет воду с потерей здоровья.
 
@@ -81,7 +81,11 @@
 ### Что проверить — TestFlight
 
 ```text
-Альфа 0.1.0 (4) — пять стихий и пассивные способности.
+Альфа 0.1.0 (5) — новая мягкая шерсть.
+
+Вместо редких жёстких полосок — плотный короткий подшёрсток и изогнутые пучки. Сравните сухой пушистый контур и мокрую приглаженную шерсть. Проверьте ветер, качение, прыжки и высыхание; обратите внимание на плавность игры.
+
+Пять стихий и пассивные способности сохранены.
 
 • Выберите каждую форму кнопкой сверху; смена начинает новую попытку.
 • Нажмите слот или название способности. Откроется описание с переключателем экипировки. После включения способность работает автоматически.
@@ -140,7 +144,7 @@ The current in-game interface is in Russian.
 ### Описание TestFlight
 
 ```text
-Welcome to ElementalCube alpha 0.1.0 (4)!
+Welcome to ElementalCube alpha 0.1.0 (5)!
 
 Five forms change movement and interaction: Ice gradually freezes, Water swims, Air slides, Stone explores the bottom, and Fire burns fuel and evaporates water at a health cost.
 
@@ -156,7 +160,11 @@ The current in-game interface is in Russian.
 ### Что проверить — TestFlight
 
 ```text
-Alpha 0.1.0 (4): five elements and passive abilities.
+Alpha 0.1.0 (5): softer fur.
+
+Sparse rigid strips have been replaced by a dense short undercoat and curved tufts. Compare the fluffy dry silhouette with the flattened wet coat. Try wind, rolling, jumping and drying, and watch frame smoothness.
+
+All five elements and passive abilities remain available.
 
 • Try every form using the top button. Switching resets the map.
 • Tap the slot or ability name. Read the description and equip the passive. It should then work automatically.

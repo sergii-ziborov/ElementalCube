@@ -45,7 +45,8 @@ final class GameSession: ObservableObject {
         settingsStore = PlaygroundSettingsStore()
         let args=ProcessInfo.processInfo.arguments
         visualPreview=args.contains { $0.hasPrefix("--preview-") }
-        let previewForm=ElementForm.allCases.first { args.contains("--preview-"+$0.rawValue) }
+        let furPreview=args.contains { $0.hasPrefix("--preview-fur-") }
+        let previewForm=furPreview ? ElementForm.ice : ElementForm.allCases.first { args.contains("--preview-"+$0.rawValue) }
         form=previewForm ?? ElementForm(rawValue:UserDefaults.standard.string(forKey:"elementalcube.form") ?? "ice") ?? .ice
         simulation=Simulation(form:form)
         let storedWind=UserDefaults.standard.object(forKey:"elementalcube.wind") as? Double ?? 1
@@ -58,7 +59,15 @@ final class GameSession: ObservableObject {
         // Reproducible local QA scenes, never enabled by a normal launch.
         if visualPreview {
             simulation.equipPassive(true)
-            if args.contains("--preview-stone") {
+            if furPreview {
+                zoom=1.8
+                simulation.wind=args.contains("--preview-fur-wind") || args.contains("--preview-fur-live") ? 3 : 0.5
+                if args.contains("--preview-fur-wet") {
+                    simulation.placeCube(Vec(10,-1));for _ in 0..<240 { simulation.step() }
+                }
+                simulation.placeCube(Vec(3.5,0.7))
+                for _ in 0..<24 { simulation.step() }
+            } else if args.contains("--preview-stone") {
                 simulation.placeCube(Vec(10,-3.3));simulation.movement=1
                 for _ in 0..<150 { simulation.step() };simulation.movement=0
             } else if args.contains("--preview-fire") {
@@ -73,6 +82,7 @@ final class GameSession: ObservableObject {
             }
         }
         abilityInfo=args.contains("--preview-ability");forms=args.contains("--preview-forms")
+        if args.contains("--preview-fur-live") { visualPreview=false }
         refresh()
     }
     private func persistSettings() {

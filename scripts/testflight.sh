@@ -13,7 +13,7 @@ if [ "$mode" = prepare ]; then
         case "$ELEMENTAL_BUILD_NUMBER" in *[!0-9]*) echo 'Build number must contain only digits' >&2; exit 2 ;; esac
         archive_settings+=("CURRENT_PROJECT_VERSION=$ELEMENTAL_BUILD_NUMBER")
     fi
-    xcodebuild -project ElementalCube.xcodeproj -scheme ElementalCube-iOS -configuration Release \
+    xcodebuild -jobs 2 -project ElementalCube.xcodeproj -scheme ElementalCube-iOS -configuration Release \
         -destination 'generic/platform=iOS' -archivePath "$release_dir/ElementalCube.xcarchive" \
         -derivedDataPath "$release_dir/DerivedData" "${archive_settings[@]}" archive
     xcodebuild -exportArchive -archivePath "$release_dir/ElementalCube.xcarchive" \

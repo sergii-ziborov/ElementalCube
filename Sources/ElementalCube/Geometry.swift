@@ -59,19 +59,32 @@ enum Geometry {
         return mesh
     }
     static func fur(_ physics:FurPhysics,form:ElementForm)->Mesh {
-        var m=Mesh();m.vertices.reserveCapacity(physics.strands.count*54)
+        var m=Mesh();m.vertices.reserveCapacity(physics.strands.count*60)
         for (i,s) in physics.strands.enumerated() {
             let dry=form == .air ? tint(0xf1fff3) : (form == .water ? tint(0xa6e7f9) : tint(0xf2fbff))
-            let color=mix(dry,tint(0x428ba5),s.wetness*0.72)
-            for offset:Float in [-1,0,1] {
-                let spread:Float=(1-s.wetness*0.8)*offset*0.012
-                for j in 0..<3 {
-                    let a=s.points[j]+V3(spread,0,0),b=s.points[j+1]+V3(spread*0.7,0,0)
-                    let width:Float=(0.008+Float(i%3)*0.002)*(1-Float(j)/3)
-                    var side=simd_cross(b-a,V3(0,0,1))
-                    if simd_length(side)<0.001 { side=V3(1,0,0) }
-                    side=simd_normalize(side)*width
-                    m.quad(a-side,b-side*0.25,b+side*0.25,a+side,color,V3(0,0.5,1))
+            let color=mix(dry,tint(form == .air ? 0x7cafaa : 0x568fb8),s.wetness*0.52)
+            func curve(_ t:Float)->V3 {
+                let q:Float=1-t
+                return s.points[0]*(q*q*q)+s.points[1]*(3*q*q*t)+s.points[2]*(3*q*t*t)+s.points[3]*(t*t*t)
+            }
+            let axis=simd_normalize(s.points[3]-s.points[0]+V3(0.0001,0,0))
+            var side=simd_cross(axis,V3(-0.28,-0.3,1))
+            if simd_length(side)<0.001 { side=V3(1,0,0) }
+            side=simd_normalize(side)
+            let normal=simd_normalize(simd_cross(side,axis))
+            for ribbon:Float in [-0.5,0.5] {
+                func vertex(_ t:Float,_ across:Float)->Vertex {
+                    let width=(0.018+Float(i%5)*0.003)*(1-s.wetness*0.58)*pow(max(0,1-t),0.65)
+                    let spread=ribbon*0.018*(1-s.wetness*0.85)*(1-t)
+                    let p=curve(t)+side*(spread+across*width)
+                    // position.w and normal.w carry tuft UVs; world positions stay 3D.
+                    return Vertex(position:SIMD4(p,across),normal:SIMD4(normal,1+t),color:color)
+                }
+                for j in 0..<5 {
+                    let a=Float(j)/5,b=Float(j+1)/5
+                    for (t,x):(Float,Float) in [(a,-1),(b,-1),(b,1),(a,-1),(b,1),(a,1)] {
+                        m.vertices.append(vertex(t,x))
+                    }
                 }
             }
         }
@@ -96,7 +109,7 @@ enum Geometry {
             m.ellipse(center:V3(x+gaze,0.093,0.523),rx:0.059,ry:0.106*eyeHeight,color:tint(0x07192f))
             m.ellipse(center:V3(x+gaze-0.031,0.148*eyeHeight,0.53),rx:0.03,ry:0.04*eyeHeight,color:tint(0xffffff))
             m.ellipse(center:V3(x+gaze+0.032,0.06,0.532),rx:0.012,ry:0.017*eyeHeight,color:tint(0xb1ecff))
-            m.ellipse(center:V3(x*1.65,-0.102,0.503),rx:0.054,ry:0.022,color:tint(0xf2bbd3,0.72))
+            m.ellipse(center:V3(x*1.65,-0.102,0.556),rx:0.054,ry:0.022,color:tint(0xf2bbd3,0.72))
             if mood == .displeased {
                 let side:Float=x<0 ? -1 : 1
                 m.line(V3(x-side*0.075,0.31,0.61),V3(x+side*0.075,0.265,0.61),width:0.019,color:tint(0x43769a))
@@ -138,6 +151,9 @@ enum Geometry {
                 y-=0.75
             }
             if top > -1 {
+                // Close the turf overhang in depth, so the rear coat cannot show
+                // through the gap between the grass lip and recessed stonework.
+                m.box(center:V3((start+end)/2,top-0.16,0.0),size:V3(end-start,0.24,1.82),color:tint(0x64784d))
                 m.box(center:V3((start+end)/2,top+0.01,0.0),size:V3(end-start,0.16,1.82),color:tint(0x82a45d))
                 for _ in 0..<Int((end-start)*22) {
                     let x=start+r.next()*(end-start),h=0.05+r.next()*0.16,z=0.5+r.next()*0.35

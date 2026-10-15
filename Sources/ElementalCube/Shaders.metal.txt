@@ -2,15 +2,44 @@
 using namespace metal;
 struct Vertex { float4 position; float4 normal; float4 color; };
 struct Uniforms { float4x4 projection; float4x4 model; float4 animation; float4 camera; float4 support; };
-struct Varying { float4 position [[position]]; float4 color; float3 normal; float3 world; };
+struct Varying { float4 position [[position]]; float4 color; float3 normal; float3 world; float3 local; float2 fiber; };
 vertex Varying scene_vertex(const device Vertex *v [[buffer(0)]], constant Uniforms &u [[buffer(1)]], uint id [[vertex_id]]) {
     Vertex a=v[id]; float3 p=a.position.xyz;
     float4 world=u.model*float4(p,1);
     Varying o; o.position=u.projection*world; o.world=world.xyz;
     o.normal=normalize((u.model*float4(a.normal.xyz,0)).xyz);
-    o.color=a.color; return o;
+    o.color=a.color; o.local=p; o.fiber=float2(a.position.w,a.normal.w); return o;
+}
+float coatHash(float2 p) { return fract(sin(dot(p,float2(127.1,311.7)))*43758.5453); }
+float coatNoise(float2 p) {
+    float2 i=floor(p),f=fract(p);f=f*f*(3-2*f);
+    return mix(mix(coatHash(i),coatHash(i+float2(1,0)),f.x),mix(coatHash(i+float2(0,1)),coatHash(i+1),f.x),f.y);
+}
+float3 plushColor(float3 base,float3 p,float3 n,float wet,float layer) {
+    float light=saturate(dot(n,normalize(float3(-.65,1.4,.9))));
+    float3 shadow=base*float3(.64,.76,.98);
+    float3 color=mix(shadow,base,.5+.5*light);
+    color*=.91+.1*saturate(p.y+.5)+layer*.08;
+    float strokes=coatNoise(float2(p.x*170+p.y*34,p.y*34));
+    color*=.965+strokes*.065;
+    color=mix(color,color*float3(.62,.76,.9),wet*.64);
+    // Broad, quiet highlights read as velvet when dry and satin when wet.
+    float sheen=pow(saturate(dot(n,normalize(float3(-.35,.55,1)))),wet>.5 ? 20. : 5.);
+    return color+float3(.075,.09,.1)*sheen*(.25+wet*.75);
 }
 fragment float4 scene_fragment(Varying v [[stage_in]], constant Uniforms &u [[buffer(1)]]) {
+    if(v.fiber.y>.5) {
+        if(u.support.x>.5 && v.world.y<u.support.y+u.support.z*(v.world.x-u.support.w)+.065) discard_fragment();
+        float t=v.fiber.y-1,across=v.fiber.x;
+        float aa=max(fwidth(across),.045);
+        float edge=1-smoothstep(1-aa*1.4,1.,abs(across));
+        float strands=.72+.28*cos(across*19.+sin(t*7.)*.7);
+        float alpha=edge*strands*(1-smoothstep(.78,1.,t));
+        if(alpha<.08) discard_fragment();
+        float3 color=plushColor(v.color.rgb,float3(0,.25,0),normalize(v.normal),0,t);
+        return float4(color,alpha);
+    }
+    if(u.camera.w>1.5) return float4(plushColor(v.color.rgb,v.local,normalize(v.normal),u.animation.y,0),1);
     float diffuse=max(0.,dot(normalize(v.normal),normalize(float3(-.65,1.4,.9))));
     float3 lit=v.color.rgb*(.42+.58*diffuse);
     if(u.camera.w>0.5) {
@@ -21,6 +50,48 @@ fragment float4 scene_fragment(Varying v [[stage_in]], constant Uniforms &u [[bu
         lit+=float3(.12,.18,.20)*sheen*u.animation.y;
     }
     return float4(lit,v.color.a);
+}
+
+// Short overlapping shells fill the spaces between simulated guide tufts.
+// No image textures or per-pixel world-space noise: the coat stays on the body.
+vertex Varying coat_vertex(const device Vertex *vertices [[buffer(0)]],constant Uniforms &u [[buffer(1)]],
+                           constant float4 &coat [[buffer(2)]],uint id [[vertex_id]]) {
+    Vertex a=vertices[id];float3 p=a.position.xyz,n=a.normal.xyz;float layer=coat.x,wet=u.animation.y;
+    float face=smoothstep(.25,.43,p.z)*smoothstep(.5,.9,n.z);
+    float eyes=length(float2((abs(p.x)-.21)/.158,(p.y-.095)/.205));
+    float mouth=length(float2(p.x/.115,(p.y+.17)/.12));
+    float mask=mix(1.,smoothstep(.85,1.16,min(eyes,mouth)),face);
+    float length=mix(.085,.025,wet)*mix(1.,.55,face)*mask;
+    float3 groom=float3(.25,-.62,.04);groom-=n*dot(groom,n);
+    float3 bend=groom*layer*layer*length*(.5+wet);
+    bend.x+=clamp(coat.y,-3.,3.)*.008*layer*layer*(1-wet*.65);
+    float4 world=u.model*float4(p+n*length*layer+bend,1);
+    Varying o;o.position=u.projection*world;o.world=world.xyz;o.local=p;
+    o.normal=normalize((u.model*float4(n,0)).xyz);o.color=a.color;o.fiber=float2(layer,mask);
+    return o;
+}
+fragment float4 coat_fragment(Varying v [[stage_in]],constant Uniforms &u [[buffer(1)]]) {
+    if(u.support.x>.5 && v.world.y<u.support.y+u.support.z*(v.world.x-u.support.w)+.065) discard_fragment();
+    float layer=v.fiber.x,wet=u.animation.y;
+    float3 n=normalize(v.normal);float3 p=v.local;
+    float3 an=abs(p);float2 uv;
+    if(an.z>=max(an.x,an.y)) uv=p.xy;
+    else if(an.y>an.x) uv=p.xz;
+    else uv=p.zy;
+    float density=mix(66.,38.,wet);
+    float2 coord=uv*density;
+    float2 cell=floor(coord),f=fract(coord);float distance=4.;
+    for(int y=-1;y<=1;y++) for(int x=-1;x<=1;x++) {
+        float2 delta=float2(x,y),key=cell+delta;
+        float2 root=.18+.64*float2(coatHash(key),coatHash(key+37.));
+        distance=min(distance,length((f-delta-root)*float2(1.,mix(.75,.4,wet))));
+    }
+    float aa=clamp(length(fwidth(coord))*.45,.035,.55);
+    float radius=mix(.66,.14,pow(layer,.8));
+    float coverage=(1-smoothstep(radius-aa,radius+aa,distance))*(1-smoothstep(.72,1.,layer))*v.fiber.y;
+    if(coverage<.08) discard_fragment();
+    float3 color=plushColor(v.color.rgb,p,n,wet,layer);
+    return float4(color,coverage);
 }
 struct Screen { float4 position [[position]]; float2 uv; };
 vertex Screen background_vertex(uint id [[vertex_id]]) {

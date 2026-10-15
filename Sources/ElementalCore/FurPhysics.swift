@@ -6,6 +6,7 @@ private func unit(_ v:FurVector)->FurVector { v/max(0.00001,length(v)) }
 public struct FurStrand {
     public let root: FurVector
     public let normal: FurVector
+    public let groom: FurVector
     public let length: Float
     public let face: Int
     public var points: [FurVector]
@@ -35,9 +36,16 @@ public final class FurPhysics {
                 let p=n*0.48+u*x+v*y
                 let q=FurVector(max(-0.36,min(0.36,p.x)),max(-0.36,min(0.36,p.y)),max(-0.36,min(0.36,p.z)))
                 let normal=unit(p-q),root=q+normal*0.12
-                let l:Float=face==0 ? 0.06+random()*0.055 : 0.13+random()*0.13
-                let points=(0...3).map { root+normal*(l*Float($0)/3) }
-                strands.append(FurStrand(root:root,normal:normal,length:l,face:face,points:points,previous:points))
+                // A short, swept coat rather than radial needles. The fine undercoat
+                // is rendered separately; these guides move the visible soft tufts.
+                let l:Float=face==0 ? 0.055+random()*0.045 : 0.105+random()*0.08
+                let tangent: FurVector
+                if face==0 { tangent=FurVector(x*0.45,-0.7,0) }
+                else if face==3 { tangent=FurVector(0.65,0,0.12) }
+                else { tangent=FurVector(0.12,-0.65,0.05) }
+                let groom=unit(normal*0.8+tangent-normal*(tangent.x*normal.x+tangent.y*normal.y+tangent.z*normal.z))
+                let points=(0...3).map { root+groom*(l*Float($0)/3) }
+                strands.append(FurStrand(root:root,normal:normal,groom:groom,length:l,face:face,points:points,previous:points))
             }
         }
     }
@@ -51,9 +59,9 @@ public final class FurPhysics {
         let teleported = !initialized || length(center-lastCenter)>2
         for i in strands.indices {
             var s=strands[i]
-            let root=center+rotate(s.root*stretch),normal=unit(rotate(s.normal))
+            let root=center+rotate(s.root*stretch),normal=unit(rotate(s.normal)),groom=unit(rotate(s.groom))
             if teleported {
-                for j in 0...3 { s.points[j]=root+normal*s.length*Float(j)/3;s.previous[j]=s.points[j] }
+                for j in 0...3 { s.points[j]=root+groom*s.length*Float(j)/3;s.previous[j]=s.points[j] }
             }
             let submerged=water(Vec(root.x,root.y)) || s.points.contains { water(Vec($0.x,$0.y)) }
             s.wetness=submerged ? min(1,s.wetness+dt*4) : max(0,s.wetness-dt*0.065)
@@ -66,7 +74,7 @@ public final class FurPhysics {
                 // Rest curvature and wet clumping are forces, not vertex animation.
                 let cluster=FurVector((round(s.root.x*8)/8-s.root.x)*wet*t,
                                       -wet*0.07*t*t,(round(s.root.z*8)/8-s.root.z)*wet*t)
-                let target=root+normal*(s.length*t*(1-wet*0.12))+rotate(cluster)
+                let target=root+groom*(s.length*t*(1-wet*0.12))+rotate(cluster)
                 s.points[j]=old+(old-s.previous[j])*exp(-dt*1.4)+(acceleration+(target-old)*(wet>0.5 ? 75 : 110))*dt*dt
                 s.previous[j]=old
             }
