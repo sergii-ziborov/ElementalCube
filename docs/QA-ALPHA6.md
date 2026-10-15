@@ -26,7 +26,7 @@ SHA-256: `5219194292d84b2a84c5378c466a832130146c2ffec1ec5792c9e83168c42a5f`.
 
 ## TestFlight
 
-Apple validation и загрузка завершились без ошибок. Ожидается появление сборки после обработки Apple; результат и доступность фиксируются в [TESTFLIGHT.md](TESTFLIGHT.md).
+Apple validation и загрузка завершились без ошибок. Build ID `60d4b598-b531-4187-ba8d-8f7a601ebfa4`, обработка `VALID`, внутренняя группа `IN_BETA_TESTING`. Сборка назначена обеим группам; задания на русском и английском сохранены. Внешняя отправка пока не принята: `422 ENTITY_UNPROCESSABLE.ANOTHER_BUILD_IN_REVIEW`, поскольку сборка 4 ещё ожидает Beta App Review. У сборки 6 `READY_FOR_BETA_SUBMISSION`. [Точный статус](TESTFLIGHT.md).
 
 ## Что требует физического устройства
 
