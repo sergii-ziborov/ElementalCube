@@ -2,6 +2,17 @@ import XCTest
 @testable import ElementalCore
 
 final class DirectControlAndInventoryTests:XCTestCase {
+    func testUpwardStrokeDoesNotSteerTowardTheTouchDownLocation() {
+        var input=DirectControl()
+        input.begin(screen:Vec(300,900),worldX:12,onCube:false,canJump:true,time:0)
+        XCTAssertEqual(input.movement(position:2,velocity:0),0)
+        input.update(screen:Vec(300,894),worldX:12,time:0.1)
+        XCTAssertEqual(input.movement(position:2,velocity:0),0)
+        input.update(screen:Vec(300,800),worldX:12,time:0.2)
+        XCTAssertEqual(input.movement(position:2,velocity:0),0)
+        XCTAssertEqual(input.end(time:0.3),.swipeJump(Vec(0,7.2)))
+        XCTAssertNil(input.destination)
+    }
     func testLongScreenSwipeStillJumpsWhileStationaryCubeHoldStillPets() {
         var input=DirectControl()
         input.begin(screen:Vec(100,900),worldX:0,onCube:false,canJump:true,time:0)

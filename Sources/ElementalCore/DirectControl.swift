@@ -34,6 +34,7 @@ public struct DirectControl {
     public private(set) var drag=Vec(0,0)
     public private(set) var destination:Float?
     private var origin=Vec(0,0)
+    private var pendingDestination:Float?
     private var startedAt:TimeInterval=0
     private var furthestDrag:Float=0
     private var onCube=false,aimAllowed=false,aimArmed=false,heldCube=false
@@ -43,7 +44,9 @@ public struct DirectControl {
         origin=screen;drag=Vec(0,0);startedAt=time;furthestDrag=0
         self.onCube=onCube;aimAllowed=canAim && canJump;aimArmed=false;heldCube=false
         gesture=onCube ? .cube : .move
-        destination=onCube ? nil : worldX
+        // Map taps and screen jumps share the same touch. Wait for release or
+        // horizontal intent; driving at touch-down gives a vertical jump drift.
+        pendingDestination=onCube ? nil : worldX;destination=nil
     }
     public mutating func update(screen:Vec,worldX:Float,time:TimeInterval=ProcessInfo.processInfo.systemUptime) {
         guard gesture != nil else { return }
@@ -54,7 +57,11 @@ public struct DirectControl {
         if gesture == .aim || (aimArmed && furthestDrag>=8) { gesture = .aim;destination=nil }
         else if -drag.y>14 && -drag.y>abs(drag.x)*0.7 { gesture = .jump;destination=nil }
         else if onCube { gesture = .cube;destination=nil }
-        else { gesture = .move;destination=worldX }
+        else {
+            gesture = .move;pendingDestination=worldX
+            let horizontal=abs(drag.x)>=8 && abs(drag.x)>=abs(drag.y)*0.7
+            destination=horizontal || drag.y>=14 ? worldX : nil
+        }
     }
     public mutating func end(time:TimeInterval=ProcessInfo.processInfo.systemUptime)->Release {
         guard gesture != nil else { return .none }
@@ -65,7 +72,8 @@ public struct DirectControl {
         } else if -drag.y>=28 && -drag.y>=abs(drag.x)*0.7 && !(onCube && heldCube) {
             release = .swipeJump(Vec(max(-3.2,min(3.2,drag.x*0.055)),7.2));destination=nil
         } else if onCube { release = .pet;destination=nil }
-        gesture=nil;drag=Vec(0,0);return release
+        else if gesture == .move { destination=pendingDestination }
+        gesture=nil;drag=Vec(0,0);pendingDestination=nil;return release
     }
     public mutating func cancel() { gesture=nil;destination=nil;drag=Vec(0,0);aimArmed=false }
     public mutating func movement(position:Float,velocity:Float,maxSpeed:Float=3.4)->Float {
