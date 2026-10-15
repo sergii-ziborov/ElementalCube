@@ -1,6 +1,6 @@
 # ElementalCube — материалы карточки Apple
 
-Версия альфы: **0.1.0 (5)**. Одно приложение для iPhone и iPad. Карточка [App Store Connect](https://appstoreconnect.apple.com/apps/6822921592/testflight) заполнена на русском и английском, включая задания тестерам и 12 снимков экрана. Внутреннее тестирование запущено 15 октября 2026; [внешняя альфа](https://testflight.apple.com/join/snm99FQh) ожидает проверки Apple.
+Версия альфы: **0.1.0 (5)**. Одно приложение для iPhone и iPad. Карточка [App Store Connect](https://appstoreconnect.apple.com/apps/6822921592/testflight) заполнена на русском и английском, включая задания сборки 5. Внутренней группе доступна новая мягкая шерсть; [внешняя альфа](https://testflight.apple.com/join/snm99FQh) ожидает проверки Apple. В карточке сохранены 12 снимков предыдущей сборки 4.
 
 ## Данные приложения
 
@@ -23,7 +23,7 @@
 - [Конфиденциальность](https://github.com/sergii-ziborov/ElementalCube/blob/main/docs/PRIVACY.md)
 
 
-Иконка: [PNG 1024 × 1024](../Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png). Скриншоты текущей сборки: [альфа 4](../Previews/alpha4). [Архивные размеры Apple](../Previews/app-store) относятся к сборкам 2 и 3.
+Иконка: [PNG 1024 × 1024](../Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png). Новая шерсть: [сборка 5](../Previews/fur5). Снимки пяти форм, уже загруженные в карточку: [альфа 4](../Previews/alpha4). [Архивные размеры Apple](../Previews/app-store) относятся к сборкам 2 и 3.
 
 
 ## Русский

@@ -1,18 +1,20 @@
-# ElementalCube — alpha 0.1.0 (4)
+# ElementalCube — alpha 0.1.0 (5)
 
 Нативная тестовая площадка для iPhone и iPad. Сборка 4 включает пять стихий, экипируемые пассивные способности, здоровье и ману, физические пряди спереди и со всех сторон, локальное замораживание, горение и испарение воды. [Правила](ELEMENTS.md).
 
+Сборка **5** меняет вид шерсти: плотный подшёрсток, мягкие изогнутые пучки, приглаживание и затемнение при намокании. [Сравнение](../Previews/fur5) · [Проверки](QA-ALPHA5.md). Она прошла валидацию, загрузку и обработку Apple и доступна внутренней группе.
+
 ## Статус — 15 октября 2026
 
-[Карточка Apple](https://appstoreconnect.apple.com/apps/6822921592/testflight) создана, App ID `6822921592`. Сборка **0.1.0 (4)** прошла валидацию, загрузку и обработку (`VALID`). Идентификатор сборки: `2ccb7223-af29-4994-97e0-3c86637e95ba`.
+[Карточка Apple](https://appstoreconnect.apple.com/apps/6822921592/testflight) заполнена, App ID `6822921592`. Сборка **0.1.0 (5)** прошла валидацию, загрузку и обработку (`VALID`). Идентификатор сборки: `3fe55c8c-8506-4f70-8f44-768383b7e40a`.
 
-- **ElementalCube Internal**: сборка доступна, аккаунт владельца добавлен; `IN_BETA_TESTING`. На своём iPhone/iPad откройте приглашение Apple и примите его в TestFlight.
-- **ElementalCube Alpha**: сборка отправлена на Beta App Review, `WAITING_FOR_REVIEW`. [Публичная ссылка](https://testflight.apple.com/join/snm99FQh) откроет установку после одобрения Apple; до этого внешняя установка недоступна. Автоматическое уведомление тестеров включено.
-- Русские и английские описания и задания тестерам сохранены; контакт и инструкции для проверки заполнены. В карточку загружены 12 снимков: пять iPhone и один iPad 13″ на каждый язык. Все получили `COMPLETE`.
+- **ElementalCube Internal**: сборка 5 доступна, аккаунт владельца добавлен; `IN_BETA_TESTING`. На своём iPhone/iPad откройте приглашение Apple и примите его в TestFlight.
+- **ElementalCube Alpha**: группе назначена новая сборка 5. Отправка её на Beta App Review получила ответ Apple `422 ENTITY_UNPROCESSABLE.ANOTHER_BUILD_IN_REVIEW`: сборка 4 этой версии ещё имеет `WAITING_FOR_REVIEW`. После завершения её проверки нужно повторить отправку сборки 5. Сейчас у сборки 5 `READY_FOR_BETA_SUBMISSION`; она ещё не отправлена на внешнюю проверку. [Публичная ссылка](https://testflight.apple.com/join/snm99FQh) откроет установку после допуска новой сборки. Автоматическое уведомление тестеров включено.
+- Русские и английские описания и задания сборки 5 сохранены; контакт и инструкции для проверки заполнены. В карточке сохранены 12 снимков альфы 4: пять iPhone и один iPad 13″ на каждый язык. Все получили `COMPLETE`. Сравнение новой шерсти сборки 5 доступно в [галерее](../Previews/fur5).
 
 Это распространение через TestFlight. Публичный релиз App Store не отправлялся. Ключи, журналы загрузки и частные контактные данные хранятся только локально.
 
-Подписанная IPA сборки 4 находится в `build/alpha4/Export`. Старые сборки сохраняются отдельно: сборка 2 — `build/testflight-next/Export`, сборка 1 — `build/testflight/Export`. Их теги и артефакты не заменяются.
+Подписанная IPA сборки 5 находится в `build/alpha5/Export`, исходники — тег `v0.1.0-alpha.5`. Старые сборки сохраняются отдельно: сборка 4 — `build/alpha4/Export`, сборка 2 — `build/testflight-next/Export`, сборка 1 — `build/testflight/Export`. Их теги и артефакты не заменяются.
 
 ## Ручная загрузка
 
@@ -21,18 +23,18 @@
 Ключ App Store Connect хранится вне репозитория. Переменные `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_PATH` можно задать в окружении или в локальном `~/.private_keys/appstoreconnect.env`. Путь к другому файлу задаётся через `ASC_ENV_FILE`. Содержимое ключа не выводится.
 
 ```sh
-ELEMENTAL_RELEASE_DIR=build/alpha4 ./scripts/testflight.sh validate
-ELEMENTAL_RELEASE_DIR=build/alpha4 ./scripts/testflight.sh upload
+ELEMENTAL_RELEASE_DIR=build/alpha5 ./scripts/testflight.sh validate
+ELEMENTAL_RELEASE_DIR=build/alpha5 ./scripts/testflight.sh upload
 python3 scripts/asc.py status
 ```
 
-Сборка 4 уже загружена; повторно отправлять её не нужно. Для воспроизведения подписанной сборки используйте исходный тег `v0.1.0-alpha.4`. Следующую версию собирайте с новым номером и в отдельном каталоге, сохраняя существующие IPA.
+Сборка 5 уже загружена; повторно отправлять её не нужно. Для воспроизведения подписанной сборки используйте исходный тег `v0.1.0-alpha.5`. Следующую версию собирайте с новым номером и в отдельном каталоге, сохраняя существующие IPA.
 
-Тексты русской и английской карточки находятся в `docs/app-store/metadata.json`. Проверка ограничений Apple: `python3 scripts/app-store-metadata.py`. Применение текстов и заданий тестерам: `python3 scripts/app-store-metadata.py --apply --build 4`. Проверка PNG: `python3 scripts/app-store-screenshots.py`; `--apply` загружает снимки из `Previews/alpha4`, сохраняет существующие ассеты и проверяет их обработку Apple. Эти команды не отправляют релиз App Store и не приглашают тестеров.
+Тексты русской и английской карточки находятся в `docs/app-store/metadata.json`. Проверка ограничений Apple: `python3 scripts/app-store-metadata.py`. Применение текстов и заданий тестерам после обработки: `python3 scripts/app-store-metadata.py --apply --build 5`. Проверка PNG предыдущего набора карточки: `python3 scripts/app-store-screenshots.py`; `--apply` загружает снимки из `Previews/alpha4`, сохраняет существующие ассеты и проверяет их обработку Apple. Снимки новой шерсти находятся в `Previews/fur5`. Эти команды не отправляют релиз App Store и не приглашают тестеров.
 
-Для следующей сборки передайте уникальный номер и отдельный каталог: `ELEMENTAL_BUILD_NUMBER=5 ELEMENTAL_RELEASE_DIR=build/alpha5 ./scripts/testflight.sh prepare`.
+Для следующей сборки передайте уникальный номер и отдельный каталог: `ELEMENTAL_BUILD_NUMBER=6 ELEMENTAL_RELEASE_DIR=build/alpha6 ./scripts/testflight.sh prepare`.
 
-Архив, подписанная IPA и журналы находятся в игнорируемой папке `build/alpha4`.
+Архив и подписанная IPA находятся в игнорируемой папке `build/alpha5`, журналы — `build/alpha5-*.log`.
 
 Параметры уже созданной карточки приложения:
 
