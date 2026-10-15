@@ -29,28 +29,36 @@ public struct WorldViewport {
 
 public struct DirectControl {
     public enum Gesture:Equatable { case aim,move }
+    public enum Release:Equatable { case none,tapJump,aim(Vec) }
     public private(set) var gesture:Gesture?
     public private(set) var drag=Vec(0,0)
     public private(set) var destination:Float?
     private var origin=Vec(0,0)
+    private var startedAt:TimeInterval=0
+    private var furthestDrag:Float=0
     public init() {}
-    public mutating func begin(screen:Vec,worldX:Float,onCube:Bool,canJump:Bool) {
+    public mutating func begin(screen:Vec,worldX:Float,onCube:Bool,canJump:Bool,time:TimeInterval=ProcessInfo.processInfo.systemUptime) {
         guard gesture==nil else { return }
-        origin=screen;drag=Vec(0,0)
+        origin=screen;drag=Vec(0,0);startedAt=time;furthestDrag=0
         if onCube {
             destination=nil
             if canJump { gesture = .aim }
         } else { gesture = .move;destination=worldX }
     }
     public mutating func update(screen:Vec,worldX:Float) {
-        if gesture == .aim { drag=Vec(screen.x-origin.x,screen.y-origin.y) }
+        if gesture == .aim { drag=Vec(screen.x-origin.x,screen.y-origin.y);furthestDrag=max(furthestDrag,hypot(drag.x,drag.y)) }
         else if gesture == .move { destination=worldX }
     }
     /// Ending a map touch retains its world destination; ending an aim cannot
-    /// fall through into a map command. Tiny taps on the cube do not jump.
-    public mutating func end()->Vec? {
-        let impulse=gesture == .aim && hypot(drag.x,drag.y)>=8 ? drag : nil
-        gesture=nil;drag=Vec(0,0);return impulse
+    /// fall through into a map command. A short cube tap is an ordinary jump;
+    /// a long hold or a drag returned to its origin is not a tap.
+    public mutating func end(time:TimeInterval=ProcessInfo.processInfo.systemUptime)->Release {
+        var release=Release.none
+        if gesture == .aim {
+            if hypot(drag.x,drag.y)>=8 { release = .aim(drag) }
+            else if furthestDrag<8 && (0...0.3).contains(time-startedAt) { release = .tapJump }
+        }
+        gesture=nil;drag=Vec(0,0);return release
     }
     public mutating func cancel() { gesture=nil;destination=nil;drag=Vec(0,0) }
     public mutating func movement(position:Float,velocity:Float,maxSpeed:Float=3.4)->Float {

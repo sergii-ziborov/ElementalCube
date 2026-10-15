@@ -1,6 +1,6 @@
 # ElementalCube — материалы карточки Apple
 
-Альфа **0.1.0 (7)** для iPhone и iPad. Актуальное состояние загрузки и проверки: [TestFlight](TESTFLIGHT.md). [Нативные снимки](../Previews/gestures7).
+Альфа **0.1.0 (8)** для iPhone и iPad. Актуальное состояние загрузки и проверки: [TestFlight](TESTFLIGHT.md). [Нативные снимки](../Previews/gestures7).
 
 Apple ID `6822921592` · Bundle ID `com.weavatrix.elementalcube` · версия 0.1.0 · Games / Puzzle / Adventure.
 
@@ -35,7 +35,7 @@ Apple ID `6822921592` · Bundle ID `com.weavatrix.elementalcube` · версия
 
 Начальная пассивная способность уже назначена и работает автоматически. Нажатие на название открывает описание. Здоровье и мана всегда видны; выбирайте, где тратить силы.
 
-Коснитесь карты для движения. Потяните самого куба в сторону полёта и отпустите: пунктир показывает дугу, а силу ограничивает изученный навык. Катитесь по траве, толкайте и опрокидывайте плавучий ящик, раскачивайте подвесной мост, скользите по льду и плывите к берегу. Доберитесь до флага, соберите двенадцать кристаллов или отправьтесь каменной формой за глубинной реликвией.
+Короткий тап по кубику — обычный прыжок вверх. Коснитесь карты для движения. Потяните самого куба в сторону полёта и отпустите: пунктир показывает дугу, а силу ограничивает изученный навык. Катитесь по траве, толкайте и опрокидывайте плавучий ящик, раскачивайте подвесной мост, скользите по льду и плывите к берегу. Доберитесь до флага, соберите двенадцать кристаллов или отправьтесь каменной формой за глубинной реликвией.
 
 Кубик реагирует на ваши действия: сосредотачивается перед прыжком, радуется находкам и встряхивает мокрую шерсть. Пряди спереди и по бокам меняются от ветра, движения и намокания. Мягкая трава и твёрдый камень по-разному встречают его после полёта; поддерживаемые iPhone добавляют тактильный отклик.
 
@@ -47,31 +47,28 @@ Apple ID `6822921592` · Bundle ID `com.weavatrix.elementalcube` · версия
 ### Описание TestFlight
 
 ```text
-ElementalCube 0.1.0 (7)
+ElementalCube 0.1.0 (8)
 
-Без кнопок движения: касайтесь карты или ведите по ней пальцем. Потяните самого куба в сторону полёта — пунктир показывает дугу, длина жеста определяет силу до предела навыка.
+Новое дерево навыков: две связанные ветви, круглые узлы, собственный цвет стихии и карточка с описанием, ценой и условиями. Изучение и снаряжение меняют реальные параметры выбранного монстра.
 
-Карта 112 × 52 м: высокие террасы, скальный спуск, пещера, двенадцать кристаллов. Личный инвентарь выбранного монстра: своё дерево, талисманы и материалы. Изучение и экипировка меняют физические параметры; прогресс сохраняется.
+Короткий тап по кубику — обычный прыжок вверх. Перетягивание — направление и сила. Касание карты — движение. Удержание и отменённый жест не прыгают.
 
-Лёд появляется сразу, затем утолщается от времени контакта и постепенно распространяется. Вода и лёд сохраняют массу; после прыжка куба и таяния старые импульсы не возвращаются.
-
-Пять типов, физические ящик и мост, здоровье и мана, ветер и мокрая шерсть. Слияния и арены пока нет. Интерфейс на русском, без регистрации и сервера.
+Номер установленной сборки виден в самой игре. Карта 112 × 52 м, 12 кристаллов, пять стихий, вода и предметы с физикой, постепенный лёд, здоровье и мана. Интерфейс на русском. Ранняя альфа; слияния и арены ещё нет.
 ```
 
-### What to Test — build 7
+### What to Test — build 8
 
 ```text
-Альфа 0.1.0 (7) — прямые жесты и личный инвентарь.
+Альфа 0.1.0 (8) — красивое дерево навыков и обычный прыжок.
 
-• Касайтесь карты слева/справа, ведите пальцем: куб двигается к точке без прыжка.
-• Тяните именно куба в сторону полёта. Сравните слабый и длинный жест, обе стороны, пунктир и фактическую дугу. Маленький тап не должен прыгать.
-• Поверните устройство, уйдите в фон: незавершённый жест должен отмениться.
-• Оставьте Льдинку на воде: первая корка сразу, затем толще вниз и шире в стороны. Прыгните с неё, посмотрите на воду, дождитесь таяния.
-• Откройте инвентарь кнопкой стихии. Изучите навык за очко, наденьте/снимите оберег, проверьте материалы после находки и перезапуска. У другого типа своё дерево и прогресс.
-• Исследуйте западные высоты, восточный спуск и нижнюю пещеру; проверьте камеру. В мире 12 кристаллов и новый финиш.
-• Проверьте пять типов, ящик и мост, выход из воды, здоровье, ману, намокание.
+• Один короткий тап по самому кубику: обычный прыжок вверх. Повторный тап в воздухе не должен ставить прыжок в очередь.
+• Перетягивание куба: направление, сила и пунктир. Удержание без движения и возврат к исходной точке отменяют прыжок. Карта по-прежнему задаёт движение.
+• Откройте дерево кнопкой стихии. Проверьте узлы, связи, доступность, описание, изучение за очки, снаряжение и сохранение. У каждого типа собственный цвет и прогресс.
+• На iPhone и iPad проверьте прокрутку, поворот устройства и уход в фон.
+• Сверьте номер «АЛЬФА · 8» под названием игры.
+• Проверьте постепенный лёд, ящик и мост, выход из воды, здоровье и ману.
 
-Укажите модель устройства, тип куба, место проблемы и плавность игры.
+Укажите модель устройства, тип куба и место проблемы.
 ```
 
 ## English
@@ -103,7 +100,7 @@ Choose one of five elements and explore a quiet shore. Ice immediately forms sup
 
 Your starting passive is already assigned and works automatically. Tap its name to read the description. Health and mana are visible from the start.
 
-Tap or drag on the map to move. Drag the cube itself toward the flight direction and release to jump along the dotted arc, up to its learned skill limit. Roll over grass, push and tip a floating crate, and load a suspended bridge, slide on ice, and swim back to shore. Reach the flag, collect twelve crystals, or take Stone through the passage to a deep relic.
+A short tap on the cube is an ordinary upward jump. Tap or drag on the map to move. Drag the cube itself toward the flight direction and release to jump along the dotted arc, up to its learned skill limit. Roll over grass, push and tip a floating crate, and load a suspended bridge, slide on ice, and swim back to shore. Reach the flag, collect twelve crystals, or take Stone through the passage to a deep relic.
 
 Your cube has a personality: it focuses before a jump, celebrates discoveries, and shakes its wet fur. Strands on the front and sides react to wind, motion, and water. Soft grass and hard stone create different landings. Supported iPhones add tactile feedback.
 
@@ -117,29 +114,26 @@ The current in-game interface is in Russian.
 ### Описание TestFlight
 
 ```text
-ElementalCube 0.1.0 (7)
+ElementalCube 0.1.0 (8)
 
-Direct gestures: tap or drag on the map to move. Drag the cube itself toward the flight direction; the dotted arc previews the jump. A longer drag gives more power, limited by its learned skill.
+A redesigned personal skill tree: two connected branches, circular nodes, element colors, and a separate detail card with costs and prerequisites. Learning and equipment affect the selected monster’s real parameters.
 
-A 112 × 52 m world with terraces, cliff shelves, a cavern and twelve crystals. Personal inventory: an individual skill tree, charms and materials. Learning and equipment affect real parameters; progress persists locally.
+Short-tap the cube for an ordinary upward jump. Drag it for direction and power. Tap or drag the map to move. Holding still or retracting an aim cancels the jump.
 
-Ice forms an immediate thin skin and thickens with contact time. Cold spreads through the connected sheet. Freezing and thawing conserve represented mass without replaying old splash velocities.
-
-Five types, a physical crate and bridge, health and mana, wind and wet fur. Merging and arenas are not available yet. Russian interface; no account or server required.
+The installed build number is visible in-game. A 112 × 52 m world, twelve crystals, five elements, physical water and props, gradual ice, health and mana. Russian interface. Early alpha; merging and arenas are not available yet.
 ```
 
-### What to Test — build 7
+### What to Test — build 8
 
 ```text
-Alpha 0.1.0 (7): direct gestures and personal inventory.
+Alpha 0.1.0 (8): redesigned skill tree and ordinary jump.
 
-• Tap/drag left or right on the map: movement without jumping.
-• Drag the cube itself toward flight. Compare short/long gestures, both directions and the dotted preview. Tiny taps should not jump.
-• Rotate or background the app: unfinished gestures should cancel.
-• Leave Ice on water: immediate skin, then thicker and wider ice. Jump off and observe water; wait for thawing.
-• Open inventory from the element button. Learn a skill, equip/unequip a charm, collect materials and relaunch. Other types have independent trees and progress.
-• Explore western heights, eastern shelves and the lower cavern. Check the camera, twelve crystals and new finish.
-• Check all five types, the crate and bridge, water exits, health, mana and wetting.
+• Short-tap the cube once: an ordinary upward jump. An airborne tap must not queue a landing jump.
+• Drag the cube for direction, power and dotted preview. Holding still or retracting an aim cancels it. Map gestures still move.
+• Open inventory from the element button. Check nodes, connections, availability, descriptions, learning costs, equipment and persistence. Each form has its own color and progress.
+• Check scrolling, rotation and backgrounding on iPhone and iPad.
+• Verify the in-game ALPHA build badge shows 8.
+• Check gradual ice, crate and bridge physics, water exits, health and mana.
 
-Include device model, cube type, location and frame smoothness.
+Include device model, cube type and location.
 ```

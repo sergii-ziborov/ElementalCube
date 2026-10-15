@@ -17,12 +17,20 @@ final class DirectInteractionTests:XCTestCase {
     private func coordinate(_ offset:CGVector)->XCUICoordinate { cube.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.5)).withOffset(offset) }
     func testMapTapMovesAndReversesWithoutJump() {
         let start=Double(value("x"))!
-        coordinate(CGVector(dx:115,dy:-20)).tap();sleep(1)
-        XCTAssertGreaterThan(Double(value("x"))!,start+0.6);XCTAssertEqual(value("jumps"),"0")
+        coordinate(CGVector(dx:115,dy:-20)).tap()
+        let forward=XCTNSPredicateExpectation(predicate:NSPredicate { _,_ in (Double(self.value("x")) ?? start)>start+0.6 },object:nil)
+        XCTAssertEqual(XCTWaiter.wait(for:[forward],timeout:8),.completed);XCTAssertEqual(value("jumps"),"0")
         let right=Double(value("x"))!
-        coordinate(CGVector(dx:-115,dy:-20)).tap();sleep(1)
-        XCTAssertLessThan(Double(value("x"))!,right-0.6);XCTAssertEqual(value("jumps"),"0")
-        cube.tap();XCTAssertEqual(value("jumps"),"0")
+        coordinate(CGVector(dx:-115,dy:-20)).tap()
+        let reverse=XCTNSPredicateExpectation(predicate:NSPredicate { _,_ in (Double(self.value("x")) ?? right)<right-0.6 },object:nil)
+        XCTAssertEqual(XCTWaiter.wait(for:[reverse],timeout:8),.completed);XCTAssertEqual(value("jumps"),"0")
+    }
+    func testSingleShortTapIsOneOrdinaryUpwardJump() {
+        let startX=Double(value("x"))!
+        cube.tap()
+        XCTAssertEqual(value("jumps"),"1")
+        XCTAssertLessThan(abs(Double(value("x"))!-startX),0.4)
+        sleep(2);XCTAssertEqual(value("jumps"),"1")
     }
     func testDragCubeJumpsInTheDraggedDirectionAndRotates() {
         let start=Double(value("x"))!
@@ -39,15 +47,16 @@ final class DirectInteractionTests:XCTestCase {
         XCTAssertTrue(app.buttons["skill.mastery"].waitForExistence(timeout:5))
         app.swipeUp()
         app.buttons["skill.mastery"].tap()
-        let learn=app.buttons["Изучить · 1 очк."]
+        let learn=app.buttons["skill.learn"]
         if !learn.isHittable { app.swipeUp() }
         XCTAssertTrue(learn.waitForExistence(timeout:3));learn.tap()
-        app.swipeDown();app.swipeDown()
+        XCTAssertTrue(app.segmentedControls.firstMatch.waitForExistence(timeout:3))
+        app.swipeDown()
         app.segmentedControls.buttons["Снаряжение"].tap()
         let equip=app.buttons["equip.travelerCharm"]
         if !equip.isHittable { app.swipeUp() };equip.tap()
         let image=XCTAttachment(screenshot:app.screenshot());image.name="iPhone monster inventory";image.lifetime = .keepAlways;add(image)
-        app.swipeDown();app.buttons["Закрыть инвентарь"].tap()
+        app.buttons["inventory.close"].tap()
         XCTAssertEqual(value("cold"),"1.25");XCTAssertEqual(value("charm"),"travelerCharm")
     }
 }

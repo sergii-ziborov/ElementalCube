@@ -28,7 +28,8 @@ let mint=Color(red:0.68,green:0.92,blue:0.84)
 struct GameView:View {
     @ObservedObject var session:GameSession
     @State private var dismissVictory=false
-    var controlHint:String { "Карта — движение · Потяни кубика к цели — прыжок" }
+    var controlHint:String { "Тап по кубику — прыжок · Карта — движение" }
+    var buildLabel:String { "АЛЬФА · " + (Bundle.main.object(forInfoDictionaryKey:"CFBundleVersion") as? String ?? "DEV") }
     var body:some View {
         GeometryReader { geo in
             let short=geo.size.height<550
@@ -120,6 +121,7 @@ struct GameView:View {
             HStack(spacing:compact ? 8 : 14) {
                 VStack(alignment:.leading,spacing:3) {
                     Text("ElementalCube").font(.system(size:compact ? 20 : 28,weight:.medium,design:.serif)).padding(6).background(cream.opacity(0.72),in:RoundedRectangle(cornerRadius:10))
+                    Text(buildLabel).font(.system(size:7,weight:.semibold)).tracking(1.4).padding(.leading,6).opacity(0.55).accessibilityIdentifier("app.build")
                     if !compact { Text("МАЛЕНЬКИЙ КУБ. БОЛЬШОЙ МИР.").font(.system(size:8,weight:.medium)).tracking(1.55).opacity(0.65) }
                 }
                 Spacer(minLength:4)
@@ -195,6 +197,7 @@ struct GameView:View {
             #endif
             HStack { Button("По умолчанию") { session.restoreDefaults() }.buttonStyle(PillButton(filled:false));Spacer();Button("Продолжить") { session.settings=false }.buttonStyle(PillButton()) }
             Text("Metal • Box2D 3.1.1 • физика 120 Гц").font(.system(size:10,design:.monospaced)).foregroundStyle(ink.opacity(0.45))
+            Text("ElementalCube \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev") · \(buildLabel)").font(.system(size:11)).foregroundStyle(ink.opacity(0.6))
         }.font(.system(size:13)).padding(30).frame(maxWidth:440).foregroundStyle(ink).background(cream)
     }
 }

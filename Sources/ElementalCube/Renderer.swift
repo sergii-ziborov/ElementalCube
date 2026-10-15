@@ -18,6 +18,7 @@ final class Renderer: NSObject, MTKViewDelegate {
     var dynamicBuffers:[[MTLBuffer]] = [[],[],[]]
     let inFlight=DispatchSemaphore(value:3)
     var lastTime=ProcessInfo.processInfo.systemUptime,accumulator:Double=0
+    private var pendingInputCancellation=false
     var frame=0
     init(view:MTKView,session:GameSession) throws {
         guard let d=MTLCreateSystemDefaultDevice(),let q=d.makeCommandQueue() else { throw NSError(domain:"Metal недоступен",code:1) }
@@ -53,7 +54,9 @@ final class Renderer: NSObject, MTKViewDelegate {
         super.init();view.delegate=self
     }
     func mtkView(_ view:MTKView,drawableSizeWillChange size:CGSize) {
-        session.cancelAim();updateViewport(size)
+        // SwiftUI can resize the Metal view while evaluating its own layout.
+        // Cancel at the next frame rather than publishing inside that update.
+        pendingInputCancellation=true;updateViewport(size)
     }
     private func updateViewport(_ size:CGSize) {
         let shortLandscape=size.width>size.height && Float(size.width/size.height)>1.9
@@ -67,6 +70,7 @@ final class Renderer: NSObject, MTKViewDelegate {
         return simd_float4x4(columns:(SIMD4(sx,0,0,0),SIMD4(0,sy,0,0),SIMD4(sx*0.30,sy*0.34,-0.025,0),SIMD4(-cameraX*sx,(-cameraY+shake)*sy,0.5,1)))
     }
     func draw(in view:MTKView) {
+        if pendingInputCancellation { pendingInputCancellation=false;session.cancelAim() }
         updateViewport(view.drawableSize)
         let now=ProcessInfo.processInfo.systemUptime,dt=min(0.06,now-lastTime);lastTime=now
         if session.suspended { accumulator=0 } else {

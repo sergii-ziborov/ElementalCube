@@ -16,6 +16,9 @@ import urllib.request
 from asc import BUNDLE, ROOT, call
 
 GALLERIES = {
+    "skills8": {
+        "APP_IPHONE_61": [(f"iphone-{scene}.png", (1206,2622)) for scene in ("skills","fire-skills","gesture","ice")],
+    },
     "alpha4": {
         "APP_IPHONE_61": [(f"iphone-{form}.png", (2622,1206)) for form in ("ice","water","air","stone","fire")],
         "APP_IPAD_PRO_3GEN_129": [("ipad-13-ice.png", (2064,2752))],
@@ -41,7 +44,7 @@ def validate(gallery):
             width, height, depth, color = struct.unpack(">IIBB", data[16:26])
             if (width, height) != size or depth != 8 or color != 2:
                 raise SystemExit(f"Expected original-size RGB PNG without alpha: {name}")
-    print(f"Validated original {gallery} screenshots for iPhone and iPad 13-inch.", flush=True)
+    print(f"Validated original {gallery} screenshots for the declared display sizes.", flush=True)
 
 
 def upload(screenshot, data, name):
@@ -108,7 +111,8 @@ def apply(gallery, replace_earlier=False):
             existing = call("GET", f"/v1/appScreenshotSets/{screenshot_set['id']}/appScreenshots",
                             {"limit": 50})["data"]
             if replace_earlier and gallery != "alpha4":
-                older=("alpha4",) if gallery=="physics6" else ("alpha4","physics6")
+                order=("alpha4","physics6","gestures7","skills8")
+                older=order[:order.index(gallery)]
                 old_names={n if old=="alpha4" else old+"-"+n for old in older for n,_ in GALLERIES[old].get(display,[])}
                 superseded.extend(asset["id"] for asset in existing if asset["attributes"]["fileName"] in old_names)
             for name, _ in files:
@@ -150,7 +154,7 @@ def apply(gallery, replace_earlier=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true")
-    parser.add_argument("--gallery",choices=GALLERIES,default="gestures7")
+    parser.add_argument("--gallery",choices=GALLERIES,default="skills8")
     parser.add_argument("--replace-earlier",action="store_true",help="Remove our known earlier assets only after the new gallery is COMPLETE")
     args = parser.parse_args()
     validate(args.gallery)

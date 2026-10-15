@@ -84,7 +84,7 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
         }
         let lineage=isHybrid ? " · "+parents.map(\.form.name).joined(separator:"/") : ""
         return [node(.passive,form.ability+lineage,form.explanation,form.symbol,0,nil),
-                node(.jump,"Прыжок", "Потяни куба в сторону полёта. Длина жеста задаёт силу в пределах навыка.","arrow.up.right",0,nil),
+                node(.jump,"Прыжок", "Короткий тап по кубику — обычный прыжок вверх. Потяни его в сторону полёта, чтобы выбрать направление и силу в пределах навыка.","arrow.up.right",0,nil),
                 node(.momentum,mobility.0+lineage,mobility.1,"arrow.up.forward",1,.jump),
                 node(.mastery,mastery.0+lineage,mastery.1,form.symbol,1,.passive),
                 node(.control,"Свободная траектория"+lineage,"Ещё +8% к предельной скорости прыжка.","point.topleft.down.to.point.bottomright.curvepath",2,.momentum),

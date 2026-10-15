@@ -19,6 +19,7 @@
 		CE09702B7CEFC681ADF56B34 /* ElementalCore in Frameworks */ = {isa = PBXBuildFile; productRef = FB5057996CF37D2F9733E2B8 /* ElementalCore */; };
 		D7A6B962EA6F8411A6046CB4 /* MonsterInventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45FDB19C14061EC60CA49FFE /* MonsterInventoryView.swift */; };
 		F2A6F9FCD391A1960ACCF7A7 /* DirectInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32855687569320763186F2E9 /* DirectInteractionTests.swift */; };
+		F7C3949123722B6861D83317 /* MonsterSkillTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4EFC131540F44D0A978A24 /* MonsterSkillTree.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,6 +46,7 @@
 		B173F3C3F688479006701C5F /* HapticFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticFeedback.swift; sourceTree = "<group>"; };
 		D5F1E319E38C847D565F9C10 /* ElementalCube-UITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "ElementalCube-UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DCA21A3F0F39D6F8AF5FB880 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		DD4EFC131540F44D0A978A24 /* MonsterSkillTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonsterSkillTree.swift; sourceTree = "<group>"; };
 		EC396B4A3B7C80D027BB9ACF /* Geometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Geometry.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -104,6 +106,7 @@
 				B173F3C3F688479006701C5F /* HapticFeedback.swift */,
 				827340D774BED81ABE7C2E5D /* MetalView.swift */,
 				45FDB19C14061EC60CA49FFE /* MonsterInventoryView.swift */,
+				DD4EFC131540F44D0A978A24 /* MonsterSkillTree.swift */,
 				3CFD35AE5C340B06920CFE10 /* Renderer.swift */,
 				97261F415D73C9626802614D /* Shaders.metal.txt */,
 			);
@@ -228,6 +231,7 @@
 				0B68F27132DD33DE57F4C35E /* HapticFeedback.swift in Sources */,
 				3CBA114B3AEB50B9C91AE17D /* MetalView.swift in Sources */,
 				D7A6B962EA6F8411A6046CB4 /* MonsterInventoryView.swift in Sources */,
+				F7C3949123722B6861D83317 /* MonsterSkillTree.swift in Sources */,
 				937F6D090A9349ACAC0090C7 /* Renderer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -376,7 +380,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = XMS5ZC28UJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ElementalCube;
@@ -438,7 +442,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = XMS5ZC28UJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ElementalCube;

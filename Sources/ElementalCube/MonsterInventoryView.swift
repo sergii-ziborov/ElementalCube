@@ -8,19 +8,19 @@ struct MonsterInventoryView:View {
     var monster:MonsterRecord { session.inventory.selected }
     var body:some View {
         ScrollView {
-            VStack(alignment:.leading,spacing:22) {
+            VStack(alignment:.leading,spacing:16) {
                 HStack {
                     VStack(alignment:.leading,spacing:5) {
-                        Text("Инвентарь монстра").font(.system(size:26,design:.serif))
-                        Text("СНАРЯЖЕНИЕ · МАТЕРИАЛЫ · НАВЫКИ").font(.system(size:9,weight:.bold)).tracking(1.8).opacity(0.55)
+                        Text("Мой кубик").font(.system(size:25,design:.serif))
+                        Text("МАЛЕНЬКИЙ КУБ. СВОЙ ПУТЬ.").font(.system(size:9,weight:.bold)).tracking(1.8).opacity(0.55)
                     }
                     Spacer()
-                    Button { session.forms=false } label:{ Image(systemName:"xmark").frame(width:36,height:36) }.buttonStyle(.plain).accessibilityLabel("Закрыть инвентарь")
+                    Button { session.forms=false } label:{ Image(systemName:"xmark").frame(width:36,height:36) }.buttonStyle(.plain).accessibilityLabel("Закрыть инвентарь").accessibilityIdentifier("inventory.close")
                 }
                 HStack(alignment:.top) {
-                    MonsterPortrait(form:monster.form).frame(width:76,height:86)
+                    MonsterPortrait(form:monster.form).frame(width:58,height:66)
                     VStack(alignment:.leading,spacing:6) {
-                        Text(monster.name).font(.system(size:30,design:.serif))
+                        Text(monster.name).font(.system(size:25,design:.serif))
                         Text(monster.typeName+" · "+(monster.form.hasFur ? "мягкая шерсть" : "без шерсти")).font(.system(size:12)).opacity(0.65)
                         Text(String(format:"Предел прыжка %.1f м/с",monster.jumpSkill.maximumSpeed)).font(.system(size:12)).monospacedDigit()
                     }
@@ -29,52 +29,31 @@ struct MonsterInventoryView:View {
                         ForEach(session.inventory.monsters) { cube in
                             Button(cube.name) { session.selectMonster(cube.id);detail=nil }
                         }
-                    } label: { Image(systemName:"arrow.triangle.2.circlepath").frame(width:40,height:40) }.accessibilityLabel("Выбрать тип куба для новой попытки")
+                    } label: { Image(systemName:"arrow.triangle.2.circlepath").frame(width:40,height:40) }.accessibilityLabel("Выбрать тип куба для новой попытки").help("Другой куб начинает новую попытку. Его находки и навыки сохраняются отдельно.")
                 }
-                Text("Выбор другого куба начинает новую попытку. Находки и изученные навыки остаются у своего владельца.").font(.system(size:12)).lineSpacing(4).opacity(0.65)
                 Picker("Раздел инвентаря",selection:$tab) { Text("Навыки").tag(0);Text("Снаряжение").tag(1);Text("Материалы").tag(2) }.pickerStyle(.segmented)
                 if tab==0 { skillTree } else if tab==1 { equipment } else { findings }
-            }.padding(24).frame(maxWidth:650).foregroundStyle(ink)
-        }.frame(maxWidth:.infinity).background(cream)
+            }.padding(20).frame(maxWidth:650).foregroundStyle(ink)
+        }.frame(maxWidth:.infinity).frame(idealHeight:900).background(cream)
+        .sheet(item:$detail) { node in
+            SkillDetailView(session:session,owner:monster.id,kind:node.kind)
+                #if os(iOS)
+                .presentationDetents([.medium,.large]).presentationDragIndicator(.visible)
+                #else
+                .frame(width:460,height:480)
+                #endif
+        }
         .onAppear { session.saveInventory();if ProcessInfo.processInfo.arguments.contains("--preview-equipment") { tab=1 } }
     }
     var skillTree:some View {
         VStack(alignment:.leading,spacing:16) {
-            HStack { Text("Дерево навыков").font(.system(size:22,design:.serif));Spacer();Text("\(monster.skillPoints) очк.").font(.system(size:12,weight:.bold)).padding(9).background(mint,in:Capsule()) }
-            Text("Два назначенных слота").font(.system(size:10,weight:.bold)).tracking(1).opacity(0.6)
+            MonsterSkillTree(monster:monster) { detail=$0 }
             HStack(spacing:10) {
                 slot("Прыжок","arrow.up.right","ДВИЖЕНИЕ")
                 slot(monster.form.ability,monster.form.symbol,"ПАССИВНАЯ")
             }
-            // Rows are paired branches: movement and this material's passive.
-            ForEach(0..<3,id:\.self) { row in
-                HStack(alignment:.top,spacing:12) {
-                    ForEach([row==0 ? 1 : row*2,row==0 ? 0 : row*2+1],id:\.self) { index in
-                        let node=monster.tree[index],known=monster.learned.contains(node.kind)
-                        Button { detail=node } label: {
-                            VStack(alignment:.leading,spacing:9) {
-                                HStack { Image(systemName:node.symbol).font(.system(size:19));Spacer();Image(systemName:known ? "checkmark.circle.fill" : (monster.canLearn(node) ? "plus.circle" : "lock")) }
-                                Text(node.title).font(.system(size:15,weight:.medium,design:.serif)).multilineTextAlignment(.leading)
-                                Text(known ? "Изучено" : "\(node.cost) очк. навыков").font(.system(size:10)).opacity(0.6)
-                            }.frame(maxWidth:.infinity,minHeight:93,alignment:.topLeading).padding(14).background(ink.opacity(known ? 0.1 : 0.035),in:RoundedRectangle(cornerRadius:16))
-                                .overlay(RoundedRectangle(cornerRadius:16).stroke(ink.opacity(detail?.id==node.id ? 0.6 : 0.08)))
-                        }.buttonStyle(.plain).accessibilityIdentifier("skill.\(node.kind.rawValue)")
-                    }
-                }
-                if row<2 { HStack { Spacer();Rectangle().fill(ink.opacity(0.18)).frame(width:1,height:12);Spacer();Rectangle().fill(ink.opacity(0.18)).frame(width:1,height:12);Spacer() }.allowsHitTesting(false) }
-            }
-            if let selected=detail,let node=monster.tree.first(where:{ $0.id==selected.id }) {
-                VStack(alignment:.leading,spacing:12) {
-                    Text(node.title).font(.system(size:21,design:.serif))
-                    Text(node.explanation).font(.system(size:13)).lineSpacing(5)
-                    if monster.learned.contains(node.kind) {
-                        Text(node.kind == .passive ? "Назначена в пассивный слот. Срабатывает автоматически при контакте с миром." : "Изучено этим кубом.").font(.system(size:11)).opacity(0.65)
-                    } else {
-                        Button(monster.canLearn(node) ? "Изучить · \(node.cost) очк." : "Нужен предыдущий навык и \(node.cost) очк.") { session.learn(node,for:monster.id) }.buttonStyle(PillButton()).disabled(!monster.canLearn(node))
-                    }
-                }.padding(18).frame(maxWidth:.infinity,alignment:.leading).background(mint.opacity(0.45),in:RoundedRectangle(cornerRadius:18))
-            }
-            Text("Первое очко уже у каждого куба. Каждый новый найденный им кристалл даёт ещё одно. Деревья и прогресс у разных монстров независимы.").font(.system(size:11)).lineSpacing(4).opacity(0.65)
+            Text("Находи кристаллы, чтобы открывать новые навыки. Дерево и прогресс принадлежат только этому кубику.")
+                .font(.system(size:12)).lineSpacing(4).foregroundStyle(ink.opacity(0.6))
         }
     }
     func slot(_ title:String,_ symbol:String,_ subtitle:String)->some View {

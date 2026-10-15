@@ -31,7 +31,7 @@ final class GameSession: ObservableObject {
     @Published var settings = false
     @Published var debug = false { didSet { persistSettings() } }
     @Published var paused = false
-    @Published var hint = "Коснись карты — движение. Потяни кубика к цели — прыжок." { didSet { hintUntil=simulation.time+3 } }
+    @Published var hint = "Тап по кубику — прыжок. Карта — движение. Потяни кубика — прицелься." { didSet { hintUntil=simulation.time+3 } }
     var hintUntil:Float = 0
     @Published var gravity:Double = 18 { didSet { simulation.gravity=Float(gravity);persistSettings() } }
     @Published var power:Double = 1 { didSet { persistSettings() } }
@@ -148,13 +148,19 @@ final class GameSession: ObservableObject {
     }
     func pointerEnded(_ point:CGPoint) {
         pointerMoved(point)
-        let impulse=aimImpulse
-        let drag=directControl.end()
+        let aimedImpulse=aimImpulse
+        let release=directControl.end()
         aiming=false;aim = .zero
-        if drag != nil && hypot(impulse.x,impulse.y)>0.05 {
+        let impulse:Vec
+        switch release {
+        case .tapJump:impulse=Vec(0,7.2)
+        case .aim:impulse=aimedImpulse
+        case .none:impulse=Vec(0,0)
+        }
+        if hypot(impulse.x,impulse.y)>0.05 {
             let accepted=simulation.jump(impulse,buffered:false)
             if !accepted { hint="Для толчка нужна опора, контакт с водой и запас маны." }
-            else { hint="Чем дальше тянешь, тем сильнее прыжок. Предел задаёт навык куба." }
+            else { hint=release == .tapJump ? "Обычный прыжок. Потяни кубика, чтобы выбрать направление и силу." : "Чем дальше тянешь, тем сильнее прыжок. Предел задаёт навык куба." }
             deliverFeedback();refresh()
         }
         applyMovement()

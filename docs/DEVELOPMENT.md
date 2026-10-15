@@ -61,3 +61,13 @@ swift test -c release --jobs 2
 Схема содержит `ElementalCube-UITests`. Тесты нажимают на карту, меняют направление, тянут самого куба, поворачивают iPhone, изучают навык и надевают оберег. Их можно запустить в Test Navigator. В терминале используйте `build-for-testing`, затем `test-without-building -xctestrun …` с конкретным симулятором; это также избегает повторного разрешения локального пакета после тестов в Xcode 27.
 
 Локальные сцены для снимков: `--preview-gesture`, `--preview-skills`, `--preview-equipment`, `--preview-summit`, `--preview-cave`, `--preview-physics-ice`. Они отключены при обычном запуске. `--ui-testing` создаёт предсказуемый личный инвентарь только внутри запущенного тестом приложения.
+
+## Проверка интерфейса выпуска
+
+Для тестирования жестов и инвентаря используйте конфигурацию Release: неоптимизированная физика в симуляторе может заметно отставать от реального времени. Короткий тап распознаётся по системному монотонному времени, а не приостановленному времени симуляции.
+
+```sh
+xcodebuild -project ElementalCube.xcodeproj -scheme ElementalCube-iOS -configuration Release -destination 'platform=iOS Simulator,name=ElementalCube iPhone' -parallel-testing-enabled NO test
+```
+
+Номер сборки отображается из `CFBundleVersion` в шапке и настройках. Метаданные и подпись IPA проверяются перед ручной загрузкой. CI/CD не используется.
