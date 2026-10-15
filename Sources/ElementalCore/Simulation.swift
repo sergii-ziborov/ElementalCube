@@ -67,6 +67,8 @@ public final class Simulation {
     private var cubeID:Int32=0,crateID:Int32=0
     private var platformIDs:[Int32]=[]
     private var bridgeIDs:[Int32]=[]
+    private var bridgeFuel:[Float]=Array(repeating:1,count:6),bridgeBurning:[Float]=Array(repeating:0,count:6)
+    public private(set) var boilingStrength:Float=0
     private var bridgeWidths:[Float]=[]
     private var iceIDs:[Int:Int32]=[:]
     private var iceShapes:[Int:IceCell]=[:]
@@ -130,8 +132,8 @@ public final class Simulation {
         platforms=definition.platforms
         waterField=WaterField(platforms:platforms)
         patches=[]
-        for p in definition.terrain where p.surface == .grass {
-            for i in 0..<Int(p.width/0.5) { patches.append(MaterialPatch(x:p.x-p.width/2+(Float(i)+0.5)*0.5,y:p.y+p.height/2)) }
+        for p in definition.terrain where p.surface == .grass || p.surface == .wood {
+            for i in 0..<Int(p.width/0.5) { patches.append(MaterialPatch(surface:p.surface,x:p.x-p.width/2+(Float(i)+0.5)*0.5,y:p.y+p.height/2)) }
         }
         for p in platforms where !p.boundary {
             for i in 0...Int(p.width/0.3) {
@@ -180,7 +182,7 @@ public final class Simulation {
     }
     private func sync() {
         cube=state(cubeID);if crateExists { crate=state(crateID) }
-        bridge=bridgeIDs.enumerated().map { BridgeSection(state:state($0.element),width:bridgeWidths[$0.offset]) }
+        bridge=bridgeIDs.enumerated().map { BridgeSection(fuel:bridgeFuel[$0.offset],burning:bridgeBurning[$0.offset],state:state($0.element),width:bridgeWidths[$0.offset]) }
     }
     public var fluidBodies:[FluidBody] {
         func body(_ id:Int32,_ s:BodyState,_ w:Float,_ h:Float)->FluidBody {
@@ -364,7 +366,15 @@ public final class Simulation {
         if cube.position.y < definition.bounds.minY-2 || !cube.position.x.isFinite { respawns+=1;resetCube() }
         for i in particles.indices {
             particles[i].life-=dt;particles[i].position.x+=particles[i].velocity.x*dt;particles[i].position.y+=particles[i].velocity.y*dt
-            particles[i].velocity.y+=dt*(particles[i].kind>=4 ? 1.5 : (particles[i].kind==1 ? -gravity : -4))
+            if particles[i].kind==7 {
+                let flow=waterField.liquid.velocity(at:particles[i].position)
+                particles[i].velocity.x+=(flow.x-particles[i].velocity.x)*min(1,dt*3)
+                particles[i].velocity.y=min(0.9,particles[i].velocity.y+dt*0.5)
+                if particles[i].position.y>=waterField.surface(at:particles[i].position.x)-0.03 {
+                    waterField.liquid.addFoam(at:particles[i].position,strength:0.06);particles[i].kind=5;particles[i].life=0.7
+                }
+            }
+            particles[i].velocity.y+=dt*(particles[i].kind==7 ? 0 : (particles[i].kind>=4 ? 1.5 : (particles[i].kind==1 ? -gravity : -4)))
             if particles[i].kind==1 {
                 let p=particles[i].position
                 if p.x>7 && p.x<17 && p.y<=waterField.surface(at:p.x) && particles[i].velocity.y<0 {
@@ -401,6 +411,7 @@ public final class Simulation {
         if trailClock<=0 && abs(cube.velocity.x)>0.25 && (cube.grounded || (form == .air && hovering)) {
             trailClock=0.10
             let kind:ElementForm=hybridStyle == .magma ? .fire : form
+            if kind == .fire { return }
             trails.append(SurfaceTrail(position:Vec(cube.position.x,cube.position.y-cubeHeight/2+0.015),life:kind == .ice ? 2.2 : 2.6,form:kind))
             if trails.count>180 { trails.removeFirst(trails.count-180) }
         }
@@ -420,6 +431,9 @@ public final class Simulation {
         }
         for patch in patches where patch.burning>0 {
             exposure=max(exposure,max(0,1-hypot(cube.position.x-patch.x,cube.position.y-patch.y-0.2)/0.95))
+        }
+        for (i,section) in bridge.enumerated() where bridgeBurning[i]>0 {
+            exposure=max(exposure,max(0,1-hypot(cube.position.x-section.state.position.x,cube.position.y-section.state.position.y)/1.25))
         }
         if crateExists && crateBurning>0 { exposure=max(exposure,max(0,1-hypot(cube.position.x-crate.position.x,cube.position.y-crate.position.y)/1.5)) }
         ignitionHeat=max(0,ignitionHeat+dt*(exposure*(1-wetness*0.9)-0.12))
@@ -442,26 +456,45 @@ public final class Simulation {
             let fraction=immersion(cube,size:1.12)
             damage(dt*(fire ? 2.4*fireDamageMultiplier : 12)*max(0.35,fraction))
         }
+        boilingStrength=0
         // Heat also reaches a shallow film below the body, so the last centimetres
         // do not remain forever once the rigid body rests on the floor.
-        if fire && !dead && waterEnabled && cube.position.x>7 && cube.position.x<17 && (inWater || abs(cube.position.y-waterLevel)<1.25) {
-            _=waterField.evaporate(around:cube.position,amount:dt*1.9)
+        let liquidSurface=waterField.liquid.surfaceHeight(at:cube.position.x)
+        let touchingWater=inWater || (cube.position.y-cubeHeight/2<=liquidSurface+0.07 && cube.position.y-cubeHeight/2>=waterField.floor(at:cube.position.x)-0.05)
+        if fire && !dead && waterEnabled && cube.position.x>7 && cube.position.x<17 && touchingWater {
+            let removed=waterField.evaporate(around:cube.position,amount:dt*1.9)
+            boilingStrength=min(1,removed/max(0.00001,dt*1.9))
+            if boilingStrength>0 && !inWater { damage(dt*2.4*fireDamageMultiplier*0.35) }
+            if boilingStrength>0 { waterField.liquid.heatCirculation(at:cube.position,dt:dt,strength:boilingStrength) }
         }
         for i in patches.indices {
-            let contact=abs(patches[i].x-cube.position.x)<1 && abs(cube.position.y-0.56-patches[i].y)<0.7
+            let contact=abs(patches[i].x-cube.position.x)<0.85 && abs(cube.position.y-cubeHeight/2-patches[i].y)<0.22 && cube.grounded
             let onBank=patches[i].x<7 || patches[i].x>17
             patches[i].frost=max(0,min(1,patches[i].frost+dt*(cold && contact ? 0.9 : (fire && contact ? -2 : -1/30))))
             if fire && contact && onBank && patches[i].fuel>0 { patches[i].burning=1 }
             if patches[i].burning>0 {
-                patches[i].fuel=max(0,patches[i].fuel-dt*0.22)
+                patches[i].fuel=max(0,patches[i].fuel-dt*(patches[i].surface == .wood ? 0.12 : 0.22))
                 if patches[i].fuel<=0 { patches[i].burning=0 }
+            }
+        }
+        for i in bridge.indices {
+            let section=bridge[i],body=FluidBody(id:0,center:section.state.position,angle:section.state.angle,width:section.width,height:section.height)
+            let q=body.local(cube.position),wet=waterEnabled && body.displaced(below:waterField.surface(at:section.state.position.x)).area/(section.width*section.height)>0.12
+            let touching=cube.grounded && abs(q.x)<section.width/2+cubeWidth/2-0.08 && abs(q.y-(cubeHeight+section.height)/2)<0.22
+            if wet { bridgeBurning[i]=0 }
+            else if fire && touching && bridgeFuel[i]>0 { bridgeBurning[i]=1 }
+            if bridgeBurning[i]>0 {
+                bridgeFuel[i]=max(0,bridgeFuel[i]-dt*0.12)
+                if bridgeFuel[i]<=0 { bridgeBurning[i]=0 }
             }
         }
         if crateExists {
             let contact=hypot(crate.position.x-cube.position.x,crate.position.y-cube.position.y)<1.65
             crateFrost=max(0,min(1,crateFrost+dt*(cold && contact ? 1 : (fire && contact ? -2 : -1/30))))
             ec_material(world,crateID,crateFrost>0.5 ? 0.015 : 0.48,0.035)
-            if (fire && contact || fireSources.contains(where:{ hypot($0.position.x-crate.position.x,$0.position.y-crate.position.y)<$0.radius+0.4 })) && immersion(crate,size:1.25)<0.1 { crateBurning=1 }
+            let local=FluidBody(id:0,center:crate.position,angle:crate.angle,width:1.25,height:1.25).local(cube.position)
+            let woodTouch=hypot(max(0,abs(local.x)-0.625),max(0,abs(local.y)-0.625))<cubeWidth/2+0.10
+            if (fire && woodTouch || fireSources.contains(where:{ hypot($0.position.x-crate.position.x,$0.position.y-crate.position.y)<$0.radius+0.4 })) && immersion(crate,size:1.25)<0.1 { crateBurning=1 }
             if immersion(crate,size:1.25)>0.2 { crateBurning=0 }
             if crateBurning>0 { crateFuel=max(0,crateFuel-dt*0.14) }
             if crateFuel<=0 { ec_remove(world,crateID);crateExists=false;crateBurning=0;emit(crate.position,kind:5,count:28) }
@@ -482,7 +515,15 @@ public final class Simulation {
         }
         if particleClock>0.1 {
             particleClock=0
-            if (form == .fire || burning>0) && !dead { emit(cube.position,kind:4,count:fire ? 4 : 1);if inWater { emit(Vec(cube.position.x,waterLevel),kind:5,count:5) } }
+            if (form == .fire || burning>0) && !dead && !inWater { emit(cube.position,kind:4,count:fire ? 4 : 1) }
+            if boilingStrength>0 {
+                for side:Float in [-1,1] {
+                    let p=Vec(cube.position.x+side*(0.6+random()*0.18),min(waterLevel-0.08,cube.position.y-0.32+random()*0.4))
+                    if waterField.contains(p) { particles.append(Mote(position:p,velocity:Vec(side*0.06,0.35+random()*0.2),life:2,kind:7)) }
+                }
+                emit(Vec(cube.position.x,waterLevel+0.04),kind:5,count:2)
+            }
+            for (i,b) in bridge.enumerated() where bridgeBurning[i]>0 { emit(Vec(b.state.position.x,b.state.position.y+0.18),kind:4,count:1) }
             for patch in patches where patch.burning>0 { emit(Vec(patch.x,patch.y+0.15),kind:4,count:1) }
             if crateBurning>0 { emit(crate.position,kind:4,count:3) }
             if cold && inWater { emit(cube.position,kind:2,count:2) }

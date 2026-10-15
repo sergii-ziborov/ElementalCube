@@ -363,6 +363,19 @@ public final class LiquidSolver {
         // replay a stale splash 30 seconds later during melting.
         particles.append(contentsOf:stored.map { LiquidParticle(position:$0.position,velocity:Vec(0,0),volume:$0.volume) })
     }
+    /// Heat-driven local convection. The volume-weighted mean is removed, so
+    /// rising hot water has a compensating return flow, without added water mass.
+    public func heatCirculation(at source:Vec,dt:Float,strength:Float) {
+        var local:[(Int,Float)]=[],sum:Float=0,mass:Float=0
+        for i in particles.indices {
+            let p=particles[i],dx=abs(p.position.x-source.x),dy=abs(p.position.y-source.y)
+            if dx>1.4 || dy>1.4 || p.isSpray { continue }
+            let vertical=max(0,1-dy/1.4),weight=(dx<0.7 ? 1-dx/0.7 : -0.4*(1-(dx-0.7)/0.7))*vertical
+            local.append((i,weight));sum+=weight*p.volume;mass+=p.volume
+        }
+        guard mass>0 else { return };let mean=sum/mass
+        for (i,weight) in local { particles[i].velocity.y+=dt*min(1,max(0,strength))*0.8*(weight-mean) }
+    }
     public func evaporate(at p:Vec,amount:Float,radius:Float)->Float {
         var remaining=max(0,amount)
         for i in particles.indices where hypot(particles[i].position.x-p.x,particles[i].position.y-p.y)<radius && remaining>0 {

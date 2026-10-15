@@ -5,6 +5,8 @@ struct Uniforms { float4x4 projection; float4x4 model; float4 animation; float4 
 struct Varying { float4 position [[position]]; float4 color; float3 normal; float3 world; float3 local; float2 fiber; };
 vertex Varying scene_vertex(const device Vertex *v [[buffer(0)]], constant Uniforms &u [[buffer(1)]], uint id [[vertex_id]]) {
     Vertex a=v[id]; float3 p=a.position.xyz;
+    if(u.world.y>0.5 && u.world.y<1.5) p+=a.normal.xyz*sin(u.animation.x*3+p.y*8+p.x*5)*.008;
+    else if(u.world.y>1.5 && u.world.y<2.5) p+=a.normal.xyz*sin(u.animation.x*5+p.y*9-p.x*6)*.012;
     float4 world=u.model*float4(p,1);
     Varying o; o.position=u.projection*world; o.world=world.xyz;
     o.normal=normalize((u.model*float4(a.normal.xyz,0)).xyz);
@@ -28,6 +30,22 @@ float3 plushColor(float3 base,float3 p,float3 n,float wet,float layer) {
     return color+float3(.075,.09,.1)*sheen*(.25+wet*.75);
 }
 fragment float4 scene_fragment(Varying v [[stage_in]], constant Uniforms &u [[buffer(1)]]) {
+    if(v.fiber.y< -1.) return float4(v.color.rgb*(.95+.05*sin(u.animation.x*7+v.local.y*14)),v.color.a);
+    if(u.world.y>.5 && u.camera.w>.5) {
+        float3 n=normalize(v.normal),view=normalize(float3(-.22,.18,1));
+        float diffuse=saturate(dot(n,normalize(float3(-.65,1.4,.9))));
+        float rim=pow(1-abs(dot(n,view)),2.);
+        if(u.world.y<1.5) {
+            float spec=pow(saturate(dot(n,normalize(float3(-.4,.65,1)))),38.);
+            float3 blue=v.color.rgb*(.6+.32*diffuse)+float3(.14,.30,.32)*rim+float3(.7,.95,1)*spec*.7;
+            return float4(blue,.94);
+        }
+        if(u.world.y<2.5) return float4(mix(v.color.rgb,float3(1,.94,.50),saturate(v.local.y+.5)*.45)+float3(.07,.015,0),1);
+        if(u.world.y<3.5) return float4(v.color.rgb*(.7+.3*diffuse)+float3(.15,.2,.19)*rim,.19);
+        float3 p=v.local;float2 uv=abs(n.z)>.6 ? p.xy : (abs(n.x)>.6 ? p.zy : p.xz);
+        float grain=coatNoise(uv*31.)*.045+coatNoise(uv*12.)*.07;
+        return float4(v.color.rgb*(.5+.5*diffuse)*(.94+grain),1);
+    }
     if(v.fiber.y>.5) {
         if(u.support.x>.5 && v.world.y<u.support.y+u.support.z*(v.world.x-u.support.w)+.065) discard_fragment();
         float t=v.fiber.y-1,across=v.fiber.x;

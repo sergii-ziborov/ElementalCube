@@ -39,15 +39,19 @@ struct MonsterPortrait:View {
     private var drawing:some View {
         TimelineView(.animation(minimumInterval:reduceMotion ? 1/8 : 1/30,paused:!visible || !animate || scenePhase != .active)) { timeline in
             let now=timeline.date.timeIntervalSinceReferenceDate
-            Canvas { context,size in
-                PortraitPainter(form:form,secondary:secondary,stage:stage,time:now-born+Double(seed%997)/113,reactionAge:now-touched,wetness:wetness,health:health,burning:burning,reduced:reduceMotion)
-                    .draw(in:&context,size:size)
-            }.hueRotation(.degrees(seed==0 ? 0 : (Double(seed%29)-14)*0.4)).accessibilityHidden(true)
+            if form == .ice {
+                Canvas { context,size in
+                    IcePortraitPainter(form:form,secondary:secondary,stage:stage,time:now-born+Double(seed%997)/113,reactionAge:now-touched,wetness:wetness,health:health,burning:burning,reduced:reduceMotion).draw(in:&context,size:size)
+                }.hueRotation(.degrees(seed==0 ? 0 : (Double(seed%29)-14)*0.4)).accessibilityHidden(true)
+            } else {
+            CharacterPreview(state:CharacterPreviewState(form:form,secondary:secondary,seed:seed,stage:stage,time:Float(now-born+Double(seed%997)/113),reactionAge:Float(now-touched),wetness:Float(wetness),health:Float(health),burning:Float(burning),reduced:reduceMotion)).allowsHitTesting(false).accessibilityHidden(true)
+            }
         }.contentShape(Rectangle())
     }
 }
 
-private struct PortraitPainter {
+// Preserve the previously established soft Ice portrait. Other elements use their own materials.
+private struct IcePortraitPainter {
     var form:ElementForm,secondary:ElementForm?,stage:Int,time:Double,reactionAge:Double,wetness:Double,health:Double,burning:Double,reduced:Bool
     var reacting:Bool { reactionAge>=0 && reactionAge<1.2 }
     var motion:Double { reduced ? 0 : time }
@@ -121,26 +125,40 @@ private struct PortraitPainter {
         }
     }
     private func fur(in c:inout GraphicsContext) {
-        // Short, curved tufts follow a rounded cube, including a fine front coat.
-        // Wet tufts lie closer to the skin and move together in small clumps.
-        func boundary(_ a:Double,_ radius:Double=1)->CGPoint {
-            let x=cos(a),y=sin(a)
-            return CGPoint(x:47+33*radius*(x<0 ? -1 : 1)*pow(abs(x),0.47),y:55+32*radius*(y<0 ? -1 : 1)*pow(abs(y),0.47))
+        // The coat covers the full volume: top, side, perimeter and front.
+        // Broad curved locks keep the soft silhouette without pixel noise.
+        func tuft(_ root:CGPoint,_ normal:CGPoint,_ length:Double,_ width:Double,_ shade:Color,_ phase:Double) {
+            let sway=sin(motion*2.2+phase)*(1-wet*0.7)
+            let tip=CGPoint(x:root.x+normal.x*length+sway*0.6,y:root.y+normal.y*length-0.5)
+            let side=CGPoint(x:-normal.y*width,y:normal.x*width)
+            var p=Path();p.move(to:CGPoint(x:root.x-side.x,y:root.y-side.y))
+            p.addQuadCurve(to:tip,control:CGPoint(x:tip.x-side.x*0.5,y:tip.y-side.y*0.5))
+            p.addQuadCurve(to:CGPoint(x:root.x+side.x,y:root.y+side.y),control:CGPoint(x:tip.x+side.x*0.8,y:tip.y+side.y*0.8));p.closeSubpath()
+            c.fill(p,with:.linearGradient(Gradient(colors:[shade,color.opacity(0.8)]),startPoint:root,endPoint:tip))
         }
-        for i in 0..<92 {
-            let a=Double(i)*2*Double.pi/92
-            let wave=sin(motion*2.8+Double(wet>0.3 ? i/4 : i)*0.65)
-            let length=(3.3+1.1*sin(Double(i)*9.2))*(1-wet*0.6)
-            let b=boundary(a-0.026),e=boundary(a+0.026),m=boundary(a)
-            let tip=CGPoint(x:m.x+cos(a)*length+wave*(form == .air ? 1.6 : 0.6),y:m.y+sin(a)*length)
-            var p=Path();p.move(to:b);p.addQuadCurve(to:tip,control:CGPoint(x:m.x,y:m.y-1));p.addQuadCurve(to:e,control:CGPoint(x:tip.x+0.5,y:tip.y+1));p.closeSubpath()
-            c.fill(p,with:.color(i%3==0 ? .white.opacity(0.85-wet*0.35) : color.opacity(0.75)))
+        // Swept top locks bridge the full front-to-back depth.
+        for i in 0..<34 {
+            let x=23+Double((i*17)%60),y=19+Double(i%3)*2.4
+            tuft(CGPoint(x:x,y:y),CGPoint(x:0.28,y:-1),4.8*(1-wet*0.55),2.1,i%3==0 ? Color.white.opacity(0.9) : Color(red:0.70,green:0.89,blue:1),Double(i))
         }
-        for i in 0..<58 {
-            let x=20+Double((i*31)%54),y=29+Double((i*17)%53)
-            if y>38 && y<77 && x>24 && x<70 { continue }
-            var p=Path();p.move(to:CGPoint(x:x,y:y));p.addQuadCurve(to:CGPoint(x:x+sin(motion*2+Double(i))*0.7,y:y-2.5+wet),control:CGPoint(x:x+0.8,y:y-1))
-            c.stroke(p,with:.color(.white.opacity(0.3-wet*0.12)),style:StrokeStyle(lineWidth:0.65,lineCap:.round))
+        // The right-hand face has the same coat, shaded by its orientation.
+        for i in 0..<44 {
+            let x=78+Double(i%4)*2.3,y=27+Double((i*13)%54)
+            tuft(CGPoint(x:x,y:y),CGPoint(x:0.75,y:0.55),4.5*(1-wet*0.6),1.7,i%4==0 ? Color(red:0.74,green:0.91,blue:1) : color.opacity(0.9),Double(i)*0.6)
+        }
+        for i in 0..<90 {
+            let a=Double(i)*2*Double.pi/90,x=cos(a),y=sin(a)
+            let root=CGPoint(x:49+37*(x<0 ? -1 : 1)*pow(abs(x),0.47),y:53+35*(y<0 ? -1 : 1)*pow(abs(y),0.47))
+            tuft(root,CGPoint(x:x,y:y),3.5*(1-wet*0.6),1.5,i%3==0 ? .white.opacity(0.82) : color.opacity(0.85),Double(i)*0.65)
+        }
+        for i in 0..<156 {
+            let x=19+Double((i*31)%57),y=27+Double((i*19)%55)
+            let eyes=pow((abs(x-46.5)-14.5)/9,2)+pow((y-52)/13,2)
+            let mouth=pow((x-47)/9,2)+pow((y-72)/9,2)
+            if eyes<1 || mouth<1 { continue }
+            let length=(2.6+Double(i%3)*0.6)*(1-wet*0.5)
+            var p=Path();p.move(to:CGPoint(x:x-1.3,y:y));p.addQuadCurve(to:CGPoint(x:x+1,y:y+length),control:CGPoint(x:x+2,y:y+length*0.45))
+            c.stroke(p,with:.color(i%3==0 ? Color.white.opacity(0.55-wet*0.2) : color.opacity(0.5)),style:StrokeStyle(lineWidth:0.75,lineCap:.round))
         }
     }
     private func face(in c:inout GraphicsContext) {

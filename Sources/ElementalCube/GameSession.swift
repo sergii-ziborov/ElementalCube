@@ -70,7 +70,7 @@ final class GameSession: ObservableObject {
         if !visualPreview && !args.contains("--ui-testing") {
             adventure=adventureStore.load(fallback:inventoryStore.load(selectedForm:form));form=inventory.selected.form
         } else {
-            if args.contains("--ui-testing") { form = .ice }
+            if args.contains("--ui-testing") && previewForm == nil { form = .ice }
             adventure=AdventureState(inventory:MonsterInventory(selectedForm:form))
         }
         starter=inventory.selected

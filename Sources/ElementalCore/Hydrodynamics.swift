@@ -55,6 +55,8 @@ public struct FluidBody {
 }
 
 public struct BridgeSection {
+    public var fuel:Float = 1
+    public var burning:Float = 0
     public var state:BodyState
     public var width:Float
     public let height:Float=0.18

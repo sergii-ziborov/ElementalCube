@@ -120,10 +120,11 @@ final class ElementsTests:XCTestCase {
         advance(s,0.5);XCTAssertTrue(s.passiveWorking);XCTAssertEqual(s.mana,94+Float(Int(Float(0.5)/Simulation.timestep))*Simulation.timestep*4,accuracy:0.001)
         advance(s,2);XCTAssertTrue(s.passiveWorking);XCTAssertEqual(s.mana,100,accuracy:0.01)
     }
-    func testStoneHasNoFurAndFrontFurExistsForWaterAndIce() {
+    func testOnlyIceHasFurAndItsFrontCoatLeavesTheFaceVisible() {
         XCTAssertTrue(FurPhysics(form:.stone).strands.isEmpty)
         XCTAssertTrue(FurPhysics(form:.fire).strands.isEmpty)
-        for form in [ElementForm.ice,.water] {
+        XCTAssertTrue(FurPhysics(form:.water).strands.isEmpty);XCTAssertTrue(FurPhysics(form:.air).strands.isEmpty)
+        for form in [ElementForm.ice] {
             let fur=FurPhysics(form:form)
             XCTAssertGreaterThan(fur.strands.filter { $0.face==0 }.count,30)
             XCTAssertEqual(Set(fur.strands.map(\.face)).count,6)

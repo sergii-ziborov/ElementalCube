@@ -11,6 +11,7 @@
 		0B68F27132DD33DE57F4C35E /* HapticFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = B173F3C3F688479006701C5F /* HapticFeedback.swift */; };
 		2CDB6CD0DD516F07652E112A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F4D79D741B81C81E5829C57 /* HomeView.swift */; };
 		3CBA114B3AEB50B9C91AE17D /* MetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 827340D774BED81ABE7C2E5D /* MetalView.swift */; };
+		3E586F77A620315D608515E2 /* BoilingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE2D03440ACC0A8C3900CAD /* BoilingTests.swift */; };
 		46B2D0008C4E2CB113E37EDD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = DCA21A3F0F39D6F8AF5FB880 /* PrivacyInfo.xcprivacy */; };
 		4AC2C2884C638BF8C8251A98 /* PortraitAnimationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5246294C5A43CEC72A790ACE /* PortraitAnimationTests.swift */; };
 		5278B1EC015B920E61D8FB9B /* HomeFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A8880634436BF2F6E5FF0B2 /* HomeFlowTests.swift */; };
@@ -23,6 +24,7 @@
 		CE09702B7CEFC681ADF56B34 /* ElementalCore in Frameworks */ = {isa = PBXBuildFile; productRef = FB5057996CF37D2F9733E2B8 /* ElementalCore */; };
 		D7A6B962EA6F8411A6046CB4 /* MonsterInventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45FDB19C14061EC60CA49FFE /* MonsterInventoryView.swift */; };
 		DF584476488943933C2C2721 /* MonsterPortraitGallery.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13F256399449FE2A0782472 /* MonsterPortraitGallery.swift */; };
+		E8E500AB556F8BF24D5BF68E /* CharacterPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF7C05E30092DE633FD1CE96 /* CharacterPreview.swift */; };
 		F2A6F9FCD391A1960ACCF7A7 /* DirectInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32855687569320763186F2E9 /* DirectInteractionTests.swift */; };
 		F7C3949123722B6861D83317 /* MonsterSkillTree.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD4EFC131540F44D0A978A24 /* MonsterSkillTree.swift */; };
 /* End PBXBuildFile section */
@@ -55,9 +57,11 @@
 		D5F1E319E38C847D565F9C10 /* ElementalCube-UITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = "ElementalCube-UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DCA21A3F0F39D6F8AF5FB880 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		DD4EFC131540F44D0A978A24 /* MonsterSkillTree.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonsterSkillTree.swift; sourceTree = "<group>"; };
+		DF7C05E30092DE633FD1CE96 /* CharacterPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterPreview.swift; sourceTree = "<group>"; };
 		E83A3B472484F13731FA17FA /* MonsterPortrait.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonsterPortrait.swift; sourceTree = "<group>"; };
 		EC396B4A3B7C80D027BB9ACF /* Geometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Geometry.swift; sourceTree = "<group>"; };
 		F13F256399449FE2A0782472 /* MonsterPortraitGallery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonsterPortraitGallery.swift; sourceTree = "<group>"; };
+		FEE2D03440ACC0A8C3900CAD /* BoilingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoilingTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -75,6 +79,7 @@
 		79019832A5238C7C5C687700 /* ElementalCubeUITests */ = {
 			isa = PBXGroup;
 			children = (
+				FEE2D03440ACC0A8C3900CAD /* BoilingTests.swift */,
 				32855687569320763186F2E9 /* DirectInteractionTests.swift */,
 				1A8880634436BF2F6E5FF0B2 /* HomeFlowTests.swift */,
 				5246294C5A43CEC72A790ACE /* PortraitAnimationTests.swift */,
@@ -112,6 +117,7 @@
 		CF555BE072E412426A3CB7B9 /* ElementalCube */ = {
 			isa = PBXGroup;
 			children = (
+				DF7C05E30092DE633FD1CE96 /* CharacterPreview.swift */,
 				655FEDACA00A1414E978902E /* ElementalCubeApp.swift */,
 				ACD70767405358A8EC3E4192 /* GameSession.swift */,
 				EC396B4A3B7C80D027BB9ACF /* Geometry.swift */,
@@ -240,6 +246,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E8E500AB556F8BF24D5BF68E /* CharacterPreview.swift in Sources */,
 				9A2AEC224003DCC828E6660E /* ElementalCubeApp.swift in Sources */,
 				0128FC69150A325DBEBC0B88 /* GameSession.swift in Sources */,
 				889D5A0ED68D0E9649667918 /* Geometry.swift in Sources */,
@@ -258,6 +265,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3E586F77A620315D608515E2 /* BoilingTests.swift in Sources */,
 				F2A6F9FCD391A1960ACCF7A7 /* DirectInteractionTests.swift in Sources */,
 				5278B1EC015B920E61D8FB9B /* HomeFlowTests.swift in Sources */,
 				4AC2C2884C638BF8C8251A98 /* PortraitAnimationTests.swift in Sources */,
@@ -400,7 +408,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = XMS5ZC28UJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ElementalCube;
@@ -462,7 +470,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = XMS5ZC28UJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ElementalCube;

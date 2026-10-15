@@ -100,14 +100,7 @@ final class Renderer: NSObject, MTKViewDelegate {
         let slot=frame%3
         let appearance=session.inventory.selected.id.uuidString+String(s.evolutionStage)
         if appearance != renderedAppearance {
-            var mesh=Geometry.cube(form:s.form)
-            let variation=Float(session.inventory.selected.appearanceSeed%29)/28-0.5
-            let secondary=session.inventory.selected.secondaryForm.flatMap { Geometry.cube(form:$0).vertices.first?.color }
-            for i in mesh.vertices.indices {
-                let p=mesh.vertices[i].position
-                if let secondary=secondary { mesh.vertices[i].color=mix(mesh.vertices[i].color,secondary,0.1+(sin(p.x*6+p.y*4)+1)*0.12) }
-                mesh.vertices[i].color *= SIMD4(1+variation*0.1,1-variation*0.03,1+variation*0.06,1)
-            }
+            let mesh=Geometry.character(form:s.form,secondary:session.inventory.selected.secondaryForm,seed:session.inventory.selected.appearanceSeed)
             renderedAppearance=appearance
             cube=device.makeBuffer(bytes:mesh.vertices,length:mesh.vertices.count*MemoryLayout<Vertex>.stride,options:.storageModeShared)!;cubeCount=mesh.vertices.count;renderedForm=s.form
         }
@@ -124,8 +117,8 @@ final class Renderer: NSObject, MTKViewDelegate {
         e.setRenderPipelineState(backgroundPipeline);e.setDepthStencilState(depthRead)
         e.setFragmentBytes(&u,length:MemoryLayout<Uniforms>.stride,index:1);e.drawPrimitives(type:.triangle,vertexStart:0,vertexCount:3)
         e.setRenderPipelineState(scenePipeline);e.setDepthStencilState(depthWrite)
-        func drawBuffer(_ buffer:MTLBuffer,_ count:Int,_ model:simd_float4x4=matrix_identity_float4x4,character:Bool=false,furSurface:Bool=false) {
-            u.model=model;u.camera.w=furSurface ? 2 : (character ? 1 : 0)
+        func drawBuffer(_ buffer:MTLBuffer,_ count:Int,_ model:simd_float4x4=matrix_identity_float4x4,character:Bool=false,furSurface:Bool=false,material:Float=0) {
+            u.model=model;u.camera.w=furSurface ? 2 : (character ? 1 : 0);u.world.y=material
             e.setVertexBytes(&u,length:MemoryLayout<Uniforms>.stride,index:1);e.setFragmentBytes(&u,length:MemoryLayout<Uniforms>.stride,index:1);e.setVertexBuffer(buffer,offset:0,index:0)
             e.drawPrimitives(type:.triangle,vertexStart:0,vertexCount:count)
         }
@@ -155,9 +148,7 @@ final class Renderer: NSObject, MTKViewDelegate {
             case .ice:
                 details.ellipse(center:at,rx:0.24,ry:0.022,color:tint(0xc9f8ff,min(0.7,trail.life*0.3)))
                 details.line(at+V3(-0.16,0.01,0),at+V3(0.13,0.02,0),width:0.009,color:tint(0xf2ffff,min(0.6,trail.life*0.25)))
-            case .fire:
-                details.ellipse(center:at,rx:0.22,ry:0.028,color:tint(0x514639,min(0.6,trail.life*0.45)))
-                details.line(at+V3(-0.15,0.01,0),at+V3(0.16,0.025,0),width:0.016,color:tint(0xffa457,min(0.7,trail.life*0.3)))
+            case .fire:break
             case .air:
                 details.line(at+V3(-0.18,0.17,0),at+V3(0.13,0.21,0),width:0.012,color:tint(0xcaf6e3,trail.life*0.13))
             case .water:
@@ -172,7 +163,15 @@ final class Renderer: NSObject, MTKViewDelegate {
         for particle in s.particles {
             let color:[C4]=[tint(0xe4deba),tint(0xb8f5ee),tint(0xc2f9ff),tint(0xfaf0b4),tint(0xffab4d),tint(0xdfece5,0.55),tint(0xf3a8be)]
             let alpha=min(1,particle.life*2),at=V3(particle.position.x,particle.position.y,particle.kind==1 || particle.kind==6 ? 1.5 : 0.9)
-            if particle.kind==6 {
+            if particle.kind==7 {
+                let radius:Float=0.025+max(0,2-particle.life)*0.012
+                for j in 0..<16 {
+                    let a=Float(j)*2*Float.pi/16,b=Float(j+1)*2*Float.pi/16
+                    details.line(at+V3(cos(a)*radius,sin(a)*radius,0),at+V3(cos(b)*radius,sin(b)*radius,0),width:0.006,color:tint(0xd7faf8,alpha*0.65))
+                }
+            } else if particle.kind==5 {
+                for j in 0..<3 { details.ellipse(center:at+V3(Float(j-1)*0.035,Float(j%2)*0.025,0),rx:0.055+max(0,1-particle.life)*0.04,ry:0.045,color:tint(0xe0f2e9,alpha*0.13)) }
+            } else if particle.kind==6 {
                 let c=color[6]*SIMD4(1,1,1,alpha)
                 details.ellipse(center:at+V3(-0.025,0.015,0),rx:0.032,ry:0.03,color:c,segments:8)
                 details.ellipse(center:at+V3(0.025,0.015,0),rx:0.032,ry:0.03,color:c,segments:8)
@@ -198,9 +197,19 @@ final class Renderer: NSObject, MTKViewDelegate {
             }
         }
         drawMesh(details)
+        for patch in s.patches where patch.burning>0 && patch.fuel>0 {
+            drawMesh(Geometry.flames(time:s.time+patch.x,active:true,wind:s.windVelocity,body:false),translation(V3(patch.x,patch.y+0.15,0.8))*scale(SIMD3(repeating:0.25)))
+        }
+        if s.crateBurning>0 && s.crateExists {
+            drawMesh(Geometry.flames(time:s.time,active:true,wind:s.windVelocity,body:false),translation(V3(s.crate.position.x,s.crate.position.y+0.7,0.7))*scale(SIMD3(repeating:0.4)))
+        }
         drawMesh(Geometry.bridgeFixtures())
         for section in s.bridge {
-            drawMesh(Geometry.bridgeSection(width:section.width),translation(V3(section.state.position.x,section.state.position.y,0.55))*rotationZ(section.state.angle))
+            var wood=Geometry.bridgeSection(width:section.width)
+            for i in wood.vertices.indices { wood.vertices[i].color=mix(tint(0x302d29),wood.vertices[i].color,section.fuel) }
+            let model=translation(V3(section.state.position.x,section.state.position.y,0.55))*rotationZ(section.state.angle)
+            drawMesh(wood,model)
+            if section.burning>0 { drawMesh(Geometry.flames(time:s.time,active:true,wind:s.windVelocity,body:false),model*translation(V3(0,0.22,0))*scale(SIMD3(repeating:0.3))) }
         }
         if let first=s.bridge.first,let last=s.bridge.last {
             var ropes=Mesh()
@@ -225,7 +234,7 @@ final class Renderer: NSObject, MTKViewDelegate {
                 ring.box(center:V3(source.position.x+cos(a)*0.4,source.position.y-0.20,0.55+sin(a)*0.3),size:V3(0.18,0.17,0.18),color:tint(0x74766b))
             }
             ring.line(V3(source.position.x-0.25,source.position.y-0.15,0.42),V3(source.position.x+0.25,source.position.y-0.15,0.72),width:0.12,color:tint(0x75513d));drawMesh(ring)
-            drawMesh(Geometry.flames(time:s.time,active:true),translation(V3(source.position.x,source.position.y-0.12,0.55))*scale(SIMD3(repeating:0.55)))
+            drawMesh(Geometry.flames(time:s.time,active:true,body:false),translation(V3(source.position.x,source.position.y-0.12,0.55))*scale(SIMD3(repeating:0.55)))
         }
         if s.crateExists {
             var box=Geometry.crate()
@@ -235,7 +244,8 @@ final class Renderer: NSObject, MTKViewDelegate {
             var ash=Mesh();ash.box(center:V3(s.crate.position.x,s.crate.position.y-0.5,0.65),size:V3(0.9,0.12,0.7),color:tint(0x383936));drawMesh(ash)
         }
         let model=translation(V3(p.x,p.y,0.55))*rotationZ(s.bodyAngle)*rotationY(0.12)*scale(s.bodyStretch)
-        drawBuffer(cube,cubeCount,model,character:true,furSurface:s.form.hasFur)
+        drawBuffer(cube,cubeCount,model,character:true,furSurface:s.form.hasFur,material:s.form == .water ? 1 : (s.form == .fire ? 2 : (s.form == .air ? 3 : (s.form == .stone ? 4 : 0))))
+        drawMesh(Geometry.elementDetail(form:s.form,time:s.time),model,character:true)
         if s.form.hasFur {
             e.setRenderPipelineState(coatPipeline)
             for layer in 1...10 {
@@ -263,11 +273,11 @@ final class Renderer: NSObject, MTKViewDelegate {
         if let charm=session.inventory.selected.equippedCharm {
             var ornament=Mesh();ornament.diamond(V3(0,-0.34,1.14),size:0.075,color:charm == .deepRelic ? tint(0xebc77d) : tint(0xb3c6b2));drawMesh(ornament,model,character:true)
         }
-        if (s.form == .fire || s.burning>0) && !s.dead { drawMesh(Geometry.flames(time:s.time,active:s.passiveWorking || s.burning>0),model) }
+        if (s.form == .fire || s.burning>0) && !s.dead { drawMesh(Geometry.flames(time:s.time,active:s.passiveWorking || s.burning>0,wind:s.windVelocity),model) }
         let blinkPhase=s.time.truncatingRemainder(dividingBy:4.7)
         let mood:Mood=session.aiming ? .focused : (s.won ? .delighted : s.mood)
         let gaze=session.aiming ? session.aimImpulse.x*0.004 : s.cube.velocity.x*0.006
-        drawMesh(Geometry.face(blink:blinkPhase>4.5 ? 0.12 : 1,mood:mood,look:gaze,wet:s.wetness),model,character:true)
+        drawMesh(Geometry.face(blink:blinkPhase>4.5 ? 0.12 : 1,mood:mood,look:gaze,wet:s.wetness,form:s.form),model,character:true)
         if s.form.hasFur && s.wetness>0.15 {
             var drips=Mesh()
             for i in 0..<5 {

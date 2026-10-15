@@ -44,17 +44,41 @@ enum Geometry {
     static func cube(form:ElementForm = .ice)->Mesh {
         var mesh=Mesh(),r=RNG()
         // Rounded solid cube: six subdivided faces, with physical depth.
-        let h:Float=0.48,round:Float=form == .stone ? 0.08 : 0.12,n=form == .stone ? 5 : 12
-        let colors:[ElementForm:UInt32]=[.ice:0xd9f6ff,.water:0x65bedd,.air:0xc1efe2,.stone:0x9d9788,.fire:0xffc263]
+        let h:Float=0.48,round:Float=form == .stone ? 0.08 : (form == .water ? 0.36 : (form == .air ? 0.3 : 0.12)),n=form == .stone ? 18 : 12
+        let colors:[ElementForm:UInt32]=[.ice:0xd9f6ff,.water:0x49c9ef,.air:0xdbf6f3,.stone:0x858a8e,.fire:0xffc263]
         let frames:[(V3,V3,V3)]=[(V3(0,0,1),V3(1,0,0),V3(0,1,0)),(V3(1,0,0),V3(0,0,-1),V3(0,1,0)),(V3(-1,0,0),V3(0,0,1),V3(0,1,0)),(V3(0,1,0),V3(1,0,0),V3(0,0,-1)),(V3(0,-1,0),V3(1,0,0),V3(0,0,1)),(V3(0,0,-1),V3(-1,0,0),V3(0,1,0))]
         func rounded(_ p:V3)->(V3,V3) { let q=simd_clamp(p,V3(repeating:-h+round),V3(repeating:h-round));let normal=simd_normalize(p-q);return(q+normal*round,normal) }
         for (normal,u,v) in frames {
             for i in 0..<n { for j in 0..<n {
                 let x=Float(i)/Float(n)*h*2-h,y=Float(j)/Float(n)*h*2-h,step=h*2/Float(n)
                 let ps=[normal*h+u*x+v*y,normal*h+u*(x+step)+v*y,normal*h+u*(x+step)+v*(y+step),normal*h+u*x+v*(y+step)]
-                let pts=ps.map(rounded)
-                let shade:Float=form == .stone ? 0.82+r.next()*0.28 : 1
-                for k in [0,1,2,0,2,3] { mesh.vertices.append(Vertex(position:SIMD4(pts[k].0,1),normal:SIMD4(pts[k].1,0),color:tint(colors[form]!)*SIMD4(shade,shade,shade,1))) }
+                let pts=ps.map { point -> (V3,V3) in
+                    var (position,normal)=rounded(point)
+                    if form == .stone {
+                        var depth:Float=0
+                        for pit in 0..<8 {
+                            let a=Float(pit)*2.399+normal.x*2+normal.y*3+normal.z*5
+                            let center=SIMD2<Float>(sin(a*3.1)*0.36,cos(a*4.7)*0.36)
+                            let uv=SIMD2<Float>(simd_dot(position,u),simd_dot(position,v)),d=simd_distance(uv,center)
+                            let radius:Float=0.065+Float(pit%3)*0.028
+                            depth += (0.025+Float(pit%4)*0.01)*exp(-d*d/(radius*radius))
+                        }
+                        let edge=min(1,max(0,(0.48-max(abs(simd_dot(position,u)),abs(simd_dot(position,v))))/0.1))
+                        position += normal*((sin(position.x*17+position.z*11)*sin(position.y*19)*0.012-depth)*edge)
+                    }
+                    if form == .water {
+                        let taper:Float=1-position.y*0.45
+                        position.x *= taper;position.z *= taper
+                        position.y += max(0,position.y-0.23)*0.35
+                        normal=simd_normalize(V3(normal.x,normal.y+0.15,normal.z))
+                    }
+                    return(position,normal)
+                }
+                let shade:Float=form == .stone ? 0.96+r.next()*0.06 : 1
+                for triangle in [[0,1,2],[0,2,3]] {
+                    let faceNormal=simd_normalize(simd_cross(pts[triangle[1]].0-pts[triangle[0]].0,pts[triangle[2]].0-pts[triangle[0]].0))
+                    for k in triangle { mesh.vertices.append(Vertex(position:SIMD4(pts[k].0,1),normal:SIMD4(form == .stone ? faceNormal : pts[k].1,0),color:tint(colors[form]!)*SIMD4(shade,shade,shade,1))) }
+                }
             } }
 
         }
@@ -92,15 +116,82 @@ enum Geometry {
         }
         return m
     }
-    static func flames(time:Float,active:Bool)->Mesh {
-        var m=Mesh()
-        for i in 0..<17 {
-            let x=Float(i)/16*1.04-0.52,h=(0.24+sin(time*8+Float(i)*1.7)*0.12)*(active ? 1 : 0.4)
-            m.triangle(V3(x-0.07,0.35,0.42),V3(x+0.07,0.35,0.42),V3(x+sin(time*5+Float(i))*0.07,0.55+h,0.44),tint(i%2==0 ? 0xffb743 : 0xff6b39),V3(0,0.3,1))
+    /// Curved flame tufts rooted over all faces, rather than a crown of triangles.
+    /// Front roots leave the eyes and mouth readable; the tips curl with airflow.
+    static func flames(time:Float,active:Bool,wind:Float=0,body:Bool=true)->Mesh {
+        var m=Mesh(),random=RNG(seed:70213)
+        let frames:[(V3,V3,V3)]=body ? [(V3(0,0,1),V3(1,0,0),V3(0,1,0)),(V3(1,0,0),V3(0,0,-1),V3(0,1,0)),(V3(-1,0,0),V3(0,0,1),V3(0,1,0)),(V3(0,1,0),V3(1,0,0),V3(0,0,-1)),(V3(0,-1,0),V3(1,0,0),V3(0,0,1)),(V3(0,0,-1),V3(-1,0,0),V3(0,1,0))] : [(V3(0,1,0),V3(1,0,0),V3(0,0,-1))]
+        for (face,frame) in frames.enumerated() {
+            let (normal,u,v)=frame
+            for i in 0..<(body ? 30 : 26) {
+                let x=(random.next()*2-1)*0.46,y=(random.next()*2-1)*0.46
+                if body && face==0 && ((abs(abs(x)-0.21)<0.14 && abs(y-0.095)<0.20) || (abs(x)<0.14 && abs(y+0.17)<0.12)) { continue }
+                let raw=normal*0.46+u*x+v*y
+                let core=simd_clamp(raw,V3(repeating:-0.34),V3(repeating:0.34))
+                let n=simd_normalize(raw-core)
+                var root=body ? core+n*0.13 : V3(x*0.8,-0.38,y*0.65)
+                if body && face==4 {
+                    if max(abs(x),abs(y))<0.34 { continue }
+                    root.y = -0.38
+                }
+                let phase=Float(i+face*30)*1.713
+                let length=(0.17+random.next()*0.20)*(0.8+sin(time*5+phase)*0.2)*(active ? 1 : 0.55)
+                let direction=simd_normalize((body ? n*0.6 : V3(0,0,0))+V3(wind*0.07+sin(time*3+phase)*0.13,1.1,0.08))
+                let side=simd_normalize(simd_cross(direction,V3(-0.2,-0.15,1)))
+                for layer in 0..<2 {
+                    let width=(0.037+random.next()*0.018)*(layer==0 ? 1 : 0.48)
+                    func point(_ t:Float,_ across:Float)->V3 {
+                        let curl=sin(t*3.5+time*4+phase)*t*t*0.07
+                        return root+direction*(length*t)+side*(curl+across*width*pow(max(0,1-t),0.8))+n*Float(layer)*0.004
+                    }
+                    for j in 0..<6 {
+                        let a=Float(j)/6,b=Float(j+1)/6
+                        let color=mix(tint(layer==0 ? 0xff7928 : 0xfff0a0),tint(0xffc451),a)
+                        let start=m.vertices.count
+                        m.quad(point(a,-1),point(a,1),point(b,1),point(b,-1),color,V3(0,0,1))
+                        for k in start..<m.vertices.count { m.vertices[k].normal.w = -2 }
+                    }
+                }
+            }
         }
         return m
     }
-    static func face(blink:Float,mood:Mood,look:Float,wet:Float)->Mesh {
+    static func character(form:ElementForm,secondary:ElementForm?,seed:UInt64)->Mesh {
+        var mesh=cube(form:form)
+        let variation=Float(seed%29)/28-0.5,second=secondary.flatMap { cube(form:$0).vertices.first?.color }
+        for i in mesh.vertices.indices {
+            let p=mesh.vertices[i].position
+            if let second=second { mesh.vertices[i].color=mix(mesh.vertices[i].color,second,0.1+(sin(p.x*6+p.y*4)+1)*0.12) }
+            mesh.vertices[i].color *= SIMD4(1+variation*0.1,1-variation*0.03,1+variation*0.06,1)
+        }
+        return mesh
+    }
+    static func elementDetail(form:ElementForm,time:Float)->Mesh {
+        var m=Mesh()
+        if form == .water {
+            for i in 0..<3 {
+                let x:Float = -0.31+Float(i)*0.24,y:Float = -0.28+sin(time*1.7+Float(i))*0.05
+                m.ellipse(center:V3(x,y,0.47),rx:0.016+Float(i%2)*0.008,ry:0.025,color:tint(0xd2faff,0.45),segments:14)
+            }
+            for j in 0..<10 {
+                let a=Float(j)/10*0.9,b=Float(j+1)/10*0.9
+                m.line(V3(-0.32+sin(a)*0.19,0.23+cos(a)*0.10,0.48),V3(-0.32+sin(b)*0.19,0.23+cos(b)*0.10,0.48),width:0.024,color:tint(0xf0ffff,0.85))
+            }
+        } else if form == .air {
+            // The body is made of broad curved streams, with gaps and tapered tails.
+            for i in 0..<10 { for j in 0..<48 {
+                let a=Float(j)/48*5.5+time*(0.42+Float(i%3)*0.04)+Float(i)*1.3,b=a+5.5/48
+                let y:Float = -0.43+Float(i)*0.092,r:Float = 0.49+0.05*cos(Float(i)*0.7)
+                func point(_ angle:Float)->V3 { V3(cos(angle)*r,y+sin(angle*1.5+Float(i))*0.035,0.05+sin(angle)*r) }
+                let width:Float=(0.035+0.018*sin(Float(j)/48*Float.pi))*min(1,Float(j+1)/4)*min(1,Float(48-j)/4)
+                let start=m.vertices.count
+                m.quad(point(a)-V3(0,width/2,0),point(a)+V3(0,width/2,0),point(b)+V3(0,width/2,0),point(b)-V3(0,width/2,0),tint(i%3==0 ? 0xf2fffc : 0xb9e6df,0.72),V3(0,0,1))
+                for k in start..<m.vertices.count { m.vertices[k].normal.w = -2 }
+            } }
+        }
+        return m
+    }
+    static func face(blink:Float,mood:Mood,look:Float,wet:Float,form:ElementForm = .ice)->Mesh {
         var m=Mesh()
         let eyeHeight=blink*(mood == .sleepy ? 0.45 : (mood == .focused ? 0.78 : 1))
         let gaze=max(-0.025,min(0.025,look))
@@ -131,11 +222,25 @@ enum Geometry {
             m.ellipse(center:V3(0,-0.17,0.55),rx:0.051,ry:0.060,color:tint(0x1c2544))
         } else if mood == .focused {
             m.line(V3(-0.055,-0.16,0.55),V3(0.055,-0.15,0.55),width:0.023,color:tint(0x1c2544))
+        } else if mood == .curious {
+            for i in 0..<12 {
+                let x=Float(i)/12*0.15-0.075,b=Float(i+1)/12*0.15-0.075
+                m.line(V3(x,-0.19+x*x*8,0.55),V3(b,-0.19+b*b*8,0.55),width:0.024,color:tint(0x1c2544))
+            }
         } else {
             m.ellipse(center:V3(0,-0.165,0.55),rx:0.075,ry:mood == .delighted ? 0.095 : 0.064,color:tint(0x1c2544))
             m.ellipse(center:V3(0.009,-0.208,0.555),rx:0.045,ry:0.027,color:tint(0xf080a6))
         }
-        if wet>0.2 { m.ellipse(center:V3(-0.36,0.3,0.61),rx:0.018,ry:0.038,color:tint(0xa0e9ff,0.9)) }
+        if form.hasFur && wet>0.2 { m.ellipse(center:V3(-0.36,0.3,0.61),rx:0.018,ry:0.038,color:tint(0xa0e9ff,0.9)) }
+        if form == .water || form == .air {
+            let radius:Float=form == .water ? 0.36 : 0.30,inner:Float=0.48-radius
+            for i in m.vertices.indices {
+                let p=m.vertices[i].position,taper:Float=form == .water ? 1-p.y*0.45 : 1
+                let x=max(0,abs(p.x/taper)-inner),y=max(0,abs(p.y)-inner)
+                let surface=(inner+sqrt(max(0.001,radius*radius-x*x-y*y)))*taper
+                m.vertices[i].position.z-=0.48-surface
+            }
+        }
         return m
     }
     static func terrain(patches:[MaterialPatch] = [],visible:WorldBounds=WorldBounds(-6,-8,29,11),definition:WorldDefinition=WorldMap.shore.definition)->Mesh {
@@ -143,6 +248,15 @@ enum Geometry {
         // Only decorate the visible bricks; the full physics map retains its scale.
         for (platformIndex,platform) in definition.terrain.enumerated() where visible.overlaps(platform,margin:2) {
             let start=platform.x-platform.width/2,end=platform.x+platform.width/2,top=platform.y+platform.height/2,bottom=platform.y-platform.height/2-(platform.width==definition.bounds.width ? 24 : 0)
+            if platform.surface == .wood {
+                let fuel=patches.filter { $0.surface == .wood && abs($0.y-top)<0.1 && $0.x>=start && $0.x<=end }.map(\.fuel).min() ?? 1
+                m.box(center:V3(platform.x,platform.y,0),size:V3(platform.width,platform.height,2.5),color:mix(tint(0x302d29),tint(0x98744c),fuel))
+                for i in 0..<max(1,Int(platform.width/0.25)) {
+                    let x=start+Float(i)*0.25
+                    m.line(V3(x,top-0.04,1.255),V3(x+0.02,bottom+0.04,1.255),width:0.009,color:tint(0x4e3b29,0.6))
+                }
+                continue
+            }
             m.box(center:V3((start+end)/2,(top+bottom)/2,0),size:V3(end-start,top-bottom,2.5),color:tint(0x6d8070))
             let firstRow=max(0,Int(floor((top-visible.maxY-2)/0.75)))
             let lastRow=max(firstRow,Int(ceil((top-max(bottom,visible.minY-2))/0.75)))
@@ -331,9 +445,14 @@ enum Geometry {
                     }
                 }
                 if edge.count==2 && edge.allSatisfy({ $0.x>=7 && $0.x<=17 && $0.y>field.floor(at:$0.x)+0.012 }) {
-                    let a=edge[0],b=edge[1]
-                    mesh.quad(a,b,V3(b.x,b.y,-0.75),V3(a.x,a.y,-0.75),tint(0x9ce8e5,0.28),V3(0,1,0))
-                    mesh.line(a+V3(0,0,0.01),b+V3(0,0,0.01),width:0.014,color:tint(0xdcfff4,0.8))
+                    let a=edge[0],b=edge[1],mid=(a+b)/2
+                    // Only the actual upper free surface has depth. Extruding
+                    // every internal density edge produced floating blue plates
+                    // around bodies and evaporating pockets.
+                    if abs(mid.y-fluid.surfaceHeight(at:mid.x))<h*1.2 {
+                        mesh.quad(a,b,V3(b.x,b.y,-0.75),V3(a.x,a.y,-0.75),tint(0x9ce8e5,0.18),V3(0,1,0))
+                        mesh.line(a+V3(0,0,0.01),b+V3(0,0,0.01),width:0.014,color:tint(0xdcfff4,0.8))
+                    }
                 }
             }
         } }

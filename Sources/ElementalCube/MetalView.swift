@@ -59,7 +59,7 @@ final class InteractiveMetalView:MTKView {
         worldAccessibility.accessibilityIdentifier="game.world";worldAccessibility.accessibilityLabel="Игровой мир"
         worldAccessibility.accessibilityFrameInContainerSpace=bounds
         if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
-            worldAccessibility.accessibilityValue=String(format:"x=%.3f;y=%.3f;jumps=%d;aiming=%d;cold=%.2f;charm=%@;pets=%d;map=%@;coins=%d;form=%@",body.position.x,body.position.y,session.simulation.jumps,session.aiming ? 1 : 0,session.simulation.waterField.conductivity,session.inventory.selected.equippedCharm?.rawValue ?? "none",session.affection,session.adventure.map.rawValue,session.adventure.coins,session.form.rawValue)
+            worldAccessibility.accessibilityValue=String(format:"x=%.3f;y=%.3f;jumps=%d;aiming=%d;cold=%.2f;charm=%@;pets=%d;map=%@;coins=%d;form=%@;boiling=%.2f;bubbles=%d",body.position.x,body.position.y,session.simulation.jumps,session.aiming ? 1 : 0,session.simulation.waterField.conductivity,session.inventory.selected.equippedCharm?.rawValue ?? "none",session.affection,session.adventure.map.rawValue,session.adventure.coins,session.form.rawValue,session.simulation.boilingStrength,session.simulation.particles.filter { $0.kind==7 }.count)
         }
         accessibilityElements=[cubeAccessibility,worldAccessibility]
     }
