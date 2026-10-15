@@ -6,6 +6,7 @@ struct MonsterInventoryView:View {
     @State private var tab=0
     @State private var detail:SkillNode?
     @State private var learnedMessage=""
+    @State private var passport=false
     var monster:MonsterRecord { session.inventory.selected }
     var body:some View {
         VStack(spacing:0) {
@@ -42,6 +43,14 @@ struct MonsterInventoryView:View {
             guard !learnedMessage.isEmpty else { return };try? await Task.sleep(nanoseconds:3_000_000_000)
             if !Task.isCancelled { withAnimation { learnedMessage="" } }
         }
+        .sheet(isPresented:$passport) {
+            InheritancePassportEditor(session:session)
+                #if os(iOS)
+                .presentationDetents([.large]).presentationDragIndicator(.visible)
+                #else
+                .frame(width:600,height:740)
+                #endif
+        }
         .onAppear { session.saveInventory();if ProcessInfo.processInfo.arguments.contains("--preview-equipment") { tab=1 } }
     }
     private var header:some View {
@@ -57,6 +66,9 @@ struct MonsterInventoryView:View {
     var skillTree:some View {
         VStack(alignment:.leading,spacing:16) {
             MonsterSkillTree(monster:monster,wetness:Double(session.wetness),health:Double(session.health),burning:Double(session.burning)) { detail=$0 }
+            Button { passport=true } label: {
+                HStack { Label("Отпечатки наследия",systemImage:"square.stack.3d.up");Spacer();Text("\(monster.inheritanceSelection.count) / 4").monospacedDigit();Image(systemName:"chevron.right") }.font(.system(size:13)).frame(minHeight:44)
+            }.buttonStyle(PillButton(filled:false)).accessibilityIdentifier("passport.open")
             Text("Находи кристаллы, чтобы открывать новые навыки. Дерево и прогресс принадлежат только этому кубику.")
                 .font(.system(size:12)).lineSpacing(4).foregroundStyle(ink.opacity(0.6))
         }

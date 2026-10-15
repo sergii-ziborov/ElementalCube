@@ -35,6 +35,10 @@ fragment float4 scene_fragment(Varying v [[stage_in]], constant Uniforms &u [[bu
         float3 n=normalize(v.normal),view=normalize(float3(-.22,.18,1));
         float diffuse=saturate(dot(n,normalize(float3(-.65,1.4,.9))));
         float rim=pow(1-abs(dot(n,view)),2.);
+        if(u.world.y>4.5) {
+            float cloud=.035*sin(v.local.x*12.+v.local.y*9.+u.animation.x*.7);
+            return float4(v.color.rgb*(.78+.22*diffuse)+float3(.08,.10,.10)*rim+cloud,.96);
+        }
         if(u.world.y<1.5) {
             float spec=pow(saturate(dot(n,normalize(float3(-.4,.65,1)))),38.);
             float3 blue=v.color.rgb*(.6+.32*diffuse)+float3(.14,.30,.32)*rim+float3(.7,.95,1)*spec*.7;

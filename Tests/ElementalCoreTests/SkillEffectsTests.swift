@@ -87,7 +87,7 @@ final class SkillEffectsTests:XCTestCase {
         let a=skilled(.fire,[.mastery,.affinity,.resilience]),b=skilled(.stone,[.mastery,.affinity,.resilience])
         var inherited=false
         for seed:UInt64 in 1...20 {
-            let child=MonsterRecord.offspring(a,b,body:.stone,seed:seed)
+            let child=MonsterRecord.legacyOffspring(a,b,body:.stone,seed:seed)
             XCTAssertEqual(child.signature,.boilingHeart)
             XCTAssertEqual(child.tree.first { $0.kind == .resilience }!.title,"Вулканическое кипение")
             if child.learned.contains(.resilience) { inherited=true;XCTAssertTrue(child.learned.isSuperset(of:[.mastery,.affinity])) }
@@ -97,7 +97,7 @@ final class SkillEffectsTests:XCTestCase {
     }
     func testMistRecoveryAndDustWindGuardHaveRealHybridEffects() {
         func child(_ second:ElementForm)->MonsterRecord {
-            var m=MonsterRecord.offspring(MonsterRecord(form:.air),MonsterRecord(form:second),body:.air,seed:1)
+            var m=MonsterRecord.legacyOffspring(MonsterRecord(form:.air),MonsterRecord(form:second),body:.air,seed:1)
             m.recordFinds(crystals:Set(0..<18),relic:false)
             for kind in [SkillNode.Kind.mastery,.affinity,.resilience] { XCTAssertTrue(m.learn(m.tree.first { $0.kind==kind }!)) };return m
         }

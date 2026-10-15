@@ -1,0 +1,62 @@
+[
+  {
+    "file": "iphone-passport.png",
+    "size": [
+      1206,
+      2622
+    ],
+    "sha256": "8e4f96df7db8f7b23347c8fd2ca0aeb202810858c1b7e8e84780242300db05f6",
+    "sourceAttachment": "3F9B7709-67AE-42C7-8E25-98825DAB6FC2.png",
+    "test": "MetamorphosisTests/testPersonalPassportEditsFourReserveImprintsWithoutChangingTheTree()"
+  },
+  {
+    "file": "iphone-result.png",
+    "size": [
+      1206,
+      2622
+    ],
+    "sha256": "28f9d9619d3aadf422b4ec399521233483943c2468f67985e5a872d97a63befc",
+    "sourceAttachment": "A8F95801-5A71-42E8-AFAF-BDDA762C3C66.png",
+    "test": "MetamorphosisTests/testPreparationCanCancelThenCommitPinnedIceToSteamWithARealLossReport()"
+  },
+  {
+    "file": "iphone-probabilities.png",
+    "size": [
+      1206,
+      2622
+    ],
+    "sha256": "11cf6706c7c3768726dccae8f20d6b5e07ddbcbf05ff36dc1138a0740fc7bc28",
+    "sourceAttachment": "96A37F51-5F84-4EE6-BDA8-CEFA972C27CA.png",
+    "test": "MetamorphosisTests/testPreparationCanCancelThenCommitPinnedIceToSteamWithARealLossReport()"
+  },
+  {
+    "file": "iphone-preparation.png",
+    "size": [
+      1206,
+      2622
+    ],
+    "sha256": "09074a6151c8044bd9f1fe18f5a94f0d9939d9fe90ea6818dcdb4e522a778d8c",
+    "sourceAttachment": "A2984087-CF7A-4C7A-843F-CE36BFE4D13F.png",
+    "test": "MetamorphosisTests/testPreparationCanCancelThenCommitPinnedIceToSteamWithARealLossReport()"
+  },
+  {
+    "file": "ipad-13-result.png",
+    "size": [
+      2064,
+      2752
+    ],
+    "sha256": "df9aac8ed07c2f9a4b4cf9a2ede9c9d17cdbcb706aba96f2d379e81ac6ab884f",
+    "sourceAttachment": "0E7BC54F-FF46-45D7-A91D-9C38D59DE157.png",
+    "test": "MetamorphosisTests/testPreparationCanCancelThenCommitPinnedIceToSteamWithARealLossReport()"
+  },
+  {
+    "file": "ipad-13-preparation.png",
+    "size": [
+      2064,
+      2752
+    ],
+    "sha256": "99af69434847a5891779963d63502778d3bd28082ec5619faa662f29516e2c30",
+    "sourceAttachment": "FDB3BCC7-07BE-447F-8ADE-D8D5B552E8D9.png",
+    "test": "MetamorphosisTests/testPreparationCanCancelThenCommitPinnedIceToSteamWithARealLossReport()"
+  }
+]

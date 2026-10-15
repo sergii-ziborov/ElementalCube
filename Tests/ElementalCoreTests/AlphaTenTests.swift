@@ -97,10 +97,10 @@ final class AlphaTenTests:XCTestCase {
         save.map = .glacier;save.recordFinds([0,1],relic:false);XCTAssertEqual(save.coins,8)
         XCTAssertTrue(save.isValid)
     }
-    func testMergeKeepsAllMaterialCopiesWhileDeduplicatingWorldFinds() {
+    func testLegacyAlpha13SaveKeepsItsMaterialCopiesWhileDeduplicatingWorldFinds() {
         var a=MonsterRecord(form:.ice),b=MonsterRecord(form:.fire)
         a.recordFinds(crystals:[0,1],relic:true);b.recordFinds(crystals:[0,1],relic:true)
-        let child=MonsterRecord.offspring(a,b,body:.water,seed:22)
+        let child=MonsterRecord.legacyOffspring(a,b,body:.water,seed:22)
         XCTAssertEqual(child.crystals,[0,1]);XCTAssertEqual(child.quantity(of:.aetherShard),4)
         XCTAssertEqual(child.quantity(of:.deepRelic),2);XCTAssertEqual(child.quantity(of:.travelerCharm),2)
         var updated=child;updated.recordFinds(crystals:[0,1],relic:true)
@@ -113,9 +113,9 @@ final class AlphaTenTests:XCTestCase {
         let other=save.inventory.monsters[1]
         XCTAssertTrue(save.select(other.id));XCTAssertEqual(save.coins,4)
         let child=try XCTUnwrap(save.merge(first.id,other.id,seed:123))
-        XCTAssertEqual(save.coins,0);XCTAssertEqual(save.collection.map(\.id),[child.id])
-        XCTAssertFalse(save.inventory.monsters.contains { $0.id==first.id || $0.id==other.id })
-        XCTAssertEqual(Set(child.parents.map(\.id)),[first.id,other.id]);XCTAssertTrue(child.isHybrid)
+        XCTAssertEqual(save.coins,0);XCTAssertEqual(Set(save.collection.map(\.id)),[other.id,child.id])
+        XCTAssertFalse(save.inventory.monsters.contains { $0.id==first.id });XCTAssertTrue(save.inventory.monsters.contains { $0.id==other.id })
+        XCTAssertEqual(Set(child.parents.map(\.id)),[first.id,other.id]);XCTAssertEqual(child.currentForm,.water)
         XCTAssertEqual(child.crystals,Set(0..<12));XCTAssertTrue(child.deepRelic)
         XCTAssertNil(save.merge(child.id,child.id));XCTAssertTrue(save.isValid)
         let data=try JSONEncoder().encode(save)
@@ -126,7 +126,7 @@ final class AlphaTenTests:XCTestCase {
         let defaults=try XCTUnwrap(UserDefaults(suiteName:suite));defer { defaults.removePersistentDomain(forName:suite) }
         var ice=MonsterRecord(form:.ice),stone=MonsterRecord(form:.stone)
         ice.recordFinds(crystals:[0,1,2],relic:false);stone.recordFinds(crystals:[0,1,2],relic:false)
-        var crystal=MonsterRecord.offspring(ice,stone,body:.stone,seed:22)
+        var crystal=MonsterRecord.legacyOffspring(ice,stone,body:.stone,seed:22)
         XCTAssertEqual(crystal.hybridStyle,.crystal);XCTAssertEqual(crystal.passiveName,"Холодный кристалл")
         XCTAssertNotEqual(crystal.tree.first?.id,stone.tree.first?.id)
         let initial=crystal.conductivity

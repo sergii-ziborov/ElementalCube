@@ -57,6 +57,8 @@ public final class Simulation {
     public let shards:[Vec]
     public private(set) var trails:[SurfaceTrail]=[]
     public private(set) var hybridStyle:HybridStyle?
+    public private(set) var creatureForm:CreatureForm?
+    public private(set) var freezesOnContact=false,burnsOnContact=false,heatImmune=false,compresses=false
     public private(set) var evolutionStage=0
     public private(set) var cubeWidth:Float=1.12,cubeHeight:Float=1.12
     private var hopImpulse:Float=1.6
@@ -88,6 +90,7 @@ public final class Simulation {
     public var manaCostMultiplier:Float=1,landingDamageMultiplier:Float=1,fireDamageMultiplier:Float=1
     public func applySkills(of monster:MonsterRecord) {
         guard monster.form==form else { return }
+        creatureForm=monster.currentForm;freezesOnContact=monster.freezesOnContact;burnsOnContact=monster.burnsOnContact;heatImmune=monster.heatImmune;compresses=monster.compresses
         hybridStyle=monster.hybridStyle;evolutionStage=monster.evolutionStage;hopImpulse=monster.hopImpulse
         directionalJumpUnlocked=monster.learned.contains(.jump);doubleJumpUnlocked=monster.learned.contains(.doubleJump);airControlMultiplier=monster.airControlMultiplier
         airManeuverUnlocked=monster.learned.contains(.control)
@@ -134,6 +137,7 @@ public final class Simulation {
     public init(form:ElementForm = .ice,map:WorldMap = .shore) {
         definition=map.definition;shards=definition.shards;fireSources=definition.campfires
         self.form=form;jumpSkill=JumpSkill.initial(for:form);fur=FurPhysics(form:form)
+        let profile=CreatureForm(form);creatureForm=profile;freezesOnContact=profile.freezesOnContact;burnsOnContact=profile.burnsOnContact;heatImmune=profile.heatImmune;compresses=profile.compresses
         platforms=definition.platforms
         waterField=WaterField(platforms:platforms)
         patches=[]
@@ -408,7 +412,7 @@ public final class Simulation {
         if recoveryClock>0.7 { recoveryClock=0;particles.append(Mote(position:Vec(cube.position.x+0.5,cube.position.y+0.2),velocity:Vec(0,0.3),life:0.9,kind:8)) }
     }
     private func updateWaterShape() {
-        guard form == .water else { return }
+        guard form == .water && compresses else { return }
         let foot=cube.position.y-cubeHeight/2
         let low=platforms.contains { p in
             let ceiling=p.y-p.height/2
@@ -434,7 +438,7 @@ public final class Simulation {
         }
     }
     private func updateBurning(dt:Float) {
-        guard !form.fireImmune else { burning=0;burnTime=0;ignitionHeat=0;return }
+        guard !heatImmune else { burning=0;burnTime=0;ignitionHeat=0;return }
         let fraction=inWater ? immersion(cube,size:1.12) : 0
         if fraction>0.12 {
             ignitionHeat=0;burnTime=max(0,burnTime-dt*24*fraction)
@@ -464,12 +468,12 @@ public final class Simulation {
         }
     }
     private func updateMaterials(dt:Float) {
-        let cold=passiveWorking && (form == .ice || hybridStyle == .crystal),fire=(passiveWorking && (form == .fire || hybridStyle == .magma)) || burning>0.35
+        let cold=passiveWorking && freezesOnContact,fire=(passiveWorking && burnsOnContact) || burning>0.35
         for i in frostMarks.indices {
             let p=frostMarks[i].position,touch=abs(p.x-cube.position.x)<0.9 && abs(p.y-cube.position.y)<0.9
             frostMarks[i].cold=max(0,min(1,frostMarks[i].cold+dt*(touch && cold ? 0.9 : (touch && fire ? -2 : -1/30))))
         }
-        if (form == .fire || hybridStyle == .magma) && inWater && !dead {
+        if burnsOnContact && inWater && !dead {
             let fraction=immersion(cube,size:1.12)
             damage(dt*(fire ? 2.4*fireDamageMultiplier : 12)*max(0.35,fraction))
         }

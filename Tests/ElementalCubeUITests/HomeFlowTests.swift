@@ -50,14 +50,14 @@ final class HomeFlowTests:XCTestCase {
         XCTAssertTrue(app.segmentedControls["home.tabs"].waitForExistence(timeout:6))
         app.swipeDown(velocity:.fast);app.segmentedControls.buttons["Эволюция"].tap()
         let merge=app.buttons["merge.begin"];reveal(merge);merge.tap()
-        let choices=app.buttons.matching(NSPredicate(format:"label == %@", "Объединить · 4 эфира"))
-        XCTAssertTrue(choices.firstMatch.waitForExistence(timeout:4));choices.allElementsBoundByIndex.last!.tap()
+        let choices=app.buttons["merge.confirm"]
+        XCTAssertTrue(choices.waitForExistence(timeout:4));choices.tap()
         XCTAssertTrue(app.buttons["merge.result.close"].waitForExistence(timeout:8))
-        XCTAssertTrue(app.staticTexts["Снежок"].exists)
+        XCTAssertTrue(app.staticTexts["Капля"].exists)
         let image=XCTAttachment(screenshot:app.screenshot());image.name="Native hybrid birth";image.lifetime = .keepAlways;add(image)
         app.buttons["merge.result.close"].tap()
         let play=app.buttons["home.play"];reveal(play);play.tap()
-        XCTAssertTrue(app.otherElements["game.cube"].waitForExistence(timeout:10));XCTAssertEqual(worldValue("form"),"ice")
+        XCTAssertTrue(app.otherElements["game.cube"].waitForExistence(timeout:10));XCTAssertEqual(worldValue("form"),"water")
     }
     func testEveryMapOpensItsOwnPhysicalWorld() {
         app.launchArguments=["--ui-testing"];app.launch()

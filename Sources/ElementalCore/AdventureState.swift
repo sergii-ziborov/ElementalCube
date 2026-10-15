@@ -1,7 +1,7 @@
 import Foundation
 
 public enum HybridStyle:String,Codable,CaseIterable {
-    case steam,magma,geyser,crystal,slush,mud,ember,blizzard,mist,dust,resonance
+    case steam,magma,geyser,crystal,slush,mud,ember,blizzard,mist,dust,resonance,boiler
     public init(_ forms:[ElementForm]) {
         let key=Set(forms).map(\.rawValue).sorted().joined(separator:"+")
         self=["fire+ice":Self.steam,"fire+stone":.magma,"fire+water":.geyser,"ice+stone":.crystal,"ice+water":.slush,"stone+water":.mud,"air+fire":.ember,"air+ice":.blizzard,"air+water":.mist,"air+stone":.dust][key] ?? .resonance
@@ -11,13 +11,13 @@ public enum HybridStyle:String,Codable,CaseIterable {
         case .steam:return "Парик";case .magma:return "Лавик";case .geyser:return "Гейзик"
         case .crystal:return "Кристаллик";case .slush:return "Снежок";case .mud:return "Глинка"
         case .ember:return "Искровик";case .blizzard:return "Снежный вихрь";case .mist:return "Туманчик"
-        case .dust:return "Пылинка";case .resonance:return "Резончик"
+        case .dust:return "Пылинка";case .resonance:return "Резончик";case .boiler:return "Горнило"
         }
     }
     public var body:ElementForm {
         switch self {
         case .steam,.geyser,.mud:return .water
-        case .magma,.crystal:return .stone
+        case .magma,.crystal,.boiler:return .stone
         case .slush,.blizzard:return .ice
         case .ember:return .fire
         case .mist,.dust:return .air
@@ -29,12 +29,12 @@ public enum HybridStyle:String,Codable,CaseIterable {
         case .steam:return "Паровая нежность";case .magma:return "Лавовое сердце";case .geyser:return "Пружинка гейзера"
         case .crystal:return "Холодный кристалл";case .slush:return "Снежное касание";case .mud:return "Живая глина"
         case .ember:return "Танец искр";case .blizzard:return "Дыхание метели";case .mist:return "Облачная подушка"
-        case .dust:return "Тихий вихрь";case .resonance:return "Резонанс стихий"
+        case .dust:return "Тихий вихрь";case .resonance:return "Резонанс стихий";case .boiler:return "Минеральная камера"
         }
     }
     public var explanation:String {
         switch self {
-        case .steam:return "Тёплый пушистый пар: пружинит и оставляет лёгкое облачко."
+        case .steam:return "Тёплый пар: пружинит и оставляет лёгкое облачко, без шерсти."
         case .magma:return "Тяжёлое горячее сердце: катится и оставляет тлеющий след."
         case .geyser:return "Весёлая горячая капля: мелкие скачки и пар над водой."
         case .crystal:return "Кристальный камушек: вращается с холодным мерцанием."
@@ -45,6 +45,7 @@ public enum HybridStyle:String,Codable,CaseIterable {
         case .mist:return "Живое облачко: плывёт над водой, оставляя туманный хвостик."
         case .dust:return "Воздушная пылинка: парит и лениво кружится."
         case .resonance:return "Родственные стихии нашли собственный ритм."
+        case .boiler:return "Паровая камера в минеральном теле: тяжёлая форма с отдельной веткой."
         }
     }
 }
@@ -58,6 +59,8 @@ public struct AdventureState:Codable,Equatable {
     public private(set) var claimedRewards:Set<String>=[]
     public private(set) var completedMaps:Set<WorldMap>=[]
     public var map:WorldMap = .shore
+    private var lineageArchive:[MonsterRecord]?=nil
+    public var archivedGenerations:[MonsterRecord] { lineageArchive ?? [] }
     public static let switchPrice=2,recruitPrice=4,mergePrice=4
     public init(inventory:MonsterInventory=MonsterInventory(),migratingLegacy:Bool=false) {
         self.inventory=inventory
@@ -106,17 +109,37 @@ public struct AdventureState:Codable,Equatable {
         guard inventory.evolveSelected() else { return false }
         coins-=cost;return true
     }
-    @discardableResult public mutating func merge(_ first:UUID,_ second:UUID,seed:UInt64=UInt64.random(in:1...UInt64.max))->MonsterRecord? {
-        guard started,first != second,owned.contains(first),owned.contains(second),coins>=Self.mergePrice,
+    public func prepareMerge(_ first:UUID,_ second:UUID)->MergePlan? {
+        guard started,first != second,owned.contains(first),owned.contains(second),
               let a=inventory.monsters.first(where:{ $0.id==first }),let b=inventory.monsters.first(where:{ $0.id==second }) else { return nil }
-        let style=HybridStyle([a.form,b.form])
-        let child=MonsterRecord.offspring(a,b,body:style == .resonance ? a.form : style.body,seed:seed)
-        inventory.replaceParents([first,second],with:child)
-        coins-=Self.mergePrice;owned.subtract([first,second]);owned.insert(child.id)
+        return MergePlan(a,b)
+    }
+    public func canCommit(_ plan:MergePlan,pins:Set<GenePin>=[])->Bool {
+        started && coins>=Self.mergePrice && owned.contains(plan.receiver.id) && owned.contains(plan.donor.id) &&
+        inventory.monsters.contains(plan.receiver) && inventory.monsters.contains(plan.donor) &&
+        (try? InheritanceEngine.validate(plan,pins:pins)) != nil
+    }
+    @discardableResult public mutating func commitMerge(_ plan:MergePlan,pins:Set<GenePin>=[],seed:UInt64?=nil)->MonsterRecord? {
+        // A repeated local confirmation returns the stored outcome, never a
+        // new draw or a second payment. Retired outcomes remain archive-only.
+        if let previous=(inventory.monsters+archivedGenerations).first(where:{ $0.inheritance?.operationID==plan.id }) {
+            guard previous.inheritance?.receiver==plan.a,previous.inheritance?.donor==plan.b else { return nil };return previous
+        }
+        guard canCommit(plan,pins:pins),let genome=try? InheritanceEngine.draw(plan,pins:pins,seed:seed),genome.isValid else { return nil }
+        let child=MonsterRecord.metamorphosed(plan,genome:genome)
+        guard child.geneticsValid else { return nil }
+        if lineageArchive == nil { lineageArchive=[] };lineageArchive!.append(plan.receiver)
+        inventory.replaceParents([plan.receiver.id],with:child)
+        coins-=Self.mergePrice;owned.remove(plan.receiver.id);owned.insert(child.id)
         return child
     }
+    @discardableResult public mutating func merge(_ first:UUID,_ second:UUID,seed:UInt64?=nil)->MonsterRecord? {
+        guard let plan=prepareMerge(first,second) else { return nil };return commitMerge(plan,seed:seed)
+    }
     public var isValid:Bool {
-        inventory.isValid && coins>=0 && owned.isSubset(of:Set(inventory.monsters.map(\.id))) && (!started || owned.contains(inventory.selectedID))
+        let active=Set(inventory.monsters.map(\.id)),retired=Set(archivedGenerations.map(\.id))
+        return inventory.isValid && coins>=0 && owned.isSubset(of:active) && (!started || owned.contains(inventory.selectedID)) &&
+        retired.count==archivedGenerations.count && active.isDisjoint(with:retired) && archivedGenerations.allSatisfy { $0.geneticsValid }
     }
 }
 

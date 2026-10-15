@@ -11,10 +11,12 @@
 		0B68F27132DD33DE57F4C35E /* HapticFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = B173F3C3F688479006701C5F /* HapticFeedback.swift */; };
 		2CDB6CD0DD516F07652E112A /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F4D79D741B81C81E5829C57 /* HomeView.swift */; };
 		3CBA114B3AEB50B9C91AE17D /* MetalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 827340D774BED81ABE7C2E5D /* MetalView.swift */; };
+		3CFC9B6968011CF84E4FCB20 /* MetamorphosisTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F8A17F89C63959F7EE89082 /* MetamorphosisTests.swift */; };
 		3E586F77A620315D608515E2 /* BoilingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FEE2D03440ACC0A8C3900CAD /* BoilingTests.swift */; };
 		46B2D0008C4E2CB113E37EDD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = DCA21A3F0F39D6F8AF5FB880 /* PrivacyInfo.xcprivacy */; };
 		4AC2C2884C638BF8C8251A98 /* PortraitAnimationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5246294C5A43CEC72A790ACE /* PortraitAnimationTests.swift */; };
 		5278B1EC015B920E61D8FB9B /* HomeFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A8880634436BF2F6E5FF0B2 /* HomeFlowTests.swift */; };
+		6FE515883904C1D0FDA0B0D0 /* MetamorphosisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 755845CDEA8FDC3990610492 /* MetamorphosisView.swift */; };
 		821A39A544EF4D8151CD918C /* Shaders.metal.txt in Resources */ = {isa = PBXBuildFile; fileRef = 97261F415D73C9626802614D /* Shaders.metal.txt */; };
 		889D5A0ED68D0E9649667918 /* Geometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC396B4A3B7C80D027BB9ACF /* Geometry.swift */; };
 		937F6D090A9349ACAC0090C7 /* Renderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CFD35AE5C340B06920CFE10 /* Renderer.swift */; };
@@ -44,6 +46,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0F8A17F89C63959F7EE89082 /* MetamorphosisTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetamorphosisTests.swift; sourceTree = "<group>"; };
 		1548F9D511700BF8A3E44CF7 /* ElementalCube-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "ElementalCube-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		1A8880634436BF2F6E5FF0B2 /* HomeFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeFlowTests.swift; sourceTree = "<group>"; };
 		1D6BD74DA9868A32810EBD74 /* SkillArt */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SkillArt; path = Sources/ElementalCube/SkillArt; sourceTree = SOURCE_ROOT; };
@@ -56,6 +59,7 @@
 		559760D922550D363782D9BA /* ElementalCube */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ElementalCube; path = .; sourceTree = SOURCE_ROOT; };
 		5F4D79D741B81C81E5829C57 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		655FEDACA00A1414E978902E /* ElementalCubeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElementalCubeApp.swift; sourceTree = "<group>"; };
+		755845CDEA8FDC3990610492 /* MetamorphosisView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetamorphosisView.swift; sourceTree = "<group>"; };
 		827340D774BED81ABE7C2E5D /* MetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalView.swift; sourceTree = "<group>"; };
 		8C34F4DA1110D88BE16AE28B /* SkillArtwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillArtwork.swift; sourceTree = "<group>"; };
 		8DC2A708111F3151AD170F1B /* SkillTreeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillTreeTests.swift; sourceTree = "<group>"; };
@@ -90,6 +94,7 @@
 				FEE2D03440ACC0A8C3900CAD /* BoilingTests.swift */,
 				32855687569320763186F2E9 /* DirectInteractionTests.swift */,
 				1A8880634436BF2F6E5FF0B2 /* HomeFlowTests.swift */,
+				0F8A17F89C63959F7EE89082 /* MetamorphosisTests.swift */,
 				5246294C5A43CEC72A790ACE /* PortraitAnimationTests.swift */,
 				8DC2A708111F3151AD170F1B /* SkillTreeTests.swift */,
 				3838B3A949861E097C0151E8 /* WaterRenderingTests.swift */,
@@ -134,6 +139,7 @@
 				B173F3C3F688479006701C5F /* HapticFeedback.swift */,
 				5F4D79D741B81C81E5829C57 /* HomeView.swift */,
 				827340D774BED81ABE7C2E5D /* MetalView.swift */,
+				755845CDEA8FDC3990610492 /* MetamorphosisView.swift */,
 				45FDB19C14061EC60CA49FFE /* MonsterInventoryView.swift */,
 				E83A3B472484F13731FA17FA /* MonsterPortrait.swift */,
 				F13F256399449FE2A0782472 /* MonsterPortraitGallery.swift */,
@@ -266,6 +272,7 @@
 				0B68F27132DD33DE57F4C35E /* HapticFeedback.swift in Sources */,
 				2CDB6CD0DD516F07652E112A /* HomeView.swift in Sources */,
 				3CBA114B3AEB50B9C91AE17D /* MetalView.swift in Sources */,
+				6FE515883904C1D0FDA0B0D0 /* MetamorphosisView.swift in Sources */,
 				D7A6B962EA6F8411A6046CB4 /* MonsterInventoryView.swift in Sources */,
 				93C6EB43F0D05A8208CA17C0 /* MonsterPortrait.swift in Sources */,
 				DF584476488943933C2C2721 /* MonsterPortraitGallery.swift in Sources */,
@@ -282,6 +289,7 @@
 				3E586F77A620315D608515E2 /* BoilingTests.swift in Sources */,
 				F2A6F9FCD391A1960ACCF7A7 /* DirectInteractionTests.swift in Sources */,
 				5278B1EC015B920E61D8FB9B /* HomeFlowTests.swift in Sources */,
+				3CFC9B6968011CF84E4FCB20 /* MetamorphosisTests.swift in Sources */,
 				4AC2C2884C638BF8C8251A98 /* PortraitAnimationTests.swift in Sources */,
 				BF79B5EAA44AE6B7EEB62B54 /* SkillTreeTests.swift in Sources */,
 				D91EC89ED0F941130850CAB6 /* WaterRenderingTests.swift in Sources */,
@@ -424,7 +432,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = XMS5ZC28UJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ElementalCube;
@@ -486,7 +494,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = XMS5ZC28UJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ElementalCube;

@@ -11,7 +11,7 @@ public enum SkillCatalog {
     public static let elemental:[SkillNode.Kind]=[.passive,.mastery,.affinity,.resilience]
     static func tree(for m:MonsterRecord)->[SkillNode] {
         func node(_ kind:SkillNode.Kind,_ title:String,_ summary:String,_ text:String,_ cost:Int,_ prerequisite:SkillNode.Kind?)->SkillNode {
-            SkillNode(id:m.treeIdentity+"/"+kind.rawValue,kind:kind,title:title,explanation:text,summary:summary,symbol:kind == .jump || kind == .momentum ? "arrow.up.right" : m.form.symbol,cost:cost,prerequisite:prerequisite.map { m.treeIdentity+"/"+$0.rawValue })
+            SkillNode(id:m.treeIdentity+"/"+kind.rawValue,kind:kind,title:title,explanation:text,summary:summary,symbol:kind == .jump || kind == .momentum ? "arrow.up.right" : m.form.symbol,cost:m.inheritedPotential.contains(kind) && !m.learned.contains(kind) ? 0 : cost,prerequisite:prerequisite.map { m.treeIdentity+"/"+$0.rawValue })
         }
         let mobility:[ElementForm:String]=[.ice:"Ледяной разбег",.water:"Упругая капля",.air:"Попутный ветер",.stone:"Разгон валуна",.fire:"Искра ввысь"]
         var mastery:(String,String,String),affinity:(String,String,String)

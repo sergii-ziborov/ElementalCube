@@ -27,6 +27,8 @@ public enum MonsterItem:String,Codable,CaseIterable,Identifiable {
 }
 public struct MonsterAncestor:Codable,Equatable {
     public var id:UUID,name:String,form:ElementForm
+    public var morphology:CreatureForm?=nil
+    public var generation:Int?=nil
 }
 /// Progress belongs to an individual, never to a global element-type switch.
 public struct MonsterRecord:Identifiable,Codable,Equatable {
@@ -40,15 +42,26 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
     public private(set) var skillPoints:Int
     public private(set) var equippedCharm:MonsterItem?
     public private(set) var evolutionStage:Int=0
+    public private(set) var morphology:CreatureForm?=nil
+    public private(set) var lineageID:UUID
+    public private(set) var generation:Int=0
+    public private(set) var inheritance:InheritedGenome?=nil
+    private var passportKinds:[SkillNode.Kind]?=nil
     private var aetherAmount=0,relicAmount=0,travelerAmount=1
     public var appearanceSeed:UInt64 {
         withUnsafeBytes(of:id.uuid) { $0.reduce(UInt64(1469598103934665603)) { ($0 ^ UInt64($1)) &* 1099511628211 } }
     }
-    private enum CodingKeys:String,CodingKey { case id,name,form,parents,learned,crystals,deepRelic,skillPoints,equippedCharm,evolutionStage,aetherAmount,relicAmount,travelerAmount }
+    private enum CodingKeys:String,CodingKey { case id,name,form,parents,learned,crystals,deepRelic,skillPoints,equippedCharm,evolutionStage,aetherAmount,relicAmount,travelerAmount,morphology,lineageID,generation,inheritance,passportKinds }
     public init(from decoder:Decoder) throws {
         let c=try decoder.container(keyedBy:CodingKeys.self)
         id=try c.decode(UUID.self,forKey:.id);name=try c.decode(String.self,forKey:.name);form=try c.decode(ElementForm.self,forKey:.form)
         parents=try c.decodeIfPresent([MonsterAncestor].self,forKey:.parents) ?? []
+        morphology=try c.decodeIfPresent(CreatureForm.self,forKey:.morphology)
+        if morphology == nil && parents.isEmpty { morphology=CreatureForm(form) }
+        lineageID=try c.decodeIfPresent(UUID.self,forKey:.lineageID) ?? id
+        generation=try c.decodeIfPresent(Int.self,forKey:.generation) ?? (parents.isEmpty ? 0 : 1)
+        inheritance=try c.decodeIfPresent(InheritedGenome.self,forKey:.inheritance)
+        passportKinds=try c.decodeIfPresent([SkillNode.Kind].self,forKey:.passportKinds)
         learned=try c.decode(Set<SkillNode.Kind>.self,forKey:.learned)
         crystals=try c.decode(Set<Int>.self,forKey:.crystals);deepRelic=try c.decode(Bool.self,forKey:.deepRelic)
         skillPoints=try c.decode(Int.self,forKey:.skillPoints);equippedCharm=try c.decodeIfPresent(MonsterItem.self,forKey:.equippedCharm)
@@ -58,29 +71,19 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
         travelerAmount=max(0,try c.decodeIfPresent(Int.self,forKey:.travelerAmount) ?? 1)
     }
     public init(form:ElementForm,name:String?=nil,id:UUID=UUID(),parents:[MonsterAncestor]=[]) {
-        self.id=id;self.name=name ?? form.name;self.form=form;self.parents=parents
+        self.id=id;self.name=name ?? form.name;self.form=form;self.parents=parents;lineageID=id
+        morphology=parents.isEmpty ? CreatureForm(form) : nil
         learned=[.passive];crystals=[];deepRelic=false;skillPoints=1;equippedCharm=nil
     }
-    public static func offspring(_ first:Self,_ second:Self,body:ElementForm,seed:UInt64=UInt64.random(in:1...UInt64.max))->Self {
-        var child=Self(form:body,parents:[first,second].map { MonsterAncestor(id:$0.id,name:$0.name,form:$0.form) })
-        child.name=child.hybridStyle?.name ?? "Пушистый микс"
-        child.crystals=first.crystals.union(second.crystals);child.deepRelic=first.deepRelic || second.deepRelic
-        child.aetherAmount=first.aetherAmount+second.aetherAmount;child.relicAmount=first.relicAmount+second.relicAmount;child.travelerAmount=first.travelerAmount+second.travelerAmount
-        child.skillPoints=first.skillPoints+second.skillPoints
-        child.equippedCharm=first.equippedCharm ?? second.equippedCharm
-        child.evolutionStage=max(first.evolutionStage,second.evolutionStage)
-        var random=seed==0 ? 1 : seed
-        func inherits()->Bool { random ^= random<<13;random ^= random>>7;random ^= random<<17;return random&1==0 }
-        for kind in [SkillNode.Kind.jump,.momentum,.mastery,.doubleJump,.control,.affinity,.resilience] {
-            let a=first.learned.contains(kind) && inherits(),b=second.learned.contains(kind) && inherits()
-            if a || b { child.learned.insert(kind) }
-        }
-        // An inherited advanced technique brings its prerequisite chain.
-        if child.learned.contains(.control) { child.learned.insert(.doubleJump) }
-        if child.learned.contains(.doubleJump) { child.learned.insert(.momentum) }
-        if child.learned.contains(.momentum) { child.learned.insert(.jump) }
-        if child.learned.contains(.resilience) { child.learned.insert(.affinity) }
-        if child.learned.contains(.affinity) { child.learned.insert(.mastery) }
+    static func metamorphosed(_ plan:MergePlan,genome:InheritedGenome)->Self {
+        let first=plan.receiver,second=plan.donor
+        var child=Self(form:plan.result.body,name:plan.result.name,parents:[first,second].map { MonsterAncestor(id:$0.id,name:$0.name,form:$0.form,morphology:$0.currentForm,generation:$0.generation) })
+        child.morphology=plan.result;child.lineageID=first.lineageID;child.generation=first.generation+1;child.inheritance=genome
+        // A donor passes an imprint, never a second copy of items or points.
+        child.crystals=first.crystals;child.deepRelic=first.deepRelic;child.aetherAmount=first.aetherAmount
+        child.relicAmount=first.relicAmount;child.travelerAmount=first.travelerAmount;child.skillPoints=first.skillPoints
+        child.equippedCharm=first.equippedCharm;child.evolutionStage=first.evolutionStage
+        child.activateInheritedPotential()
         return child
     }
     @discardableResult public mutating func evolve()->Bool {
@@ -90,8 +93,40 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
     public var evolutionRequirement:Int { (evolutionStage+1)*3 }
     public var evolutionCost:Int { (evolutionStage+1)*4 }
     public var stageName:String { ["Крошка","Росток","Искатель","Хранитель"][evolutionStage] }
-    public var hybridStyle:HybridStyle? { parents.isEmpty ? nil : HybridStyle(parents.map(\.form)) }
-    public var secondaryForm:ElementForm? { parents.first { $0.form != form }?.form ?? (parents.isEmpty ? nil : form) }
+    public var currentForm:CreatureForm { morphology ?? CreatureForm.legacy(form,style:hybridStyle) }
+    public var hybridStyle:HybridStyle? { if let morphology=morphology { return morphology.style };return parents.isEmpty ? nil : HybridStyle(parents.map(\.form)) }
+    public var secondaryForm:ElementForm? { if let morphology=morphology { return morphology.secondaryVisual };return parents.first { $0.form != form }?.form ?? (parents.isEmpty ? nil : form) }
+    public var masteryChannel:MasteryChannel { if morphology == nil && hybridStyle == .crystal { return .cold };return currentForm.masteryChannel }
+    public var freezesOnContact:Bool { morphology?.freezesOnContact ?? (form == .ice || hybridStyle == .crystal) }
+    public var burnsOnContact:Bool { morphology?.burnsOnContact ?? (form == .fire || hybridStyle == .magma) }
+    public var heatImmune:Bool { morphology?.heatImmune ?? (form.fireImmune || hybridStyle == .steam) }
+    public var compresses:Bool { morphology?.compresses ?? (form == .water) }
+    public var inheritanceLocks:Int { evolutionStage>=3 ? 2 : (evolutionStage>=1 ? 1 : 0) }
+    public var inheritedPotential:Set<SkillNode.Kind> { inheritance?.potential ?? [] }
+    public var availableImprints:[SkillNode.Kind] {
+        [.jump,.mastery,.momentum,.doubleJump,.control,.affinity,.resilience].filter { learned.contains($0) || inheritedPotential.contains($0) }
+    }
+    public var inheritanceSelection:[SkillNode.Kind] { passportKinds ?? Array(availableImprints.prefix(4)) }
+    @discardableResult public mutating func setInheritanceSelection(_ kinds:[SkillNode.Kind])->Bool {
+        guard kinds.count<=4,Set(kinds).count==kinds.count,kinds.allSatisfy({ availableImprints.contains($0) }) else { return false }
+        passportKinds=kinds;return true
+    }
+    private mutating func activateInheritedPotential() {
+        var changed=true
+        while changed {
+            changed=false
+            for node in tree where inheritedPotential.contains(node.kind) && !learned.contains(node.kind) {
+                if node.prerequisite.map({ id in tree.contains { $0.id==id && learned.contains($0.kind) } }) ?? true { learned.insert(node.kind);changed=true }
+            }
+        }
+    }
+    var geneticsValid:Bool {
+        guard generation>=0,generation<10000,morphology.map({ $0.body==form }) ?? true,
+              inheritanceSelection.count<=4,Set(inheritanceSelection).count==inheritanceSelection.count,
+              inheritanceSelection.allSatisfy({ availableImprints.contains($0) }) else { return false }
+        guard let genome=inheritance else { return true }
+        return genome.isValid && morphology==genome.resultForm && parents.count==2 && parents[0].id==genome.receiver.ownerID && parents[1].id==genome.donor.ownerID && lineageID==genome.receiver.lineageID && generation==genome.receiver.generation+1
+    }
     public static func randomStarter()->Self {
         let form=ElementForm.allCases.randomElement()!
         let names:[ElementForm:[String]]=[.ice:["Снежик","Пломбир","Фростик"],.water:["Булька","Капелька","Лужик"],.air:["Зефир","Пушок","Вжух"],.stone:["Галька","Крош","Гранитик"],.fire:["Искорка","Уголёк","Огоняш"]]
@@ -104,8 +139,8 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
         if let item=item,(!item.isEquipment || quantity(of:item)==0) { return false }
         equippedCharm=item;return true
     }
-    public var isHybrid:Bool { !parents.isEmpty }
-    public var typeName:String { isHybrid ? parents.map { $0.form.name }.joined(separator:" + ") : form.name }
+    public var isHybrid:Bool { morphology.map { $0.style != nil } ?? !parents.isEmpty }
+    public var typeName:String { morphology?.name ?? (hybridStyle?.name ?? form.name) }
     public var treeIdentity:String { id.uuidString+"/"+form.rawValue+"/"+parents.map { $0.id.uuidString }.joined(separator:"+") }
     public var tree:[SkillNode] { SkillCatalog.tree(for:self) }
     // Used only to derive truthful before/after descriptions; purchases still
@@ -120,7 +155,7 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
         return node.prerequisite.map { prerequisite in tree.contains { $0.id==prerequisite && learned.contains($0.kind) } } ?? true
     }
     @discardableResult public mutating func learn(_ node:SkillNode)->Bool {
-        guard canLearn(node) else { return false };skillPoints-=node.cost;learned.insert(node.kind);return true
+        guard canLearn(node) else { return false };skillPoints-=node.cost;learned.insert(node.kind);activateInheritedPotential();return true
     }
     /// Each world crystal awards this individual once, including after restarting.
     public mutating func recordFinds(crystals found:Set<Int>,relic:Bool) {
@@ -136,6 +171,8 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
     public var masteryRanks:Int { (learned.contains(.mastery) ? 1 : 0)+(learned.contains(.affinity) ? 1 : 0) }
     public var passiveName:String { hybridStyle?.passiveName ?? form.ability }
     public var passiveExplanation:String {
+        if morphology == .steam { return "Тёплая паровая оболочка плавает и не загорается от обычного огня. Ледяное касание и чистое пламя прежних форм недоступны. Не просачивается сквозь узкую щель, как жидкая Капля. Пассивная способность не расходует ману." }
+        if morphology == .boiler { return "Паровое ядро в тяжёлой минеральной камере. Тонет и катится по дну, не замораживает воду и не поджигает касанием. Обычный огонь не поджигает оболочку; удар и жёсткая посадка всё ещё опасны." }
         guard let style=hybridStyle else { return form.explanation }
         let extra=style == .crystal ? " Холод постепенно замораживает воду вокруг камня." : (style == .magma ? " Жар обжигает траву и дерево, а в воде испарение расходует здоровье." : "")
         return style.explanation+" "+form.explanation+extra
@@ -177,6 +214,9 @@ public struct MonsterInventory:Codable,Equatable {
     @discardableResult public mutating func equip(_ item:MonsterItem?)->Bool {
         guard let i=monsters.firstIndex(where:{ $0.id==selectedID }) else { return false };return monsters[i].equip(item)
     }
+    @discardableResult public mutating func setInheritanceSelection(_ kinds:[SkillNode.Kind])->Bool {
+        guard let i=monsters.firstIndex(where:{ $0.id==selectedID }) else { return false };return monsters[i].setInheritanceSelection(kinds)
+    }
     public mutating func recordFinds(crystals:Set<Int>,relic:Bool) {
         guard let i=monsters.firstIndex(where:{ $0.id==selectedID }) else { return };monsters[i].recordFinds(crystals:crystals,relic:relic)
     }
@@ -192,7 +232,7 @@ public struct MonsterInventory:Codable,Equatable {
         monsters.removeAll { ids.contains($0.id) };monsters.append(child);selectedID=child.id
     }
     public var isValid:Bool {
-        !monsters.isEmpty && Set(monsters.map(\.id)).count==monsters.count && monsters.contains { $0.id==selectedID } && monsters.allSatisfy { $0.skillPoints>=0 && $0.learned.contains(.passive) && ($0.equippedCharm.map { $0.isEquipment } ?? true) }
+        !monsters.isEmpty && Set(monsters.map(\.id)).count==monsters.count && monsters.contains { $0.id==selectedID } && monsters.allSatisfy { $0.skillPoints>=0 && $0.learned.contains(.passive) && $0.geneticsValid && ($0.equippedCharm.map { $0.isEquipment } ?? true) }
     }
 }
 public final class MonsterInventoryStore {

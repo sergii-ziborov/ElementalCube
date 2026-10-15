@@ -64,6 +64,7 @@ struct MonsterSkillTree:View {
     }
     private func skill(_ node:SkillNode)->some View {
         let known=monster.learned.contains(node.kind),available=monster.canLearn(node)
+        let inherited=monster.inheritedPotential.contains(node.kind)
         let prerequisite=node.prerequisite.flatMap { id in monster.tree.first { $0.id==id } }
         let locked=prerequisite.map { !monster.learned.contains($0.kind) } ?? false
         return Button { select(node) } label: {
@@ -80,7 +81,7 @@ struct MonsterSkillTree:View {
                     .foregroundStyle(palette.paper.opacity(locked ? 0.78 : 1))
                 Text(node.summary).font(.system(size:10)).lineSpacing(2).multilineTextAlignment(.center).lineLimit(3).frame(maxWidth:.infinity,minHeight:35)
                     .foregroundStyle(palette.paper.opacity(0.55))
-                Text(known ? "Изучено" : (locked ? "После предыдущего" : (available ? "Изучить · \(node.cost) очк." : "Нужно \(node.cost) очк.")))
+                Text(known ? (inherited ? "Унаследован" : "Изучено") : (locked ? (inherited ? "Ждёт основы" : "После предыдущего") : (available ? "Изучить · \(node.cost) очк." : "Нужно \(node.cost) очк.")))
                     .font(.system(size:10,weight:known || available ? .semibold : .regular)).foregroundStyle(known || available ? palette.accent : palette.paper.opacity(0.4))
                     .padding(.horizontal,9).frame(height:25).background(palette.accent.opacity(known ? 0.12 : (available ? 0.08 : 0.025)),in:Capsule())
             }.padding(12).frame(maxWidth:.infinity,minHeight:230,alignment:.top)
@@ -141,6 +142,9 @@ struct SkillDetailView:View {
                     }
                 }.padding(16).background(palette.paper.opacity(0.04),in:RoundedRectangle(cornerRadius:18)).accessibilityIdentifier("skill.effects")
                 Text(node.explanation).font(.system(size:14)).lineSpacing(6).foregroundStyle(palette.paper.opacity(0.75)).fixedSize(horizontal:false,vertical:true)
+                if monster.inheritedPotential.contains(kind) {
+                    Text(known ? "Приём сохранён в наследии этого поколения." : "Потенциал сохранён в наследии. После изучения нужных основ он раскроется без дополнительных очков.").font(.system(size:12)).lineSpacing(4).foregroundStyle(palette.accent)
+                }
                 if kind != .jump && kind != .doubleJump { Label("Действует автоматически · не расходует ману",systemImage:"checkmark.seal").font(.system(size:11)).foregroundStyle(palette.accent.opacity(0.8)) }
                 if !known {
                     VStack(alignment:.leading,spacing:9) {

@@ -67,6 +67,7 @@ final class GameSession: ObservableObject {
         let physicsPreview=args.contains { $0.hasPrefix("--preview-physics-") }
         let previewForm=physicsPreview ? (args.contains("--preview-physics-crate") ? ElementForm.water : (args.contains("--preview-physics-bridge") ? .stone : .ice)) : (furPreview ? ElementForm.ice : ElementForm.allCases.first { args.contains("--preview-"+$0.rawValue) })
         form=previewForm ?? ElementForm(rawValue:UserDefaults.standard.string(forKey:"elementalcube.form") ?? "ice") ?? .ice
+        if args.contains("--preview-metamorphosis") { form = .ice }
         if !visualPreview && !args.contains("--ui-testing") {
             adventure=adventureStore.load(fallback:inventoryStore.load(selectedForm:form));form=inventory.selected.form
         } else {
@@ -74,14 +75,22 @@ final class GameSession: ObservableObject {
             adventure=AdventureState(inventory:MonsterInventory(selectedForm:form))
         }
         starter=inventory.selected
-        let previewHome=args.contains("--preview-home") || args.contains("--preview-lab")
+        let previewHome=args.contains("--preview-home") || args.contains("--preview-lab") || args.contains("--preview-metamorphosis")
         home = previewHome || args.contains("--preview-start") || (!visualPreview && (!args.contains("--ui-testing") || args.contains("--onboarding")))
         if (!home || previewHome) && !adventure.started { _=adventure.begin(with:inventory.selected) }
-        if args.contains("--ui-testing-rich") || args.contains("--preview-lab") {
+        if args.contains("--ui-testing-rich") || args.contains("--preview-lab") || args.contains("--preview-metamorphosis") {
             for map in WorldMap.allCases { adventure.map=map;adventure.recordFinds(Set(0..<12),relic:true);adventure.finishMap() }
             adventure.map = .shore
         }
         if args.contains("--preview-lab") { homeTab = .laboratory;_ = adventure.evolve() }
+        if args.contains("--preview-metamorphosis") {
+            let receiver=inventory.selectedID,donor=inventory.monsters.first { $0.form == .fire }!.id
+            for kind in [SkillNode.Kind.jump,.momentum,.doubleJump,.control,.mastery,.affinity,.resilience] { _=inventory.learn(inventory.selected.tree.first { $0.kind==kind }!,monsterID:receiver) }
+            _=adventure.evolve();_=inventory.setInheritanceSelection([.mastery,.affinity,.resilience,.jump])
+            _=adventure.select(donor);adventure.recordFinds(Set(0..<12),relic:false)
+            for kind in [SkillNode.Kind.jump,.momentum,.doubleJump,.control,.mastery,.affinity,.resilience] { _=inventory.learn(inventory.selected.tree.first { $0.kind==kind }!,monsterID:donor) }
+            _=inventory.setInheritanceSelection([.jump,.mastery,.momentum,.affinity]);_=adventure.select(receiver);homeTab = .laboratory
+        }
         if args.contains("--preview-glacier") { adventure.map = .glacier }
         if args.contains("--preview-forge") { adventure.map = .forge }
         if args.contains("--preview-gesture"),let node=inventory.selected.tree.first(where:{ $0.kind == .jump }) { _=inventory.learn(node,monsterID:inventory.selectedID) }
@@ -283,9 +292,18 @@ final class GameSession: ObservableObject {
     }
     @discardableResult func merge(with second:UUID)->MonsterRecord? {
         saveInventory()
-        guard let child=adventure.merge(inventory.selectedID,second) else { return nil }
-        form=child.form;persistAdventure();reset(preserveFinds:false)
-        homeMessage="Из двух историй родился \(child.name).";return child
+        guard let plan=adventure.prepareMerge(inventory.selectedID,second) else { return nil }
+        return commitMerge(plan)
+    }
+    @discardableResult func commitMerge(_ plan:MergePlan,pins:Set<GenePin>=[])->MonsterRecord? {
+        guard let child=adventure.commitMerge(plan,pins:pins) else { return nil }
+        persistAdventure()
+        if inventory.selectedID==child.id { form=child.form;reset(preserveFinds:false) }
+        homeMessage="Новое поколение: \(child.name). Донор остался с тобой.";return child
+    }
+    @discardableResult func setInheritanceSelection(_ kinds:[SkillNode.Kind],owner:UUID)->Bool {
+        guard owner==inventory.selectedID,inventory.setInheritanceSelection(kinds) else { return false }
+        persistAdventure();return true
     }
     @discardableResult func learn(_ node:SkillNode,for id:UUID)->Bool {
         guard inventory.learn(node,monsterID:id) else { return false }

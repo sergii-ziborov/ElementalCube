@@ -155,14 +155,36 @@ enum Geometry {
     }
     static func character(form:ElementForm,secondary:ElementForm?,seed:UInt64)->Mesh {
         var mesh=cube(form:form)
+        let steam=form == .water && secondary == .fire
         let variation=Float(seed%29)/28-0.5,second=secondary.flatMap { cube(form:$0).vertices.first?.color }
         for i in mesh.vertices.indices {
             let p=mesh.vertices[i].position
-            if let second=second { mesh.vertices[i].color=mix(mesh.vertices[i].color,second,0.1+(sin(p.x*6+p.y*4)+1)*0.12) }
+            if steam {
+                mesh.vertices[i].color=mix(tint(0xb7dce8),tint(0xfcfff9),max(0,min(1,p.y+0.65)))
+                let swell:Float=(sin(p.x*15+p.z*7)*sin(p.y*12-p.z*8)+1)*0.012
+                mesh.vertices[i].position += mesh.vertices[i].normal*SIMD4(repeating:swell)*SIMD4(1,1,1,0)
+            } else if let second=second { mesh.vertices[i].color=mix(mesh.vertices[i].color,second,0.1+(sin(p.x*6+p.y*4)+1)*0.12) }
             mesh.vertices[i].color *= SIMD4(1+variation*0.1,1-variation*0.03,1+variation*0.06,1)
             if form == .water { mesh.vertices[i].position *= SIMD4(waterScale,waterScale,waterScale,1) }
         }
         return mesh
+    }
+    static func steam(time:Float)->Mesh {
+        var m=Mesh()
+        // Broad translucent curls, separate from Ice's strands and liquid gleam.
+        for i in 0..<5 {
+            let phase=(time*0.3+Float(i)*0.2).truncatingRemainder(dividingBy:1)
+            let side:Float=i%2==0 ? -1 : 1
+            for j in 0..<18 {
+                let a=Float(j)/18,b=Float(j+1)/18
+                func point(_ t:Float)->V3 {
+                    V3(side*(0.38+sin(t*5+phase*4+Float(i))*0.10),0.35+phase*0.5+t*0.3,0.10+Float(i%3)*0.16)
+                }
+                let alpha=(1-phase)*sin(a*Float.pi)*0.35
+                m.line(point(a),point(b),width:0.035+sin(a*Float.pi)*0.045,color:tint(0xf4fffc,alpha))
+            }
+        }
+        return m
     }
     static func elementDetail(form:ElementForm,time:Float)->Mesh {
         var m=Mesh()

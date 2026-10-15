@@ -6,7 +6,8 @@ struct HomeView:View {
     @State private var picked:MonsterRecord?
     @State private var recruiting=false
     @State private var secondID:UUID?
-    @State private var confirmMerge=false
+    @State private var mergePreparation:MergePlan?
+    @State private var pendingBirth:MonsterRecord?
     @State private var newborn:MonsterRecord?
     private var monster:MonsterRecord { session.adventure.started ? session.inventory.selected : session.starter }
     private var partner:MonsterRecord? { session.adventure.collection.first { $0.id==secondID && $0.id != monster.id } ?? session.adventure.collection.first { $0.id != monster.id } }
@@ -59,12 +60,15 @@ struct HomeView:View {
         .sheet(isPresented:$session.forms) { MonsterInventoryView(session:session) }
         .sheet(item:$picked) { candidate in pickDetail(candidate) }
         .sheet(item:$newborn) { child in birth(child) }
-        .confirmationDialog("Два кубика станут одним новым",isPresented:$confirmMerge,titleVisibility:.visible) {
-            Button("Объединить · 4 эфира",role:.destructive) {
-                if let partner=partner { newborn=session.merge(with:partner.id) }
-            }
-        } message: {
-            Text("Оба родителя покинут коллекцию. Материалы и свободные очки перейдут потомку. Каждый изученный приём наследуется с шансом 50% от каждого родителя; результат сохранится сразу.")
+        .sheet(item:$mergePreparation,onDismiss:{
+            if let child=pendingBirth { pendingBirth=nil;newborn=child }
+        }) { plan in
+            MergePreparationView(session:session,plan:plan) { child in pendingBirth=child;mergePreparation=nil }
+                #if os(iOS)
+                .presentationDetents([.large]).presentationDragIndicator(.visible)
+                #else
+                .frame(width:620,height:760)
+                #endif
         }
     }
     private var wallet:some View {
@@ -102,7 +106,7 @@ struct HomeView:View {
         VStack(spacing:8) {
             MonsterPortrait(form:cube.form,secondary:cube.secondaryForm,seed:cube.appearanceSeed,stage:cube.evolutionStage,celebration:cube.evolutionStage,interactive:true).frame(width:compact ? 110 : 155,height:compact ? 124 : 174).accessibilityIdentifier("home.portrait")
             Text(cube.name).font(.system(size:compact ? 26 : 32,weight:.medium,design:.serif))
-            Text(cube.hybridStyle?.name ?? cube.form.name).font(.system(size:11,weight:.semibold)).tracking(1.5).opacity(0.5)
+            Text(cube.typeName+(cube.generation>0 ? " · поколение \(cube.generation)" : "")).font(.system(size:11,weight:.semibold)).tracking(1.5).opacity(0.5)
             HStack(spacing:6) {
                 ForEach(0..<3,id:\.self) { i in Image(systemName:i<cube.evolutionStage ? "star.fill" : "star").foregroundStyle(ink.opacity(i<cube.evolutionStage ? 0.8 : 0.18)) }
                 Text(cube.stageName).padding(.leading,5)
@@ -181,6 +185,10 @@ struct HomeView:View {
         VStack(alignment:.leading,spacing:20) {
             hero(monster)
             Text("Расти в своём ритме").font(.system(size:29,design:.serif))
+            if monster.inheritance != nil {
+                Button { newborn=monster } label: { Label("Наследие этого поколения",systemImage:"leaf").frame(maxWidth:.infinity) }
+                    .buttonStyle(PillButton(filled:false)).accessibilityIdentifier("lineage.report")
+            }
             Text("Эволюция сохраняет личность и дерево. Каждая ступень добавляет 0,8 м/с к силе прицельного прыжка и новый блеск облику.").font(.system(size:13)).lineSpacing(4).opacity(0.65)
             if monster.evolutionStage<3 {
                 Label("Кристаллы: \(monster.crystals.count) / \(monster.evolutionRequirement)",systemImage:"diamond").font(.system(size:14))
@@ -189,7 +197,7 @@ struct HomeView:View {
             Divider().padding(.vertical,12)
             Text("Два характера. Новое чудо.").font(.system(size:27,design:.serif))
             if let other=partner {
-                let style=HybridStyle([monster.form,other.form])
+                let future=FormCatalog.result(monster.currentForm,other.currentForm)
                 HStack {
                     VStack { MonsterPortrait(form:monster.form,secondary:monster.secondaryForm,seed:monster.appearanceSeed,stage:monster.evolutionStage).frame(width:92,height:105);Text(monster.name).font(.system(size:12)).lineLimit(1) }
                     Spacer();Image(systemName:"sparkles").font(.system(size:24));Spacer()
@@ -197,28 +205,43 @@ struct HomeView:View {
                         ForEach(session.adventure.collection.filter { $0.id != monster.id }) { cube in Button(cube.name) { secondID=cube.id } }
                     } label: { VStack { MonsterPortrait(form:other.form,secondary:other.secondaryForm,seed:other.appearanceSeed,stage:other.evolutionStage).frame(width:92,height:105);Label(other.name,systemImage:"chevron.down").font(.system(size:12)).lineLimit(1) } }
                 }.padding(18).background(.white.opacity(0.45),in:RoundedRectangle(cornerRadius:24))
-                Text("Может родиться: \(style.name)").font(.system(size:22,design:.serif))
-                Text(style.explanation).font(.system(size:13)).opacity(0.65)
-                Text("Два родителя станут одним новым кубиком. Каждый изученный приём имеет 50% шанс наследования от каждого родителя; материалы и свободные очки переходят потомку.").font(.system(size:12)).lineSpacing(4).opacity(0.6)
-                Button { confirmMerge=true } label: { Label("Объединить · 4 эфира",systemImage:"arrow.triangle.merge").frame(maxWidth:.infinity) }.buttonStyle(PillButton()).disabled(session.adventure.coins<4).opacity(session.adventure.coins<4 ? 0.4 : 1).accessibilityIdentifier("merge.begin")
+                Text(future.map { "Новая форма: "+$0.name } ?? "Это сочетание пока не поддерживается").font(.system(size:22,design:.serif)).accessibilityIdentifier("merge.preview.form")
+                if let future=future { Text(future.properties.joined(separator:" · ")).font(.system(size:13)).lineSpacing(4).opacity(0.65) }
+                Text("Твоя линия получит новое поколение. Донор останется в коллекции. В каждом блоке наследия выбираются ровно по две карточки из четырёх у каждого; несовместимые приёмы теряются.").font(.system(size:12)).lineSpacing(4).opacity(0.6)
+                Button {
+                    session.saveInventory();mergePreparation=session.adventure.prepareMerge(monster.id,other.id)
+                } label: { Label("Подготовить слияние",systemImage:"arrow.triangle.merge").frame(maxWidth:.infinity) }
+                    .buttonStyle(PillButton()).disabled(session.adventure.coins<4 || future==nil).opacity(session.adventure.coins<4 || future==nil ? 0.4 : 1).accessibilityIdentifier("merge.begin")
+                Text("Стоимость — 4 эфира. Фиксаторов наследия: \(monster.inheritanceLocks).").font(.system(size:11)).opacity(0.6)
             } else {
                 Text("Для мерджа нужны два друга из твоей коллекции.").font(.system(size:14)).opacity(0.6)
                 Button("Познакомиться с кубиком") { session.homeTab = .collection }.buttonStyle(PillButton(filled:false))
             }
+            let history=session.adventure.archivedGenerations.filter { $0.lineageID==monster.lineageID }
+            if !history.isEmpty {
+                DisclosureGroup("Родословная · \(history.count) прежних поколений") {
+                    VStack(alignment:.leading,spacing:12) {
+                        ForEach(history.reversed()) { old in
+                            HStack(spacing:12) {
+                                MonsterPortrait(form:old.form,secondary:old.secondaryForm,seed:old.appearanceSeed,stage:old.evolutionStage).frame(width:45,height:52)
+                                VStack(alignment:.leading,spacing:5) { Text(old.name).font(.system(size:16,design:.serif));Text(old.typeName+" · поколение \(old.generation)").font(.system(size:11)).opacity(0.6) }
+                            }
+                        }
+                        Text("Архив хранит историю линии. Прежние поколения нельзя выбрать для игры или слияния.").font(.system(size:11)).lineSpacing(3).opacity(0.6)
+                    }.padding(.top,12)
+                }.font(.system(size:14)).accessibilityIdentifier("lineage.archive")
+            }
         }
     }
     private func birth(_ child:MonsterRecord)->some View {
-        ScrollView {
-            VStack(spacing:20) {
-                Text("Привет, новый мир!").font(.system(size:32,design:.serif))
-                hero(child)
-                Text(child.hybridStyle?.explanation ?? "У каждого кубика своя история.").font(.system(size:15)).multilineTextAlignment(.center)
-                Text("Унаследованные навыки").font(.system(size:21,design:.serif))
-                ForEach(child.tree.filter { child.learned.contains($0.kind) }) { node in Label(node.title,systemImage:node.symbol).font(.system(size:13)) }
-                Button("Познакомиться поближе") { newborn=nil;session.homeTab = .journey }.buttonStyle(PillButton()).accessibilityIdentifier("merge.result.close")
-            }.padding(28).frame(maxWidth:600)
-        }.frame(maxWidth:.infinity).background(cream).foregroundStyle(ink)
+        MergeResultView(child:child) { newborn=nil;session.homeTab = .journey }
+            #if os(iOS)
+            .presentationDetents([.large]).presentationDragIndicator(.visible)
+            #else
+            .frame(width:620,height:760)
+            #endif
     }
+
 }
 
 private struct MapPreview:View {

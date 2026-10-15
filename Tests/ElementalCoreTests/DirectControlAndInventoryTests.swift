@@ -86,8 +86,8 @@ final class DirectControlAndInventoryTests:XCTestCase {
     }
     func testHybridTreeHasItsOwnIdentityParentsAndIndependentProgress() {
         let ice=MonsterRecord(form:.ice),fire=MonsterRecord(form:.fire)
-        var a=MonsterRecord.offspring(ice,fire,body:.water)
-        let b=MonsterRecord.offspring(ice,fire,body:.water)
+        var a=MonsterRecord.legacyOffspring(ice,fire,body:.water)
+        let b=MonsterRecord.legacyOffspring(ice,fire,body:.water)
         XCTAssertEqual(a.parents.map(\.id),[ice.id,fire.id]);XCTAssertTrue(a.isHybrid)
         XCTAssertNotEqual(a.treeIdentity,b.treeIdentity)
         XCTAssertTrue(Set(a.tree.map(\.id)).isDisjoint(with:Set(ice.tree.map(\.id))))

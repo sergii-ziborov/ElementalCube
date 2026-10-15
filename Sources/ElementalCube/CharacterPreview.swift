@@ -103,8 +103,9 @@ private final class CharacterPreviewRenderer:NSObject,MTKViewDelegate {
             shadow.triangle(center,center+V3(cos(a)*0.56,0,sin(a)*0.40),center+V3(cos(b)*0.56,0,sin(b)*0.40),tint(0x254c46,s.form == .air ? 0.08 : 0.14),V3(0,1,0))
         }
         mesh(shadow,matrix_identity_float4x4)
-        draw(body,bodyCount,model,s.form == .water ? 1 : (s.form == .fire ? 2 : (s.form == .air ? 3 : (s.form == .stone ? 4 : 0))),s.form.hasFur)
-        mesh(Geometry.elementDetail(form:s.form,time:t))
+        let steam=s.form == .water && s.secondary == .fire
+        draw(body,bodyCount,model,steam ? 5 : (s.form == .water ? 1 : (s.form == .fire ? 2 : (s.form == .air ? 3 : (s.form == .stone ? 4 : 0)))),s.form.hasFur)
+        mesh(steam ? Geometry.steam(time:t) : Geometry.elementDetail(form:s.form,time:t))
         if s.form.hasFur {
             e.setRenderPipelineState(gpu.coat)
             for layer in 1...10 {

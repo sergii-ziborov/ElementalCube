@@ -247,8 +247,9 @@ final class Renderer: NSObject, MTKViewDelegate {
             var ash=Mesh();ash.box(center:V3(s.crate.position.x,s.crate.position.y-0.5,0.65),size:V3(0.9,0.12,0.7),color:tint(0x383936));drawMesh(ash)
         }
         let model=translation(V3(p.x,p.y,0.55))*rotationZ(s.bodyAngle)*rotationY(0.12)*scale(s.bodyStretch)
-        drawBuffer(cube,cubeCount,model,character:true,furSurface:s.form.hasFur,material:s.form == .water ? 1 : (s.form == .fire ? 2 : (s.form == .air ? 3 : (s.form == .stone ? 4 : 0))))
-        drawMesh(Geometry.elementDetail(form:s.form,time:s.time),model,character:true)
+        let steam=s.form == .water && session.inventory.selected.secondaryForm == .fire
+        drawBuffer(cube,cubeCount,model,character:true,furSurface:s.form.hasFur,material:steam ? 5 : (s.form == .water ? 1 : (s.form == .fire ? 2 : (s.form == .air ? 3 : (s.form == .stone ? 4 : 0)))))
+        drawMesh(steam ? Geometry.steam(time:s.time) : Geometry.elementDetail(form:s.form,time:s.time),model,character:true)
         if s.form.hasFur {
             e.setRenderPipelineState(coatPipeline)
             for layer in 1...10 {
@@ -265,7 +266,7 @@ final class Renderer: NSObject, MTKViewDelegate {
             for i in 0..<max(1,s.evolutionStage) { gems.diamond(V3(-0.26+Float(i)*0.26,0.37,1.13),size:0.035,color:tint(s.hybridStyle == .magma ? 0xffa359 : 0xe6d996)) }
             drawMesh(gems,model,character:true)
         }
-        if let style=s.hybridStyle,style == .steam || style == .geyser || style == .mist {
+        if let style=s.hybridStyle,style == .steam || style == .geyser || style == .mist || style == .boiler {
             var mist=Mesh()
             for i in 0..<4 {
                 let phase=(s.time*0.6+Float(i)*0.25).truncatingRemainder(dividingBy:1)
