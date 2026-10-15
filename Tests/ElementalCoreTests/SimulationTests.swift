@@ -65,14 +65,15 @@ final class SimulationTests:XCTestCase {
         XCTAssertTrue(s.cube.grounded);XCTAssertGreaterThan(s.cube.position.y,0)
     }
     func testRollingMovesAndRotatesTheRigidBody() {
-        let s=Simulation();s.equipPassive(false);advance(s,1);s.movement = -1;advance(s,1)
+        let s=Simulation(form:.stone);s.equipPassive(false);advance(s,1);s.movement = -1;advance(s,1)
         XCTAssertLessThan(s.cube.position.x,1);XCTAssertGreaterThan(abs(s.cube.angle),1)
         s.movement=0;advance(s,2);XCTAssertLessThan(abs(s.cube.velocity.x),0.2)
     }
     func testSwimmingCanExitAlongTheShallowBank() {
         let s=Simulation(form:.water);s.placeCube(Vec(9.8,-1));advance(s,1)
         s.movement = -1;advance(s,6)
-        XCTAssertLessThan(s.cube.position.x,7);XCTAssertTrue(s.cube.grounded)
+        XCTAssertLessThan(s.cube.position.x,7)
+        s.movement=0;advance(s,0.5);XCTAssertTrue(s.cube.grounded)
     }
     func testFrostedGrassPreservesMoreMomentum() {
         let grass=Simulation(),ice=Simulation()

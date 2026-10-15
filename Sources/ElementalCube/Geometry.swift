@@ -138,11 +138,11 @@ enum Geometry {
         if wet>0.2 { m.ellipse(center:V3(-0.36,0.3,0.61),rx:0.018,ry:0.038,color:tint(0xa0e9ff,0.9)) }
         return m
     }
-    static func terrain(patches:[MaterialPatch] = [],visible:WorldBounds=WorldBounds(-6,-8,29,11))->Mesh {
+    static func terrain(patches:[MaterialPatch] = [],visible:WorldBounds=WorldBounds(-6,-8,29,11),definition:WorldDefinition=WorldMap.shore.definition)->Mesh {
         var m=Mesh()
         // Only decorate the visible bricks; the full physics map retains its scale.
-        for (platformIndex,platform) in WorldLayout.terrain.enumerated() where visible.overlaps(platform,margin:2) {
-            let start=platform.x-platform.width/2,end=platform.x+platform.width/2,top=platform.y+platform.height/2,bottom=platform.y-platform.height/2-(platform.width==WorldLayout.bounds.width ? 24 : 0)
+        for (platformIndex,platform) in definition.terrain.enumerated() where visible.overlaps(platform,margin:2) {
+            let start=platform.x-platform.width/2,end=platform.x+platform.width/2,top=platform.y+platform.height/2,bottom=platform.y-platform.height/2-(platform.width==definition.bounds.width ? 24 : 0)
             m.box(center:V3((start+end)/2,(top+bottom)/2,0),size:V3(end-start,top-bottom,2.5),color:tint(0x6d8070))
             let firstRow=max(0,Int(floor((top-visible.maxY-2)/0.75)))
             let lastRow=max(firstRow,Int(ceil((top-max(bottom,visible.minY-2))/0.75)))
@@ -156,6 +156,13 @@ enum Geometry {
                     let x=max(start,rawX),w=min(end,rawX+1.1)-x,height=min(0.69,y-bottom)
                     guard w>0.04,height>0.04 else { continue }
                     m.box(center:V3(x+w/2,y-height/2,1.20),size:V3(w-0.035,height-0.04,0.12+tile.next()*0.05),color:mix(tint(0x728579),tint(0xa6b398),tile.next()))
+                }
+            }
+            if platform.surface == .ice {
+                m.box(center:V3((start+end)/2,top+0.015,0),size:V3(end-start,0.13,2.58),color:tint(0xd9f4f6))
+                for i in 0..<max(1,Int(platform.width*2)) {
+                    let x=start+Float(i)*0.5+0.12
+                    if x<end { m.triangle(V3(x-0.04,top,1.32),V3(x+0.05,top,1.32),V3(x+0.01,top-0.19,1.32),tint(0xa3dce9),V3(0,0,1)) }
                 }
             }
             if platform.surface == .grass {
@@ -202,7 +209,7 @@ enum Geometry {
         // The former finish is now a waypoint on the longer journey.
         for x:Float in [22.25,23.8] { m.box(center:V3(x,1.05,-0.8),size:V3(0.34,2.1,0.4),color:tint(0xb4bb9b)) }
         m.box(center:V3(23.03,2.2,-0.8),size:V3(1.9,0.35,0.4),color:tint(0xc9cbb0))
-        for marker in [WorldLayout.goal] {
+        for marker in [definition.goal] {
             let x=marker.x,y=marker.y
             m.line(V3(x,y,0.9),V3(x,y+2.35,0.9),width:0.055,color:tint(0x525c51))
             m.quad(V3(x,y+2.2,0.95),V3(x+0.85,y+2.1,0.95),V3(x+0.67,y+1.65,0.95),V3(x,y+1.73,0.95),tint(0xead490),V3(0,0,1))

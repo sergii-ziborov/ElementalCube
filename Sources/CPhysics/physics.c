@@ -131,3 +131,15 @@ bool ec_space_clear_ignoring(ECWorld *w,int id,float x,float y,float width,float
 }
 
 bool ec_space_clear(ECWorld *w,float x,float y,float width,float height) { return ec_space_clear_ignoring(w,-1,x,y,width,height); }
+
+bool ec_resize_dynamic(ECWorld *w,int id,float x,float y,float width,float height) {
+    if(id<0 || id>=w->count || width<=0 || height<=0 || !b2Body_IsValid(w->bodies[id])) return false;
+    b2BodyId body=w->bodies[id];
+    if(b2Body_GetType(body)!=b2_dynamicBody || !ec_space_clear_ignoring(w,id,x,y,width-.012f,height-.012f)) return false;
+    b2ShapeId shape;b2Body_GetShapes(body,&shape,1);
+    float radius=fminf(.08f,fminf(width,height)*.2f);
+    b2Polygon poly=b2MakeRoundedBox(width/2-radius,height/2-radius,radius);
+    b2Body_SetTransform(body,(b2Vec2){x,y},b2MakeRot(0));
+    b2Shape_SetPolygon(shape,&poly);b2Body_ApplyMassFromShapes(body);b2Body_SetAwake(body,true);
+    return true;
+}

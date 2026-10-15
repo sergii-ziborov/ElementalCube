@@ -1,158 +1,138 @@
 # ElementalCube — материалы карточки Apple
 
-Альфа **0.1.0 (9)** для iPhone и iPad. Статус обработки и групп: [TestFlight](TESTFLIGHT.md). [Нативные снимки](../Previews/alpha9).
+Альфа **0.1.0 (10)**. [Фактический статус](TESTFLIGHT.md) · [Нативные снимки](../Previews/alpha10).
 
-Apple ID `6822921592` · Bundle `com.weavatrix.elementalcube` · Games / Puzzle / Adventure.
+Apple ID `6822921592` · `com.weavatrix.elementalcube` · Games / Puzzle / Adventure.
 
-[Игра](https://github.com/sergii-ziborov/ElementalCube) · [Поддержка](https://github.com/sergii-ziborov/ElementalCube/issues) · [Конфиденциальность](PRIVACY.md)
+## ru
 
-## Русский
-
-### Подзаголовок / Subtitle
+### subtitle
 
 ```text
 Маленький куб. Большой мир.
 ```
 
-### Промотекст / Promotional text
+### promotionalText
 
 ```text
-Пять стихий, пять характеров: замораживайте воду касанием, скользите над ней, исследуйте дно и испаряйте водоём огнём. Физическая песочница с пушистым героем.
+Выбери маленького друга, погладь его и отправляйся в путь. Три карты, пять стихий, эволюция и новые кубики из слияния в уютной физической песочнице.
 ```
 
-### Ключевые слова / Keywords
+### keywords
 
 ```text
 куб,физика,прыжки,головоломка,лёд,вода,платформер,пушистик,приключение
 ```
 
-### Описание / Description
+### description
 
 ```text
 Маленький куб. Большой мир.
 
-Выберите одну из пяти стихий и исследуйте тихий берег. Льдинка сразу создаёт ледяную опору при касании воды и затем постепенно расширяет лёд; Капля плавает; Ветерок скользит над водой; Камушек тонет и находит подводные проходы; Огонёк сжигает горючее и испаряет воду, теряя здоровье. Огонь может поджечь другие формы; огненная и каменная имеют иммунитет. Вода тушит возгорание.
+Выбери первого друга из пяти стихий или создай случайного. Льдинка скользит и замораживает воду касанием; Капля подпрыгивает, плавает и просачивается в низкие проходы; Ветерок парит над водой; Камушек катится и исследует дно; Огонёк перетекает, обжигает траву и испаряет воду за здоровье.
 
-Изначально изучена только пассивная способность. Она назначена автоматически и не расходует ману. Нажатие на название открывает описание. Здоровье и мана всегда видны; выбирайте, где тратить силы.
+Свайп вверх по игровому экрану — бесплатный обычный прыжок. Небольшой наклон слегка направляет его. Коснись карты или веди по ней пальцем, чтобы двигаться. Погладь самого кубика — он обрадуется. После изучения прицельного прыжка удержи кубика, потяни в сторону и отпусти: пунктир показывает полёт. Двойной прыжок тоже нужно изучить. У нового кубика доступна только автоматическая пассивка, которая не расходует ману.
 
-Короткий тап по кубику — обычный прыжок вверх. Коснитесь карты для движения. Изучите направленный прыжок, затем потяните самого куба в сторону полёта: пунктир без стрелки показывает дугу. Двойной прыжок также открывается в личном дереве; обычный остаётся бесплатным. Катитесь по траве, толкайте и опрокидывайте плавучий ящик, раскачивайте подвесной мост, скользите по льду и плывите к берегу. Доберитесь до флага, соберите двенадцать кристаллов или отправьтесь каменной формой за глубинной реликвией.
+Главный экран хранит коллекцию, личный инвентарь и лабораторию. Первый друг бесплатный. Найденный в мире эфир позволяет менять друзей, приглашать новых, развивать их и объединять двух в одного потомка. Эволюция сохраняет личность и навыки. Мердж создаёт гибрид со своим именем, внешностью, движением и деревом; родители покидают коллекцию после подтверждения, материалы и свободные очки переходят потомку, а приёмы наследуются с шансом 50% от каждого родителя.
 
-Кубик анимирован и в игровом мире, и в интерфейсе. Портреты дышат, моргают и радуются поглаживанию. Кубик реагирует на ваши действия: сосредотачивается перед прыжком, радуется находкам и встряхивает мокрую шерсть. Пряди спереди и по бокам меняются от ветра, движения и намокания. Мягкая трава и твёрдый камень по-разному встречают его после полёта; поддерживаемые iPhone добавляют тактильный отклик.
+Тихий берег, Хрустальные высоты и Сад тёплых искр предлагают разные маршруты, по 12 кристаллов и собственный финиш. Двигай физический ящик, нагружай подвесной мост, наблюдай волны, брызги и постепенное замерзание. Живые портреты дышат и моргают даже в меню. Шерсть реагирует на ветер и намокание; огонь и камень обходятся без неё.
 
-Это ранняя альфа ElementalCube: карта в четыре раза шире и выше прежней, пять форм и личный инвентарь для проверки управления и физики. В личном инвентаре — отдельное дерево выбранного монстра, талисманы и материалы. Навыки меняют физику, предметы можно надевать и снимать; находки и прогресс сохраняются. Слияние и арены ещё не реализованы.
-
-Игра работает без регистрации, рекламы и игрового сервера. Поддерживаются iPhone и iPad, портретная и горизонтальная ориентации. Настройки, выбранная форма сохраняются.
+Ранняя альфа для iPhone и iPad, портретной и горизонтальной ориентаций. Интерфейс на русском. Без регистрации, рекламы, покупок и игрового сервера. Коллекция, валюта, предметы и навыки сохраняются на устройстве. Жидкость моделируется в двухмерной плоскости с объёмным изображением.
 ```
 
-### TestFlight
+### betaDescription
 
 ```text
-ElementalCube 0.1.0 (9)
+ElementalCube 0.1.0 (10)
 
-Бесплатные пассивки и базовый прыжок. В начале изучена только пассивка. Направленный и двойной прыжки открываются в дереве; направленный показывает пунктир без стрелки.
+Свайп вверх — базовый прыжок, карта — движение, кубик — поглаживание. Прицельный после изучения: удержать кубика и потянуть.
 
-Лёд постепенно нарастает в стороны и вниз, толстая корка тает дольше. Брызги несут часть воды, движутся под гравитацией и возвращаются в водоём; пена движется вместе с течением. Ледяная, водная и воздушная формы могут загореться; огненная и каменная невосприимчивы. Вода тушит горение.
+Главный экран, бесплатный первый выбор или случайный друг, платная смена за игровую валюту. Три карты, эволюция, мердж с подтверждением и наследованием.
 
-Живые портреты на главной, в инвентаре и дереве: дыхание, моргание, взгляд и реакция на поглаживание.
-
-Карта 112 × 52 м, 12 кристаллов, физические ящик и мост. Ранняя альфа; интерфейс на русском.
+Разные движения стихий и гибридов, водная деформация для прохода половинной высоты. Бесплатные пассивки, личные навыки и предметы. Ранняя альфа; интерфейс на русском.
 ```
 
-### What to Test — build 9
+### whatToTest
 
 ```text
-Альфа 0.1.0 (9).
+Альфа 0.1.0 (10).
 
-• Короткий тап по кубику — бесплатный прыжок вверх. При старте известна только пассивка; направленный и двойной изучаются в дереве. После изучения двойного один дополнительный тап в воздухе даёт толчок, третий — нет.
-• Пассивки не расходуют ману. Направленный прыжок расходует 6, воздушный толчок — 10; мана восстанавливается. В направленном прицеле только пунктир, без стрелки.
-• Льдинка при первом касании воды создаёт опору; длительный контакт утолщает её вниз и расширяет край. После прыжка вода не должна резко подлетать; толстый лёд живёт дольше тонкого.
-• Столкните ящик в воду: посмотрите на отдельные капли, возвращение в водоём, пену и волны.
-• У очага на восточном берегу проверьте возгорание ледяного, водного и воздушного кубов, иммунитет огня и камня, тушение погружением.
-• Аватары в шапке, инвентаре и дереве дышат, моргают и реагируют на поглаживание даже при остановленном мире.
-• Проверьте поворот, фон, уменьшение движения, сохранение предметов и изученных навыков. Старые платные улучшения сохраняются; прежде бесплатный направленный прыжок требует изучения.
-• Сверьте надпись «АЛЬФА · 9».
-
-Укажите устройство, тип кубика и место проблемы.
+• Первый запуск: выбери стихию или случайного друга. Только первый выбор бесплатный; смена своего — 2 эфира, новый — 4. Кристаллы приносят эфир один раз, первый финиш карты — 6.
+• Свайп вверх по игровому экрану прыгает бесплатно, небольшой наклон направляет. Карта задаёт движение. Касание кубика радует его, не прыгает.
+• Изучи прицельный: удержи кубика, затем потяни и отпусти. Начальный предел 8 м/с; улучшения усиливают. Двойной открывает один дополнительный свайп в воздухе. Пассивки не тратят ману.
+• Лёд скользит со следом, вода скачет, воздух парит, камень катится, огонь течёт и обжигает. Водой пройди под низкой крышей восточнее пруда: тело сплющится и распрямится снаружи.
+• В лаборатории вырасти кубика и объедини двух друзей. Проверь предупреждение о расходе родителей, потомка, предметы, навыки и сохранение после перезапуска.
+• Открой все три карты с главного экрана, проверь поворот, воду, мост, ящик, замерзание и выход на берег.
+• Сверь «АЛЬФА · 10». Укажи устройство, форму и место проблемы.
 ```
 
-## English
+## en-US
 
-### Подзаголовок / Subtitle
+### subtitle
 
 ```text
 Small cube. Big world.
 ```
 
-### Промотекст / Promotional text
+### promotionalText
 
 ```text
-Five elements, five personalities. Freeze water by touch, glide above it, explore the bottom, or evaporate a pond with fire in a playful physics sandbox.
+Choose a tiny friend, give it a gentle stroke and explore. Three maps, five elements, evolution and hybrid cubes in a cozy physics sandbox.
 ```
 
-### Ключевые слова / Keywords
+### keywords
 
 ```text
 cube,physics,platformer,ice,water,jump,puzzle,adventure,cozy
 ```
 
-### Описание / Description
+### description
 
 ```text
 Small cube. Big world.
 
-Choose one of five elements and explore a quiet shore. Ice immediately forms support on first water contact, then gradually spreads the freeze. Water floats. Air slides above the surface. Stone sinks into underwater passages. Fire burns fuel and evaporates water at a health cost. Other forms can catch fire; Fire and Stone are immune. Water extinguishes burning.
+Choose your first friend from five elements or generate a random one. Ice slides and freezes water on contact. Water moves in tiny hops, floats and squeezes through low passages. Air hovers above water. Stone rolls and explores the bottom. Fire flows, scorches grass and evaporates water at a health cost.
 
-Only the starting passive is learned initially. It is already assigned, works automatically and consumes no mana. Tap its name to read the description. Health and mana are visible from the start.
+Swipe upward on the playfield for a free basic jump, with slight steering. Tap or drag on the map to move. Stroke the cube itself to make it happy. After learning precise jumping, hold the cube, drag toward the flight direction and release along a dotted trajectory. Double jumping is also learned. A new cube starts with only its automatic passive, which never uses mana.
 
-A short tap on the cube is an ordinary upward jump. Tap or drag on the map to move. Learn the directed jump, then drag the cube toward the flight direction and release along the dotted arc without an arrowhead. Double jumping is also learned in the personal tree; the basic jump stays free. Roll over grass, push and tip a floating crate, and load a suspended bridge, slide on ice, and swim back to shore. Reach the flag, collect twelve crystals, or take Stone through the passage to a deep relic.
+The home screen holds your collection, personal inventory and laboratory. Your first friend is free. Earn in-game aether to switch friends, recruit new ones, evolve them or merge two into a child. Evolution keeps identity and skills. Merging creates a hybrid with its own name, appearance, movement and tree. After confirmation, parents leave the collection; materials and unspent points transfer, while techniques have a 50% inheritance chance from each parent.
 
-UI portraits breathe, blink and react happily to petting even while gameplay is paused. Your cube has a personality: it focuses before a jump, celebrates discoveries, and shakes its wet fur. Strands on the front and sides react to wind, motion, and water. Soft grass and hard stone create different landings. Supported iPhones add tactile feedback.
+Quiet Shore, Crystal Heights and Garden of Warm Sparks have different routes, twelve crystals each and separate finish flags. Push a physical crate, load a suspended bridge and watch waves, splashes and gradual freezing. UI portraits breathe and blink even in menus. Fur reacts to wind and wetness; Fire and Stone have no fur.
 
-This is an early ElementalCube alpha with a map four times wider and taller, five forms, and a personal monster inventory. Each monster has its own skill tree, equipment and materials. Learning and equipped charms change simulation parameters; discoveries and progress persist. Merging and arenas are not available yet.
-
-No account, ads, or game server connection is required. Designed for iPhone and iPad in portrait and landscape. Settings and selected form persist locally.
-
-The current in-game interface is in Russian.
+Early alpha for iPhone and iPad in portrait and landscape. The interface is currently Russian. No account, ads, purchases or game server. Collection, currency, items and skills save on the device. Fluid is simulated in a two-dimensional plane with dimensional visuals.
 ```
 
-### TestFlight
+### betaDescription
 
 ```text
-ElementalCube 0.1.0 (9)
+ElementalCube 0.1.0 (10)
 
-Free passives and basic jumping. New monsters only know their passive. Directed and double jumps require learning; directed aiming keeps its dotted arc without an arrowhead.
+Swipe up to jump, tap the map to move, stroke the cube to pet it. Learn precise jumping, then hold and drag the cube.
 
-Ice gradually advances sideways and down; thicker sheets last longer. Splash droplets carry real water volume, follow gravity and rejoin the pond. Foam follows the current. Ice, Water and Air can catch fire; Fire and Stone are immune. Water extinguishes burning.
+Home screen, free first choice or random friend, later switches use earned currency. Three maps, evolution and confirmed merging with inheritance.
 
-Living portraits in the main HUD, inventory and tree: breathing, blinking, glances and a happy response to petting.
-
-112 × 52 m world, 12 crystals, physical crate and bridge. Early alpha; Russian interface.
+Distinct element and hybrid movement, Water deformation through half-height gaps. Free passives, personal skills and items. Early alpha; Russian interface.
 ```
 
-### What to Test — build 9
+### whatToTest
 
 ```text
-Alpha 0.1.0 (9).
+Alpha 0.1.0 (10).
 
-• Short-tap the cube for a free upward jump. Only the passive starts learned. Unlock directed and double jumps in the tree; double jumping permits one extra airborne boost, not a third jump.
-• Passives use no mana. Directed jumping costs 6; an air boost costs 10; mana regenerates. Directed aiming shows dots without an arrowhead.
-• Ice creates immediate water support, then grows downward and sideways with contact time. Jumping off should not launch water abruptly; thick ice lasts longer.
-• Push the crate into water and watch separated drops, reentry, foam and waves.
-• At the eastern campfire, test ignition of Ice, Water and Air, immunity of Fire and Stone, and extinguishing by immersion.
-• Main HUD, inventory and tree portraits breathe, blink and react to petting while gameplay is paused.
-• Check rotation, backgrounding, Reduce Motion and saved equipment/skills. Existing paid upgrades persist; the formerly free directed jump now requires learning.
-• Verify the build badge shows 9.
-
-Include device, monster type and location.
+• First launch: choose an element or random friend. First choice is free; switching an owned friend costs 2 aether, a new one costs 4. Each world crystal awards currency once; first finish per map awards 6.
+• Swipe up on the playfield for a free jump with slight steering. Tap/drag the map to move. Touching the cube pets it rather than jumping.
+• Learn precise jumping: hold the cube, then drag and release. Initial limit 8 m/s; upgrades strengthen it. Double jumping unlocks one extra airborne swipe. Passives use no mana.
+• Ice slides with a trail, Water hops, Air hovers, Stone rolls and Fire flows/scorches. Take Water through the low roof east of the pond; it flattens and expands outside.
+• Evolve and merge in the lab. Check the parent-consumption warning, child, items, skills and saved state after relaunch.
+• Open all three maps; test rotation, water, bridge, crate, freezing and getting back onto a bank.
+• Verify the badge shows 10. Include device, form and location.
 ```
 
-## Снимки и ручное обновление
-
-Снимки получены в нативном приложении на iPhone 16 Pro и iPad Pro 13″ M4. Пиксели и размеры исходного захвата сохранены, удалён только альфа-канал PNG. GIF показывает реальную анимацию интерфейса, в карточку Apple не загружается.
+## Ручное обновление
 
 ```sh
-python3 scripts/app-store-metadata.py --apply --build 9
-python3 scripts/app-store-screenshots.py --gallery alpha9 --apply --replace-earlier
+python3 scripts/app-store-metadata.py --apply --build 10
+python3 scripts/app-store-screenshots.py --gallery alpha10 --apply --replace-earlier
 ```
 
-Скрипты не отправляют App Store-релиз и не приглашают новых тестеров. Слияние и арены ещё не реализованы.
+Снимки получены в нативном приложении, PNG исходного размера RGB без альфы. Служебные галереи и GIF в Apple не загружаются. Скрипты не отправляют публичный App Store-релиз и не приглашают тестеров. CI/CD отсутствует.

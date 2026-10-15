@@ -18,18 +18,14 @@ struct MonsterInventoryView:View {
                     Button { session.forms=false } label:{ Image(systemName:"xmark").frame(width:36,height:36) }.buttonStyle(.plain).accessibilityLabel("Закрыть инвентарь").accessibilityIdentifier("inventory.close")
                 }
                 HStack(alignment:.top) {
-                    MonsterPortrait(form:monster.form,wetness:Double(session.wetness),health:Double(session.health),burning:Double(session.burning),celebration:monster.learned.count+(monster.equippedCharm == nil ? 0 : 10),interactive:true).frame(width:58,height:66).accessibilityIdentifier("portrait.inventory")
+                    MonsterPortrait(form:monster.form,secondary:monster.secondaryForm,seed:monster.appearanceSeed,stage:monster.evolutionStage,wetness:Double(session.wetness),health:Double(session.health),burning:Double(session.burning),celebration:monster.learned.count+(monster.equippedCharm == nil ? 0 : 10),interactive:true).frame(width:58,height:66).accessibilityIdentifier("portrait.inventory")
                     VStack(alignment:.leading,spacing:6) {
                         Text(monster.name).font(.system(size:25,design:.serif))
-                        Text(monster.typeName+" · "+(monster.form.hasFur ? "мягкая шерсть" : "без шерсти")).font(.system(size:12)).opacity(0.65)
-                        Text(String(format:"Предел прыжка %.1f м/с",monster.jumpSkill.maximumSpeed)).font(.system(size:12)).monospacedDigit()
+                        Text(monster.stageName+" · "+monster.typeName+" · "+(monster.form.hasFur ? "мягкая шерсть" : "без шерсти")).font(.system(size:12)).opacity(0.65)
+                        Text(String(format:"Предел прицела %.1f м/с",monster.jumpSkill.maximumSpeed)).font(.system(size:12)).monospacedDigit()
                     }
                     Spacer()
-                    Menu {
-                        ForEach(session.inventory.monsters) { cube in
-                            Button(cube.name) { session.selectMonster(cube.id);detail=nil }
-                        }
-                    } label: { Image(systemName:"arrow.triangle.2.circlepath").frame(width:40,height:40) }.accessibilityLabel("Выбрать тип куба для новой попытки").help("Другой куб начинает новую попытку. Его находки и навыки сохраняются отдельно.")
+                    Button { session.showHome(.collection) } label: { Image(systemName:"square.stack.3d.up").frame(width:40,height:40) }.buttonStyle(.plain).accessibilityLabel("Коллекция кубиков").accessibilityIdentifier("collection.open")
                 }
                 Picker("Раздел инвентаря",selection:$tab) { Text("Навыки").tag(0);Text("Снаряжение").tag(1);Text("Материалы").tag(2) }.pickerStyle(.segmented)
                 if tab==0 { skillTree } else if tab==1 { equipment } else { findings }
@@ -49,8 +45,8 @@ struct MonsterInventoryView:View {
         VStack(alignment:.leading,spacing:16) {
             MonsterSkillTree(monster:monster,wetness:Double(session.wetness),health:Double(session.health),burning:Double(session.burning)) { detail=$0 }
             HStack(spacing:10) {
-                slot("Обычный прыжок","arrow.up","БАЗОВОЕ ДЕЙСТВИЕ")
-                slot(monster.form.ability,monster.form.symbol,"ПАССИВНАЯ")
+                slot("Свайп вверх","arrow.up","БАЗОВЫЙ ПРЫЖОК")
+                slot(monster.passiveName,monster.form.symbol,"ПАССИВНАЯ")
             }
             Text("Находи кристаллы, чтобы открывать новые навыки. Дерево и прогресс принадлежат только этому кубику.")
                 .font(.system(size:12)).lineSpacing(4).foregroundStyle(ink.opacity(0.6))
@@ -76,7 +72,7 @@ struct MonsterInventoryView:View {
     var findings:some View {
         VStack(alignment:.leading,spacing:16) {
             Label("Эфирный кристалл · \(monster.quantity(of:.aetherShard))",systemImage:"diamond.fill").font(.system(size:21,design:.serif))
-            Text("Найдено этим кубом: \(monster.crystals.count) из \(WorldLayout.shards.count).").font(.system(size:13))
+            Text("Всего найдено этим кубиком: \(monster.crystals.count).").font(.system(size:13))
             Text(MonsterItem.aetherShard.explanation).font(.system(size:12)).lineSpacing(4).opacity(0.65)
             Text("Материалы и снаряжение хранятся у своего владельца. Повторный сбор того же кристалла не создаёт копии.").font(.system(size:12)).lineSpacing(4).opacity(0.65)
         }.padding(18).frame(maxWidth:.infinity,alignment:.leading).background(ink.opacity(0.05),in:RoundedRectangle(cornerRadius:18))

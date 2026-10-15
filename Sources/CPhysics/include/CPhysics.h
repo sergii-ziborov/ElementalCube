@@ -5,6 +5,7 @@ typedef struct { float x, y, vx, vy, angle, mass, omega; bool grounded; } ECStat
 ECWorld *ec_create(void);
 void ec_destroy(ECWorld *w);
 int ec_box(ECWorld *w, float x, float y, float width, float height, float density, bool dynamic, bool fixed);
+bool ec_resize_dynamic(ECWorld *w, int id, float x, float y, float width, float height);
 void ec_resize_static(ECWorld *w, int id, float x, float y, float width, float height);
 void ec_remove(ECWorld *w, int id);
 void ec_step(ECWorld *w, float dt);

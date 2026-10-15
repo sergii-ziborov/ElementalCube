@@ -7,6 +7,7 @@ import ElementalCore
         WindowGroup {
             Group {
                 if ProcessInfo.processInfo.arguments.contains("--preview-portraits") { MonsterPortraitGallery() }
+                else if session.home { HomeView(session:session) }
                 else { GameView(session:session) }
             }
                 #if os(macOS)
@@ -31,7 +32,7 @@ let mint=Color(red:0.68,green:0.92,blue:0.84)
 struct GameView:View {
     @ObservedObject var session:GameSession
     @State private var dismissVictory=false
-    var controlHint:String { "Тап по кубику — прыжок · Карта — движение" }
+    var controlHint:String { "Свайп вверх — прыжок · Карта — движение" }
     var buildLabel:String { "АЛЬФА · " + (Bundle.main.object(forInfoDictionaryKey:"CFBundleVersion") as? String ?? "DEV") }
     var body:some View {
         GeometryReader { geo in
@@ -43,23 +44,23 @@ struct GameView:View {
                     header(compact:compact).padding(.top,short ? 4 : (compact ? 14 : 26))
                     HStack(alignment:.top) {
                         VStack(alignment:.leading,spacing:8) {
-                            if !short { Label("ПЕРВАЯ ПРОГУЛКА",systemImage:"sparkle").font(.system(size:10,weight:.bold)).tracking(2).opacity(0.6) }
+                            if !short { Label(session.simulation.definition.map.name.uppercased(),systemImage:session.simulation.definition.map.symbol).font(.system(size:10,weight:.bold)).tracking(2).opacity(0.6) }
                             Text(session.won ? "Берег пройден!" : "Доберись до флага").font(.system(size:short ? 14 : (compact ? 18 : 22),weight:.medium,design:.serif))
                             HStack(spacing:7) {
                                 Image(systemName:"diamond.fill")
-                                Text("\(session.shards) / \(WorldLayout.shards.count) кристаллов").font(.system(size:11)).opacity(0.7)
+                                Text("\(session.shards) / \(session.simulation.shards.count) кристаллов").font(.system(size:11)).opacity(0.7)
                                 if session.deepRelic { Image(systemName:"seal.fill").foregroundStyle(.orange).accessibilityLabel("Глубинная реликвия найдена") }
                             }
                             if compact {
                                 HStack(spacing:5) {
                                     Circle().fill(session.passiveWorking ? Color.green.opacity(0.65) : ink.opacity(0.25)).frame(width:5,height:5)
-                                    Text(session.form.name + (session.form.hasFur && session.wetness>0.2 ? " · шерсть \(Int(session.wetness*100))%" : " · пассивная")).font(.system(size:10)).opacity(0.7)
+                                    Text(session.monsterName + (session.form.hasFur && session.wetness>0.2 ? " · шерсть \(Int(session.wetness*100))%" : " · пассивная")).font(.system(size:10)).opacity(0.7)
                                 }
                             }
                         }.padding(short ? 10 : 18).background(cream.opacity(0.75),in:RoundedRectangle(cornerRadius:short ? 12 : 18))
                         Spacer()
                         if !compact {
-                            HStack(spacing:7) { Circle().fill(Color(red:0.32,green:0.56,blue:0.4)).frame(width:5,height:5);Text("ТЕСТОВЫЙ МИР • 01").font(.system(size:10,weight:.medium)).tracking(1.4) }.padding(.top,14).opacity(0.7)
+                            HStack(spacing:7) { Circle().fill(Color(red:0.32,green:0.56,blue:0.4)).frame(width:5,height:5);Text(session.simulation.definition.map.name.uppercased()).font(.system(size:10,weight:.medium)).tracking(1.4) }.padding(.top,14).opacity(0.7)
                         }
                     }.padding(.top,short ? 8 : 25).allowsHitTesting(false)
                     Spacer()
@@ -67,14 +68,14 @@ struct GameView:View {
                 }.padding(.horizontal,compact ? 16 : 38).padding(.bottom,short ? 7 : (compact ? 20 : 25)).foregroundStyle(ink)
                 if session.paused && !session.settings {
                     VStack(spacing:16) {
-                        MonsterPortrait(form:session.form,wetness:Double(session.wetness),health:Double(session.health),burning:Double(session.burning),interactive:true).frame(width:70,height:78)
+                        MonsterPortrait(form:session.form,secondary:session.inventory.selected.secondaryForm,seed:session.inventory.selected.appearanceSeed,stage:session.inventory.selected.evolutionStage,wetness:Double(session.wetness),health:Double(session.health),burning:Double(session.burning),interactive:true).frame(width:70,height:78)
                         Text("Небольшая пауза").font(.system(size:28,design:.serif))
                         Button("Продолжить") { session.paused=false }.buttonStyle(PillButton())
                     }.padding(40).background(cream,in:RoundedRectangle(cornerRadius:24)).foregroundStyle(ink)
                 }
                 if session.dead {
                     VStack(spacing:16) {
-                        MonsterPortrait(form:session.form,wetness:Double(session.wetness),health:0).frame(width:76,height:84)
+                        MonsterPortrait(form:session.form,secondary:session.inventory.selected.secondaryForm,seed:session.inventory.selected.appearanceSeed,stage:session.inventory.selected.evolutionStage,wetness:Double(session.wetness),health:0).frame(width:76,height:84)
                         Text("Нужна новая попытка").font(.system(size:24,design:.serif))
                         Text("Здоровье закончилось. Огонь теряет его в воде; жёсткие падения тоже оставляют след.").font(.system(size:13)).multilineTextAlignment(.center).frame(maxWidth:280)
                         Button("Вернуться на берег") { session.reset() }.buttonStyle(PillButton())
@@ -84,10 +85,10 @@ struct GameView:View {
                     ZStack {
                         ink.opacity(0.12).ignoresSafeArea()
                         VStack(spacing:17) {
-                            MonsterPortrait(form:session.form,celebration:3,interactive:true).frame(width:80,height:88)
+                            MonsterPortrait(form:session.form,secondary:session.inventory.selected.secondaryForm,seed:session.inventory.selected.appearanceSeed,stage:session.inventory.selected.evolutionStage,celebration:3,interactive:true).frame(width:80,height:88)
                             Image(systemName:"flag.checkered").font(.system(size:34)).foregroundStyle(Color(red:0.64,green:0.54,blue:0.27))
                             Text("Маленький куб.\nПервое приключение.").font(.system(size:30,weight:.medium,design:.serif)).multilineTextAlignment(.center)
-                            Text("Берег пройден за \(session.jumps) прыжков.\nСобрано кристаллов: \(session.shards) из \(WorldLayout.shards.count).").font(.system(size:14)).lineSpacing(5).opacity(0.7).multilineTextAlignment(.center)
+                            Text("Берег пройден за \(session.jumps) прыжков.\nСобрано кристаллов: \(session.shards) из \(session.simulation.shards.count).").font(.system(size:14)).lineSpacing(5).opacity(0.7).multilineTextAlignment(.center)
                             HStack(spacing:10) {
                                 Button("Ещё раз") { dismissVictory=false;session.reset() }.buttonStyle(PillButton())
                                 Button("Исследовать") { dismissVictory=true }.buttonStyle(PillButton(filled:false))
@@ -124,20 +125,22 @@ struct GameView:View {
     func header(compact:Bool)->some View {
         VStack(spacing:9) {
             HStack(spacing:compact ? 8 : 14) {
+                Button { session.showHome() } label: {
                 VStack(alignment:.leading,spacing:3) {
                     Text("ElementalCube").font(.system(size:compact ? 20 : 28,weight:.medium,design:.serif)).padding(6).background(cream.opacity(0.72),in:RoundedRectangle(cornerRadius:10))
                     Text(buildLabel).font(.system(size:7,weight:.semibold)).tracking(1.4).padding(.leading,6).opacity(0.55).accessibilityIdentifier("app.build")
                     if !compact { Text("МАЛЕНЬКИЙ КУБ. БОЛЬШОЙ МИР.").font(.system(size:8,weight:.medium)).tracking(1.55).opacity(0.65) }
                 }
+                }.buttonStyle(.plain).accessibilityLabel("Главный экран").accessibilityIdentifier("home.open")
                 Spacer(minLength:4)
                 Button { session.forms=true } label: {
                     HStack(spacing:5) {
-                        MonsterPortrait(form:session.form,wetness:Double(session.wetness),health:Double(session.health),burning:Double(session.burning),animate:!session.forms && !session.settings && !session.abilityInfo && !session.paused && !session.dead && !session.won)
+                        MonsterPortrait(form:session.form,secondary:session.inventory.selected.secondaryForm,seed:session.inventory.selected.appearanceSeed,stage:session.inventory.selected.evolutionStage,wetness:Double(session.wetness),health:Double(session.health),burning:Double(session.burning),animate:!session.forms && !session.settings && !session.abilityInfo && !session.paused && !session.dead && !session.won)
                             .frame(width:30,height:34).allowsHitTesting(false)
-                        if !compact { Text(session.form.name) }
+                        if !compact { Text(session.monsterName) }
                         Image(systemName:"chevron.down").font(.system(size:8))
                     }.font(.system(size:13,weight:.medium)).padding(6).background(cream.opacity(0.65),in:Capsule()).contentShape(Capsule())
-                }.buttonStyle(.plain).accessibilityLabel("Инвентарь монстра: \(session.form.name)").accessibilityIdentifier("inventory.open")
+                }.buttonStyle(.plain).accessibilityLabel("Инвентарь монстра: \(session.monsterName)").accessibilityIdentifier("inventory.open")
                 if !compact {
                     VStack(spacing:8) {
                         resource("ЗДОРОВЬЕ","heart.fill",value:session.health,color:Color(red:0.76,green:0.33,blue:0.31))
@@ -160,9 +163,9 @@ struct GameView:View {
             Button { session.showAbility() } label: {
                 VStack(alignment:.leading,spacing:5) {
                     Label("ПАССИВНАЯ",systemImage:session.form.symbol).font(.system(size:9,weight:.medium)).tracking(1).opacity(0.65)
-                    Text(session.form.ability).font(.system(size:compact ? 15 : 19,design:.serif))
+                    Text(session.inventory.selected.passiveName).font(.system(size:compact ? 15 : 19,design:.serif))
                 }.foregroundStyle(cream).padding(.vertical,12).contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityLabel(session.form.ability+", описание пассивной способности")
+            }.buttonStyle(.plain).accessibilityLabel(session.inventory.selected.passiveName+", описание пассивной способности")
             Spacer(minLength:0)
             VStack(alignment:.trailing,spacing:6) {
                 Text(session.aiming ? "ОТПУСТИ, ЧТОБЫ ПРЫГНУТЬ" : (session.grounded ? "НА ОПОРЕ" : (session.inWater ? "В ВОДЕ" : "В ПОЛЁТЕ")))
@@ -180,9 +183,9 @@ struct GameView:View {
     var abilityPanel:some View {
         ScrollView {
             VStack(alignment:.leading,spacing:22) {
-                HStack { Label(session.form.ability,systemImage:session.form.symbol).font(.system(size:25,design:.serif));Spacer();Button { session.abilityInfo=false } label:{ Image(systemName:"xmark") }.buttonStyle(.plain) }
+                HStack { Label(session.inventory.selected.passiveName,systemImage:session.form.symbol).font(.system(size:25,design:.serif));Spacer();Button { session.abilityInfo=false } label:{ Image(systemName:"xmark") }.buttonStyle(.plain) }
                 Text("ПАССИВНАЯ СПОСОБНОСТЬ").font(.system(size:10,weight:.bold)).tracking(1.3).opacity(0.6)
-                Text(session.form.explanation).font(.system(size:15)).lineSpacing(6)
+                Text(session.inventory.selected.passiveExplanation).font(.system(size:15)).lineSpacing(6)
                 Text("Пассивная способность не расходует ману. Мана нужна изученным активным приёмам; обычный прыжок бесплатен. Здоровье восстанавливается при новой попытке.").font(.system(size:12)).lineSpacing(4).opacity(0.7)
                 Text(session.form == .ice ? "Первая ледяная опора возникает сразу. Затем холод распространяется в стороны и вниз, пока кубик рядом." : "Действует автоматически при движении и контакте с миром.").font(.system(size:12)).lineSpacing(4).opacity(0.7)
                 Button("В игру") { session.abilityInfo=false }.buttonStyle(PillButton())

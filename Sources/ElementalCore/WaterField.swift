@@ -120,7 +120,7 @@ public final class WaterField {
     }
     public func step(dt:Float, coldSource:Vec?, heatSource:Vec?, occupied:[Vec],coldFoot:Float?=nil) {
         refreshSurface()
-        let previous=ice.map(\.solid)
+        let previous=ice.map(\.solid),previousCold=ice.map(\.cold)
         for i in ice.indices {
             let p=ice[i].center,col=i%columns
             if i>=rows*columns {
@@ -179,14 +179,17 @@ public final class WaterField {
                 let distance=hypot(p.x-source.x,p.y-source.y)
                 let touched=abs(p.x-source.x)<0.99 && abs(p.y-source.y)<0.99
                 let connected=[i-1,i+1,i-columns,i+columns].contains { j in
-                    j>=0 && j<ice.count && abs(ice[j].center.x-p.x)<=cell*1.1 && previous[j]
+                    j>=0 && j<ice.count && abs(ice[j].center.x-p.x)<=cell*1.1 && (previous[j] || previousCold[j]>=0.82)
                 }
                 chilling=distance<1.45 && (touched || connected)
                 if chilling { ice[i].cold=min(1,ice[i].cold+dt*(1.6-distance*0.55)*conductivity) }
             }
             if !chilling { ice[i].cold=max(0,ice[i].cold-dt/30) }
             if let source=heatSource,hypot(source.x-p.x,source.y-p.y)<1.5 { ice[i].cold=max(0,ice[i].cold-dt*2) }
-            let overlaps=occupied.contains { abs($0.x-p.x)<0.78 && abs($0.y-p.y)<0.78 }
+            // Keep a horizontal escape band around a submerged cold source.
+            // Cold grows above and below it instead of sealing a rigid box in.
+            let escape=coldSource.map { abs($0.y-p.y)<0.80 && abs($0.x-p.x)<1.6 } ?? false
+            let overlaps=escape || occupied.contains { abs($0.x-p.x)<0.78 && abs($0.y-p.y)<0.78 }
             // No static collider is born intersecting a moving rigid body.
             let now=previous[i] ? ice[i].cold>0.02 : ice[i].cold>=0.82 && !overlaps
             if now && !previous[i] {

@@ -33,7 +33,8 @@ final class AlphaNineTests:XCTestCase {
         advance(s,2)
         learn(.jump,&monster);s.applySkills(of:monster)
         XCTAssertTrue(s.performJump(Vec(4,8),directed:true));XCTAssertEqual(s.mana,94,accuracy:0.001)
-        XCTAssertGreaterThan(s.cube.velocity.x,3.9)
+        XCTAssertGreaterThan(s.cube.velocity.x,3)
+        XCTAssertLessThanOrEqual(hypot(s.cube.velocity.x,s.cube.velocity.y),monster.jumpSkill.maximumSpeed+0.001)
     }
     func testLearnedDoubleJumpAllowsOneAirBoostAndResetsOnLanding() {
         var monster=MonsterRecord(form:.ice)

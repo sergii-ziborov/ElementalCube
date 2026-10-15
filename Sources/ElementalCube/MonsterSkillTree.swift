@@ -59,7 +59,7 @@ struct MonsterSkillTree:View {
                         Circle().stroke(palette.accent.opacity(0.16),lineWidth:1).frame(width:88,height:88)
                         Circle().stroke(palette.accent.opacity(0.35),lineWidth:1).frame(width:73,height:73)
                         Circle().fill(palette.accent.opacity(0.12)).frame(width:64,height:64)
-                        MonsterPortrait(form:monster.form,wetness:wetness,health:health,burning:burning,celebration:monster.learned.count,interactive:true).frame(width:52,height:58).accessibilityIdentifier("portrait.tree")
+                        MonsterPortrait(form:monster.form,secondary:monster.secondaryForm,seed:monster.appearanceSeed,stage:monster.evolutionStage,wetness:wetness,health:health,burning:burning,celebration:monster.learned.count,interactive:true).frame(width:52,height:58).accessibilityIdentifier("portrait.tree")
                     }.position(x:w/2,y:47)
                     ForEach(0..<rows.count,id:\.self) { row in
                         ForEach(0..<2,id:\.self) { branch in

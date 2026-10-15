@@ -1,11 +1,23 @@
 import SwiftUI
 import ElementalCore
 
+enum HomeTab:String,CaseIterable { case journey="Путь",collection="Кубики",laboratory="Эволюция" }
+
 final class GameSession: ObservableObject {
     private let settingsStore: PlaygroundSettingsStore
     private let feedback = HapticFeedback()
     private let inventoryStore=MonsterInventoryStore()
-    @Published var inventory=MonsterInventory()
+    private let adventureStore=AdventureStore()
+    @Published var adventure=AdventureState()
+    var inventory:MonsterInventory { get { adventure.inventory } set { adventure.inventory=newValue } }
+    @Published var home=true
+    @Published var homeTab:HomeTab = .journey
+    @Published var starter=MonsterRecord(form:.ice)
+    @Published var recruitCandidates=ElementForm.allCases.map { MonsterRecord(form:$0) }
+    @Published var homeMessage=""
+    @Published var affection=0
+    var monsterName:String { inventory.selected.name }
+    private var lastPet:TimeInterval = -100
     private var movementInput = MovementInput()
     private var directControl = DirectControl()
     var viewport = WorldViewport()
@@ -20,7 +32,7 @@ final class GameSession: ObservableObject {
     @Published var forms=false
     @Published var dead=false
     @Published var deepRelic=false
-    var suspended:Bool { paused || settings || abilityInfo || forms || dead || aiming }
+    var suspended:Bool { home || paused || settings || abilityInfo || forms || dead || aiming }
     @Published var burning:Float = 0
     @Published var wetness:Float = 0
     @Published var grounded = true
@@ -32,7 +44,7 @@ final class GameSession: ObservableObject {
     @Published var settings = false
     @Published var debug = false { didSet { persistSettings() } }
     @Published var paused = false
-    @Published var hint = "Тап по кубику — прыжок. Карта — движение. Новые приёмы — в дереве навыков." { didSet { hintUntil=simulation.time+3 } }
+    @Published var hint = "Свайп вверх — прыжок. Карта — движение. Погладь кубика — он обрадуется." { didSet { hintUntil=simulation.time+3 } }
     var hintUntil:Float = 0
     @Published var gravity:Double = 18 { didSet { simulation.gravity=Float(gravity);persistSettings() } }
     @Published var power:Double = 1 { didSet { persistSettings() } }
@@ -55,10 +67,25 @@ final class GameSession: ObservableObject {
         let physicsPreview=args.contains { $0.hasPrefix("--preview-physics-") }
         let previewForm=physicsPreview ? (args.contains("--preview-physics-crate") ? ElementForm.water : (args.contains("--preview-physics-bridge") ? .stone : .ice)) : (furPreview ? ElementForm.ice : ElementForm.allCases.first { args.contains("--preview-"+$0.rawValue) })
         form=previewForm ?? ElementForm(rawValue:UserDefaults.standard.string(forKey:"elementalcube.form") ?? "ice") ?? .ice
-        if !visualPreview && !args.contains("--ui-testing") { inventory=inventoryStore.load(selectedForm:form);form=inventory.selected.form }
-        else { if args.contains("--ui-testing") { form = .ice };inventory=MonsterInventory(selectedForm:form) }
+        if !visualPreview && !args.contains("--ui-testing") {
+            adventure=adventureStore.load(fallback:inventoryStore.load(selectedForm:form));form=inventory.selected.form
+        } else {
+            if args.contains("--ui-testing") { form = .ice }
+            adventure=AdventureState(inventory:MonsterInventory(selectedForm:form))
+        }
+        starter=inventory.selected
+        let previewHome=args.contains("--preview-home") || args.contains("--preview-lab")
+        home = previewHome || args.contains("--preview-start") || (!visualPreview && (!args.contains("--ui-testing") || args.contains("--onboarding")))
+        if (!home || previewHome) && !adventure.started { _=adventure.begin(with:inventory.selected) }
+        if args.contains("--ui-testing-rich") || args.contains("--preview-lab") {
+            for map in WorldMap.allCases { adventure.map=map;adventure.recordFinds(Set(0..<12),relic:true);adventure.finishMap() }
+            adventure.map = .shore
+        }
+        if args.contains("--preview-lab") { homeTab = .laboratory;_ = adventure.evolve() }
+        if args.contains("--preview-glacier") { adventure.map = .glacier }
+        if args.contains("--preview-forge") { adventure.map = .forge }
         if args.contains("--preview-gesture"),let node=inventory.selected.tree.first(where:{ $0.kind == .jump }) { _=inventory.learn(node,monsterID:inventory.selectedID) }
-        simulation=Simulation(form:form);simulation.applySkills(of:inventory.selected)
+        simulation=Simulation(form:form,map:adventure.map);simulation.applySkills(of:inventory.selected)
         let storedWind=UserDefaults.standard.object(forKey:"elementalcube.wind") as? Double ?? 1
         wind=storedWind.isFinite ? max(-3,min(3,storedWind)) : 1;simulation.wind=Float(wind)
         let stored = visualPreview ? PlaygroundSettings() : settingsStore.load()
@@ -66,9 +93,13 @@ final class GameSession: ObservableObject {
         debug=stored.debug;haptics=stored.haptics
         simulation.gravity=Float(gravity);simulation.waterEnabled=water
         // Reproducible local QA scenes, never enabled by a normal launch.
-        if visualPreview {
+        if visualPreview && !home {
             simulation.equipPassive(true)
-            if args.contains("--preview-summit") {
+            if args.contains("--preview-glacier") {
+                simulation.placeCube(Vec(42,7.9));for _ in 0..<120 { simulation.step() }
+            } else if args.contains("--preview-forge") {
+                simulation.placeCube(Vec(46.2,-11.9));for _ in 0..<120 { simulation.step() }
+            } else if args.contains("--preview-summit") {
                 simulation.placeCube(Vec(WorldLayout.summit.x,WorldLayout.summit.y+0.7));for _ in 0..<120 { simulation.step() }
             } else if args.contains("--preview-cave") {
                 simulation.placeCube(Vec(41,-12.3));for _ in 0..<120 { simulation.step() }
@@ -123,7 +154,7 @@ final class GameSession: ObservableObject {
         guard !previewPrepared,ProcessInfo.processInfo.arguments.contains("--preview-gesture") else { return }
         previewPrepared=true
         let point=viewport.project(simulation.cube.position,depth:1.1)
-        pointerBegan(CGPoint(x:CGFloat(point.x),y:CGFloat(point.y)))
+        pointerBegan(CGPoint(x:CGFloat(point.x),y:CGFloat(point.y)),time:ProcessInfo.processInfo.systemUptime-0.4)
         pointerMoved(CGPoint(x:CGFloat(point.x)+75,y:CGFloat(point.y)-110))
     }
     private func persistSettings() {
@@ -143,19 +174,21 @@ final class GameSession: ObservableObject {
         return AimPlanner.directImpulse(dx:Float(aim.width),dy:Float(aim.height),maximumSpeed:simulation.jumpSkill.maximumSpeed,sensitivity:Float(power))
     }
     var launchVelocity:Vec { simulation.launchVelocity(for:aimImpulse) }
-    func pointerBegan(_ point:CGPoint) {
+    func pointerBegan(_ point:CGPoint,time:TimeInterval=ProcessInfo.processInfo.systemUptime) {
         guard !suspended else { return }
         let p=Vec(Float(point.x),Float(point.y)),body=simulation.cube!
         let hit=viewport.hitsCube(p,center:body.position,angle:simulation.bodyAngle,stretch:Vec(simulation.bodyStretch.x,simulation.bodyStretch.y))
-        directControl.begin(screen:p,worldX:viewport.unproject(p,depth:1.1).x,onCube:hit,canJump:simulation.canLaunch)
+        directControl.begin(screen:p,worldX:viewport.unproject(p,depth:1.1).x,onCube:hit,canJump:simulation.canLaunch,canAim:simulation.directionalJumpUnlocked,time:time)
         aiming=directControl.gesture == .aim;aim = .zero
         applyMovement()
-        if hit && !aiming { hint="Дождись опоры, чтобы оттолкнуться. Касание карты задаёт движение." }
+        if hit { hint=simulation.directionalJumpUnlocked ? "Погладь кубика. Для прицела удержи и потяни." : "Кубик любит поглаживания. Прыжок — свайп вверх по экрану." }
     }
     func pointerMoved(_ point:CGPoint) {
         let p=Vec(Float(point.x),Float(point.y))
         directControl.update(screen:p,worldX:viewport.unproject(p,depth:1.1).x)
+        aiming=directControl.gesture == .aim
         aim=CGSize(width:CGFloat(directControl.drag.x),height:CGFloat(directControl.drag.y))
+        if directControl.gesture == .cube && hypot(directControl.drag.x,directControl.drag.y)>8 { petCube() }
         applyMovement()
     }
     func pointerEnded(_ point:CGPoint) {
@@ -165,16 +198,17 @@ final class GameSession: ObservableObject {
         aiming=false;aim = .zero
         let impulse:Vec
         switch release {
-        case .tapJump:impulse=Vec(0,7.2)
-        case .aim:
-            impulse=aimedImpulse
-            if !simulation.directionalJumpUnlocked { hint="Направленный прыжок нужно изучить в дереве. Короткий тап — обычный прыжок." }
+        case .pet:petCube();impulse=Vec(0,0)
+        case .swipeJump(let v):impulse=v
+        case .aim:impulse=aimedImpulse
         case .none:impulse=Vec(0,0)
         }
         if hypot(impulse.x,impulse.y)>0.05 {
-            let accepted=simulation.performJump(impulse,directed:release != .tapJump)
-            if !accepted { hint=simulation.nextJumpIsAirJump ? "Двойной прыжок нужно изучить; дополнительный толчок стоит 10 маны." : "Для приёма нужны опора и запас маны." }
-            else { hint=release == .tapJump ? (simulation.directionalJumpUnlocked ? "Обычный прыжок. Потяни кубика, чтобы выбрать направление и силу." : "Обычный прыжок. Направленный и двойной открываются в дереве навыков.") : "Чем дальше тянешь, тем сильнее прыжок. Предел задаёт навык куба." }
+            let directed:Bool
+            if case .aim=release { directed=true } else { directed=false }
+            let accepted=simulation.performJump(impulse,directed:directed)
+            if !accepted { hint=simulation.nextJumpIsAirJump ? "Для второго толчка изучи двойной прыжок. Он стоит 10 маны." : "Дождись опоры. Прицельному прыжку нужны 6 маны." }
+            else { hint=directed ? "Сила прицельного прыжка растёт вместе с навыками." : "Прыг! Небольшой наклон свайпа задаёт направление." }
             deliverFeedback();refresh()
         }
         applyMovement()
@@ -196,28 +230,76 @@ final class GameSession: ObservableObject {
     func cancelAim() { aiming=false;aim = .zero;directControl.cancel();movementInput.clear();applyMovement() }
     func tapJump() { guard !suspended else { return };_ = simulation.performJump();deliverFeedback() }
     func showAbility() { guard !suspended else { return };cancelAim();abilityInfo=true }
-    func selectMonster(_ id:UUID) {
+    private func persistAdventure() {
+        guard !visualPreview,!ProcessInfo.processInfo.arguments.contains(where:{ $0 == "--ui-testing" || $0.hasPrefix("--preview-") }) else { return }
+        adventureStore.save(adventure)
+    }
+    func petCube() {
+        let now=ProcessInfo.processInfo.systemUptime
+        guard now-lastPet>0.24 else { return }
+        lastPet=now;simulation.pet();affection+=1;refresh()
+    }
+    func showHome(_ tab:HomeTab = .journey) {
+        saveInventory();cancelAim();forms=false;settings=false;abilityInfo=false
+        homeTab=tab;home=true;homeMessage=""
+    }
+    func randomizeStarter() { starter=MonsterRecord.randomStarter() }
+    func beginJourney() {
+        guard adventure.begin(with:starter) else { return }
+        form=inventory.selected.form;persistAdventure();reset(preserveFinds:false);home=false;paused=false
+    }
+    func play(_ map:WorldMap) {
+        guard adventure.started else { return }
         saveInventory()
-        guard inventory.select(id) else { return }
-        form=inventory.selected.form;UserDefaults.standard.set(form.rawValue,forKey:"elementalcube.form")
-        inventoryStore.save(inventory);reset(preserveFinds:false);forms=false
+        let changing=adventure.map != map
+        adventure.map=map;persistAdventure()
+        if changing || simulation.won || simulation.dead { reset(preserveFinds:false) }
+        home=false;paused=false;forms=false;cancelAim()
+    }
+    @discardableResult func selectMonster(_ id:UUID)->Bool {
+        saveInventory()
+        guard adventure.select(id) else { homeMessage="Для смены кубика нужно больше эфира. Находи кристаллы в мирах.";return false }
+        form=inventory.selected.form;persistAdventure();reset(preserveFinds:false);forms=false
+        homeMessage="\(monsterName) готов к приключению.";return true
+    }
+    @discardableResult func recruit(_ candidate:MonsterRecord)->Bool {
+        saveInventory()
+        guard adventure.recruitRandom(candidate) else { homeMessage="Новый друг стоит 4 эфира.";return false }
+        form=inventory.selected.form
+        if let i=recruitCandidates.firstIndex(where:{ $0.id==candidate.id }) { recruitCandidates[i]=MonsterRecord(form:candidate.form) }
+        persistAdventure();reset(preserveFinds:false);homeMessage="Знакомьтесь: \(monsterName)!";return true
+    }
+    func evolve() {
+        saveInventory()
+        guard adventure.evolve() else { return }
+        simulation.applySkills(of:inventory.selected);simulation.pet();affection+=1
+        persistAdventure();homeMessage="Новая ступень: \(monsterName) · \(inventory.selected.stageName.lowercased())."
+    }
+    @discardableResult func merge(with second:UUID)->MonsterRecord? {
+        saveInventory()
+        guard let child=adventure.merge(inventory.selectedID,second) else { return nil }
+        form=child.form;persistAdventure();reset(preserveFinds:false)
+        homeMessage="Из двух историй родился \(child.name).";return child
     }
     func learn(_ node:SkillNode,for id:UUID) {
         guard inventory.learn(node,monsterID:id) else { return }
         if id==inventory.selectedID { simulation.applySkills(of:inventory.selected) }
-        inventoryStore.save(inventory)
+        persistAdventure()
     }
     func saveInventory() {
-        inventory.recordFinds(crystals:simulation.collected,relic:simulation.deepRelic)
-        if !visualPreview { inventoryStore.save(inventory) }
+        adventure.recordFinds(simulation.collected,relic:simulation.deepRelic)
+        if simulation.won { adventure.finishMap() }
+        persistAdventure()
     }
     func equip(_ item:MonsterItem?) {
         guard inventory.equip(item) else { return }
-        simulation.applySkills(of:inventory.selected);inventoryStore.save(inventory)
+        simulation.applySkills(of:inventory.selected);persistAdventure()
     }
     func reset(preserveFinds:Bool=true) {
-        if preserveFinds { saveInventory() };simulation=Simulation(form:form);simulation.applySkills(of:inventory.selected);simulation.gravity=Float(gravity);simulation.waterEnabled=water;simulation.wind=Float(wind)
-        visualPreview=false;cancelAim();hint="Новая попытка. \(form.ability) действует автоматически.";refresh()
+        if preserveFinds { saveInventory() }
+        simulation=Simulation(form:form,map:adventure.map);simulation.applySkills(of:inventory.selected)
+        simulation.gravity=Float(gravity);simulation.waterEnabled=water;simulation.wind=Float(wind)
+        visualPreview=false;cancelAim();hint="\(monsterName) здесь. Свайп вверх — прыжок.";refresh()
     }
     func tick() {
         guard !suspended && !visualPreview else { return }
@@ -227,9 +309,10 @@ final class GameSession: ObservableObject {
     func refresh() {
         shards=simulation.collected.count;energy=simulation.energy;burning=simulation.burning;wetness=simulation.wetness;grounded=simulation.cube.grounded
         inWater=simulation.inWater;won=simulation.won;jumps=simulation.jumps
-        let changed=inventory.selected.crystals.union(simulation.collected) != inventory.selected.crystals || (simulation.deepRelic && !inventory.selected.deepRelic)
-        inventory.recordFinds(crystals:simulation.collected,relic:simulation.deepRelic)
-        if changed && !visualPreview { inventoryStore.save(inventory) }
+        let before=adventure
+        adventure.recordFinds(simulation.collected,relic:simulation.deepRelic)
+        if simulation.won { adventure.finishMap() }
+        if adventure != before { persistAdventure() }
         health=simulation.health;dead=simulation.dead;passiveWorking=simulation.passiveWorking;deepRelic=simulation.deepRelic
     }
 }

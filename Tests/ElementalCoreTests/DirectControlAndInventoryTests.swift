@@ -30,30 +30,27 @@ final class DirectControlAndInventoryTests:XCTestCase {
     }
     func testAimOwnsGestureDoesNotFallThroughAndCancelClearsMotion() {
         var input=DirectControl()
-        input.begin(screen:Vec(50,50),worldX:2,onCube:true,canJump:true)
-        input.begin(screen:Vec(90,90),worldX:10,onCube:false,canJump:true)
-        input.update(screen:Vec(100,0),worldX:9)
+        input.begin(screen:Vec(50,50),worldX:2,onCube:true,canJump:true,canAim:true,time:1)
+        input.begin(screen:Vec(90,90),worldX:10,onCube:false,canJump:true,time:1.1)
+        input.update(screen:Vec(100,0),worldX:9,time:1.4)
         XCTAssertEqual(input.drag,Vec(50,-50));XCTAssertEqual(input.movement(position:2,velocity:0),0)
-        XCTAssertEqual(input.end(),.aim(Vec(50,-50)));XCTAssertNil(input.destination)
-        input.begin(screen:Vec(20,20),worldX:6,onCube:true,canJump:false)
-        XCTAssertEqual(input.end(),.none);XCTAssertNil(input.destination)
+        XCTAssertEqual(input.end(time:1.5),.aim(Vec(50,-50)));XCTAssertNil(input.destination)
+        input.begin(screen:Vec(20,20),worldX:6,onCube:true,canJump:false,time:2)
+        XCTAssertEqual(input.end(time:2.1),.pet);XCTAssertNil(input.destination)
         input.begin(screen:Vec(0,0),worldX:6,onCube:false,canJump:true);input.cancel()
         XCTAssertNil(input.destination);XCTAssertNil(input.gesture)
     }
-    func testShortCubeTapJumpsButHoldsDragReturnsAirAndCancellationsDoNot() {
+    func testCubeTapsAndHoldsPetWhileCancelledAimsNeverJump() {
         var input=DirectControl()
-        func begin(_ canJump:Bool=true) { input.begin(screen:Vec(50,50),worldX:2,onCube:true,canJump:canJump,time:10) }
-        begin();input.update(screen:Vec(52,48),worldX:2)
-        XCTAssertEqual(input.end(time:10.12),.tapJump)
-        XCTAssertEqual(input.end(time:10.13),.none,"Release cannot jump twice")
-        begin();XCTAssertEqual(input.end(time:10.8),.none,"Holding is not a short tap")
-        begin();input.update(screen:Vec(100,50),worldX:4);input.update(screen:Vec(50,50),worldX:2)
-        XCTAssertEqual(input.end(time:10.15),.none,"Retracting an aim cancels it")
-        begin(false);XCTAssertEqual(input.end(time:10.1),.none,"No second jump in air")
+        func begin() { input.begin(screen:Vec(50,50),worldX:2,onCube:true,canJump:true,canAim:true,time:10) }
+        begin();input.update(screen:Vec(52,48),worldX:2,time:10.1)
+        XCTAssertEqual(input.end(time:10.12),.pet);XCTAssertEqual(input.end(time:10.13),.none)
+        begin();XCTAssertEqual(input.end(time:10.8),.pet)
+        begin();input.update(screen:Vec(100,50),worldX:4,time:10.4);input.update(screen:Vec(50,50),worldX:2,time:10.5)
+        XCTAssertEqual(input.end(time:10.6),.none,"Retracting an aim cancels it")
         begin();input.cancel();XCTAssertEqual(input.end(time:10.1),.none)
         input.begin(screen:Vec(50,50),worldX:6,onCube:false,canJump:true,time:10)
-        XCTAssertEqual(input.end(time:10.1),.none,"A map tap only moves")
-        XCTAssertEqual(input.destination,6)
+        XCTAssertEqual(input.end(time:10.1),.none);XCTAssertEqual(input.destination,6)
     }
     func testProjectionAndHitTestingAcrossRetinaIndependentOrientations() {
         for screen in [Vec(402,874),Vec(874,402),Vec(1032,1376),Vec(1280,800)] {

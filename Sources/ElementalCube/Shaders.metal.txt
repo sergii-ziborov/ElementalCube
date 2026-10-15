@@ -1,7 +1,7 @@
 #include <metal_stdlib>
 using namespace metal;
 struct Vertex { float4 position; float4 normal; float4 color; };
-struct Uniforms { float4x4 projection; float4x4 model; float4 animation; float4 camera; float4 support; };
+struct Uniforms { float4x4 projection; float4x4 model; float4 animation; float4 camera; float4 support; float4 world; };
 struct Varying { float4 position [[position]]; float4 color; float3 normal; float3 world; float3 local; float2 fiber; };
 vertex Varying scene_vertex(const device Vertex *v [[buffer(0)]], constant Uniforms &u [[buffer(1)]], uint id [[vertex_id]]) {
     Vertex a=v[id]; float3 p=a.position.xyz;
@@ -125,5 +125,7 @@ fragment float4 background_fragment(Screen v [[stage_in]], constant Uniforms &u 
     }
     sky=mix(sky,float3(.25,.43,.40),smoothstep(.35,.29,uv.y));
     float grain=fract(sin(dot(v.position.xy,float2(12.9898,78.233)))*43758.5453);
+    if(u.world.x>1.5) sky=mix(sky,float3(sky.r*1.13,sky.g*.78,sky.b*.67),.75);
+    else if(u.world.x>.5) sky=mix(sky,float3(sky.r*.82,sky.g*.94,min(1.,sky.b*1.13)),.8);
     return float4(sky+(grain-.5)*.012,1);
 }

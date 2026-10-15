@@ -53,13 +53,13 @@ final class InteractiveMetalView:MTKView {
     func updateAccessibility() {
         isAccessibilityElement=false
         let body=session.simulation.cube!,viewport=session.viewport,p=viewport.project(body.position,depth:1.1)
-        let size=max(44,CGFloat(1.4/viewport.size.x*viewport.screen.x))
+        let width=max(44,CGFloat(max(1.4,session.simulation.cubeWidth)/viewport.size.x*viewport.screen.x)),height=max(44,CGFloat(max(1.4,session.simulation.cubeHeight)/viewport.size.y*viewport.screen.y))
         cubeAccessibility.accessibilityIdentifier="game.cube";cubeAccessibility.accessibilityLabel="Куб: "+session.form.name
-        cubeAccessibility.accessibilityFrameInContainerSpace=CGRect(x:CGFloat(p.x)-size/2,y:CGFloat(p.y)-size/2,width:size,height:size)
+        cubeAccessibility.accessibilityFrameInContainerSpace=CGRect(x:CGFloat(p.x)-width/2,y:CGFloat(p.y)-height/2,width:width,height:height)
         worldAccessibility.accessibilityIdentifier="game.world";worldAccessibility.accessibilityLabel="Игровой мир"
         worldAccessibility.accessibilityFrameInContainerSpace=bounds
         if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
-            worldAccessibility.accessibilityValue=String(format:"x=%.3f;y=%.3f;jumps=%d;aiming=%d;cold=%.2f;charm=%@",body.position.x,body.position.y,session.simulation.jumps,session.aiming ? 1 : 0,session.simulation.waterField.conductivity,session.inventory.selected.equippedCharm?.rawValue ?? "none")
+            worldAccessibility.accessibilityValue=String(format:"x=%.3f;y=%.3f;jumps=%d;aiming=%d;cold=%.2f;charm=%@;pets=%d;map=%@;coins=%d;form=%@",body.position.x,body.position.y,session.simulation.jumps,session.aiming ? 1 : 0,session.simulation.waterField.conductivity,session.inventory.selected.equippedCharm?.rawValue ?? "none",session.affection,session.adventure.map.rawValue,session.adventure.coins,session.form.rawValue)
         }
         accessibilityElements=[cubeAccessibility,worldAccessibility]
     }

@@ -25,9 +25,9 @@ final class DirectInteractionTests:XCTestCase {
         let reverse=XCTNSPredicateExpectation(predicate:NSPredicate { _,_ in (Double(self.value("x")) ?? right)<right-0.6 },object:nil)
         XCTAssertEqual(XCTWaiter.wait(for:[reverse],timeout:8),.completed);XCTAssertEqual(value("jumps"),"0")
     }
-    func testSingleShortTapIsOneOrdinaryUpwardJump() {
+    func testScreenSwipeIsOneOrdinaryUpwardJump() {
         let startX=Double(value("x"))!
-        cube.tap()
+        world.swipeUp(velocity:.fast)
         XCTAssertEqual(value("jumps"),"1")
         XCTAssertLessThan(abs(Double(value("x"))!-startX),0.4)
         sleep(2);XCTAssertEqual(value("jumps"),"1")
@@ -40,7 +40,7 @@ final class DirectInteractionTests:XCTestCase {
         app.buttons["skill.learn"].tap()
         app.buttons["inventory.close"].tap()
         let start=Double(value("x"))!
-        coordinate(.zero).press(forDuration:0.1,thenDragTo:coordinate(CGVector(dx:75,dy:-125)))
+        coordinate(.zero).press(forDuration:0.4,thenDragTo:coordinate(CGVector(dx:75,dy:-125)))
         XCTAssertEqual(value("jumps"),"1")
         sleep(1);XCTAssertGreaterThan(Double(value("x"))!,start+0.5)
         XCUIDevice.shared.orientation = .landscapeLeft;sleep(1)
@@ -48,10 +48,11 @@ final class DirectInteractionTests:XCTestCase {
         XCTAssertTrue(cube.exists)
         let image=XCTAttachment(screenshot:app.screenshot());image.name="iPhone landscape direct controls";image.lifetime = .keepAlways;add(image)
     }
-    func testDirectedDragIsLockedUntilLearnedButTapStillJumps() {
-        coordinate(.zero).press(forDuration:0.1,thenDragTo:coordinate(CGVector(dx:75,dy:-125)))
+    func testUnlearnedCubeDragAndTapPetWhileScreenSwipeJumps() {
+        coordinate(.zero).press(forDuration:0.4,thenDragTo:coordinate(CGVector(dx:75,dy:-125)))
         XCTAssertEqual(value("jumps"),"0")
-        cube.tap();XCTAssertEqual(value("jumps"),"1")
+        cube.tap();XCTAssertEqual(value("jumps"),"0");XCTAssertGreaterThan(Int(value("pets")) ?? 0,0)
+        world.swipeUp(velocity:.fast);XCTAssertEqual(value("jumps"),"1")
     }
     func testPersonalTreeAndEquipmentChangeTheSelectedMonster() {
         app.buttons["inventory.open"].tap()

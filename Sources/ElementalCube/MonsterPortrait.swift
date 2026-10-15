@@ -5,6 +5,9 @@ import ElementalCore
 /// Canvas redraws only the portrait; it never steps physics or publishes session state.
 struct MonsterPortrait:View {
     var form:ElementForm
+    var secondary:ElementForm?=nil
+    var seed:UInt64=0
+    var stage:Int=0
     var wetness:Double=0
     var health:Double=100
     var burning:Double=0
@@ -37,15 +40,15 @@ struct MonsterPortrait:View {
         TimelineView(.animation(minimumInterval:reduceMotion ? 1/8 : 1/30,paused:!visible || !animate || scenePhase != .active)) { timeline in
             let now=timeline.date.timeIntervalSinceReferenceDate
             Canvas { context,size in
-                PortraitPainter(form:form,time:now-born,reactionAge:now-touched,wetness:wetness,health:health,burning:burning,reduced:reduceMotion)
+                PortraitPainter(form:form,secondary:secondary,stage:stage,time:now-born+Double(seed%997)/113,reactionAge:now-touched,wetness:wetness,health:health,burning:burning,reduced:reduceMotion)
                     .draw(in:&context,size:size)
-            }.accessibilityHidden(true)
+            }.hueRotation(.degrees(seed==0 ? 0 : (Double(seed%29)-14)*0.4)).accessibilityHidden(true)
         }.contentShape(Rectangle())
     }
 }
 
 private struct PortraitPainter {
-    var form:ElementForm,time:Double,reactionAge:Double,wetness:Double,health:Double,burning:Double,reduced:Bool
+    var form:ElementForm,secondary:ElementForm?,stage:Int,time:Double,reactionAge:Double,wetness:Double,health:Double,burning:Double,reduced:Bool
     var reacting:Bool { reactionAge>=0 && reactionAge<1.2 }
     var motion:Double { reduced ? 0 : time }
     var wet:Double { min(1,max(0,wetness)) }
@@ -56,6 +59,16 @@ private struct PortraitPainter {
         case .air:return Color(red:0.59,green:0.89,blue:0.79)
         case .stone:return Color(red:0.57,green:0.59,blue:0.51)
         case .fire:return Color(red:1,green:0.58,blue:0.18)
+        }
+    }
+    private var accent:Color {
+        guard let second=secondary else { return color.opacity(0.7) }
+        switch second {
+        case .ice:return Color(red:0.6,green:0.83,blue:1)
+        case .water:return Color(red:0.3,green:0.68,blue:0.91)
+        case .air:return Color(red:0.45,green:0.9,blue:0.77)
+        case .stone:return Color(red:0.66,green:0.61,blue:0.48)
+        case .fire:return Color(red:1,green:0.64,blue:0.31)
         }
     }
     func draw(in context:inout GraphicsContext,size:CGSize) {
@@ -69,7 +82,7 @@ private struct PortraitPainter {
         if form == .air { wind(in:&context) }
         context.translateBy(x:50,y:88-hover-hop*(form == .stone ? 0.2 : 1))
         context.rotate(by:.degrees(form == .stone ? sin(motion)*0.3 : sin(motion*1.1)*1.8))
-        let amount=form == .stone ? 0.004 : (form == .water ? 0.025 : 0.014)
+        let amount=form == .stone ? (secondary == nil ? 0.004 : 0.008) : (form == .water ? 0.025 : 0.014)
         context.scaleBy(x:1-breath*amount,y:1+breath*amount)
         context.translateBy(x:-50,y:-88)
         if form == .fire || burning>0 { flames(in:&context) }
@@ -77,18 +90,25 @@ private struct PortraitPainter {
         if form.hasFur { fur(in:&context) }
         face(in:&context)
         if form.hasFur && wet>0.2 { droplets(in:&context) }
+        if stage>0 {
+            for i in 0..<stage {
+                let x=34+Double(i)*13,y=12+(reduced ? 0 : sin(time*2+Double(i))*1.5)
+                var p=Path();p.move(to:CGPoint(x:x,y:y-3));p.addLine(to:CGPoint(x:x+2,y:y));p.addLine(to:CGPoint(x:x,y:y+3));p.addLine(to:CGPoint(x:x-2,y:y));p.closeSubpath()
+                context.fill(p,with:.color(Color(red:0.94,green:0.73,blue:0.27)))
+            }
+        }
         if reacting { affection(in:&context) }
     }
     private func body(in c:inout GraphicsContext) {
         var side=Path();side.move(to:CGPoint(x:72,y:20));side.addQuadCurve(to:CGPoint(x:88,y:29),control:CGPoint(x:87,y:16))
         side.addLine(to:CGPoint(x:88,y:72));side.addQuadCurve(to:CGPoint(x:76,y:87),control:CGPoint(x:89,y:83));side.closeSubpath()
-        c.fill(side,with:.linearGradient(Gradient(colors:[color,color.opacity(0.7)]),startPoint:CGPoint(x:79,y:22),endPoint:CGPoint(x:90,y:88)))
+        c.fill(side,with:.linearGradient(Gradient(colors:[color,accent]),startPoint:CGPoint(x:79,y:22),endPoint:CGPoint(x:90,y:88)))
         var top=Path();top.move(to:CGPoint(x:22,y:25));top.addLine(to:CGPoint(x:31,y:18));top.addQuadCurve(to:CGPoint(x:77,y:18),control:CGPoint(x:50,y:15));top.addQuadCurve(to:CGPoint(x:87,y:28),control:CGPoint(x:86,y:18));top.closeSubpath()
         c.fill(top,with:.color(color.opacity(0.65)))
         let rect=CGRect(x:14,y:23,width:66,height:65)
         let shape=RoundedRectangle(cornerRadius:form == .stone ? 11 : 15).path(in:rect)
         let light:Color=form == .fire ? Color(red:1,green:0.9,blue:0.42) : (form == .stone ? Color(red:0.78,green:0.78,blue:0.66) : Color(red:0.89-wet*0.18,green:0.97-wet*0.15,blue:1-wet*0.1))
-        c.fill(shape,with:.linearGradient(Gradient(colors:[light,color]),startPoint:CGPoint(x:20,y:27),endPoint:CGPoint(x:74,y:87)))
+        c.fill(shape,with:.linearGradient(Gradient(colors:secondary == nil ? [light,color] : [light,color,accent]),startPoint:CGPoint(x:20,y:27),endPoint:CGPoint(x:74,y:87)))
         if form == .stone {
             for points in [[CGPoint(x:16,y:34),CGPoint(x:32,y:25),CGPoint(x:36,y:44),CGPoint(x:20,y:49)],
                            [CGPoint(x:56,y:25),CGPoint(x:76,y:30),CGPoint(x:73,y:47),CGPoint(x:63,y:40)],

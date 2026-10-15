@@ -28,41 +28,49 @@ public struct WorldViewport {
 }
 
 public struct DirectControl {
-    public enum Gesture:Equatable { case aim,move }
-    public enum Release:Equatable { case none,tapJump,aim(Vec) }
+    public enum Gesture:Equatable { case cube,move,jump,aim }
+    public enum Release:Equatable { case none,pet,swipeJump(Vec),aim(Vec) }
     public private(set) var gesture:Gesture?
     public private(set) var drag=Vec(0,0)
     public private(set) var destination:Float?
     private var origin=Vec(0,0)
     private var startedAt:TimeInterval=0
     private var furthestDrag:Float=0
+    private var onCube=false,aimAllowed=false,aimArmed=false,heldCube=false
     public init() {}
-    public mutating func begin(screen:Vec,worldX:Float,onCube:Bool,canJump:Bool,time:TimeInterval=ProcessInfo.processInfo.systemUptime) {
+    public mutating func begin(screen:Vec,worldX:Float,onCube:Bool,canJump:Bool,canAim:Bool=false,time:TimeInterval=ProcessInfo.processInfo.systemUptime) {
         guard gesture==nil else { return }
         origin=screen;drag=Vec(0,0);startedAt=time;furthestDrag=0
-        if onCube {
-            destination=nil
-            if canJump { gesture = .aim }
-        } else { gesture = .move;destination=worldX }
+        self.onCube=onCube;aimAllowed=canAim && canJump;aimArmed=false;heldCube=false
+        gesture=onCube ? .cube : .move
+        destination=onCube ? nil : worldX
     }
-    public mutating func update(screen:Vec,worldX:Float) {
-        if gesture == .aim { drag=Vec(screen.x-origin.x,screen.y-origin.y);furthestDrag=max(furthestDrag,hypot(drag.x,drag.y)) }
-        else if gesture == .move { destination=worldX }
+    public mutating func update(screen:Vec,worldX:Float,time:TimeInterval=ProcessInfo.processInfo.systemUptime) {
+        guard gesture != nil else { return }
+        // Aim requires a stationary hold before dragging. A quick upward swipe
+        // stays a basic jump even when it starts on the monster.
+        if onCube && time-startedAt>=0.28 && furthestDrag<8 { heldCube=true;aimArmed=aimAllowed }
+        drag=Vec(screen.x-origin.x,screen.y-origin.y);furthestDrag=max(furthestDrag,hypot(drag.x,drag.y))
+        if gesture == .aim || (aimArmed && furthestDrag>=8) { gesture = .aim;destination=nil }
+        else if -drag.y>14 && -drag.y>abs(drag.x)*0.7 { gesture = .jump;destination=nil }
+        else if onCube { gesture = .cube;destination=nil }
+        else { gesture = .move;destination=worldX }
     }
-    /// Ending a map touch retains its world destination; ending an aim cannot
-    /// fall through into a map command. A short cube tap is an ordinary jump;
-    /// a long hold or a drag returned to its origin is not a tap.
     public mutating func end(time:TimeInterval=ProcessInfo.processInfo.systemUptime)->Release {
+        guard gesture != nil else { return .none }
+        let duration=time-startedAt
         var release=Release.none
         if gesture == .aim {
-            if hypot(drag.x,drag.y)>=8 { release = .aim(drag) }
-            else if furthestDrag<8 && (0...0.3).contains(time-startedAt) { release = .tapJump }
-        }
+            if hypot(drag.x,drag.y)>=12 { release = .aim(drag) }
+            destination=nil
+        } else if -drag.y>=28 && -drag.y>=abs(drag.x)*0.7 && duration<=0.65 && !(onCube && heldCube) {
+            release = .swipeJump(Vec(max(-3.2,min(3.2,drag.x*0.055)),7.2));destination=nil
+        } else if onCube { release = .pet;destination=nil }
         gesture=nil;drag=Vec(0,0);return release
     }
-    public mutating func cancel() { gesture=nil;destination=nil;drag=Vec(0,0) }
+    public mutating func cancel() { gesture=nil;destination=nil;drag=Vec(0,0);aimArmed=false }
     public mutating func movement(position:Float,velocity:Float,maxSpeed:Float=3.4)->Float {
-        guard gesture != .aim,let target=destination else { return 0 }
+        guard gesture == nil || gesture == .move,let target=destination else { return 0 }
         let delta=target-position
         if abs(delta)<0.14 && abs(velocity)<0.25 { destination=nil;return 0 }
         return max(-1,min(1,delta*3/maxSpeed))
