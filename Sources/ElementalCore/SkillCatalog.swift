@@ -14,6 +14,12 @@ public enum SkillCatalog {
             SkillNode(id:m.treeIdentity+"/"+kind.rawValue,kind:kind,title:title,explanation:text,summary:summary,symbol:kind == .jump || kind == .momentum ? "arrow.up.right" : m.form.symbol,cost:m.inheritedPotential.contains(kind) && !m.learned.contains(kind) ? 0 : cost,prerequisite:prerequisite.map { m.treeIdentity+"/"+$0.rawValue })
         }
         let mobility:[ElementForm:String]=[.ice:"Ледяной разбег",.water:"Упругая капля",.air:"Попутный ветер",.stone:"Разгон валуна",.fire:"Искра ввысь"]
+        let gait:[ElementForm:(String,String)]=[
+            .ice:("Скольжение +20%", "Усиливает ледяной разбег на 20%. Куб не катится, а скользит, оставляя короткий след инея."),
+            .water:("Скачки +20%", "Усиливает маленькие скачки на суше на 20%. Перед толчком жидкое тело сжимается, в полёте вытягивается, после посадки растекается вширь."),
+            .air:("Высота полёта +0,25 м", "Поднимает высоту свободного полёта на 0,25 м. Воздушное тело летит над землёй и водой, медленнее падает и управляется в воздухе с рождения."),
+            .stone:("Сила разрушения +25%", "Увеличивает разрушительную энергию столкновения на 25%. Сильный удар разбивает деревянный ящик или разрешённую каменную преграду на настоящие обломки. Слабое касание не разрушает их."),
+            .fire:("Скорость перетекания +15%", "Ускоряет вязкое перетекание на 15%. Огонёк движется медленнее Льдинки, быстро гасит инерцию и обжигает только горючую опору.")]
         var mastery:(String,String,String),affinity:(String,String,String)
         if m.hybridStyle == .crystal || m.form == .ice {
             mastery=(m.isHybrid ? "Растущий кристалл" : "Глубокий холод","Холод распространяется на 25% быстрее","Усиливает теплопроводность морозного касания. Ледяная корка быстрее растёт в глубину и в стороны; первая опора по-прежнему появляется сразу и не расходует ману.")
@@ -42,7 +48,7 @@ public enum SkillCatalog {
         return [
             node(.passive,m.passiveName,"Автоматически · 0 маны",m.passiveExplanation,0,nil),
             node(.jump,"Направленный прыжок","Выбери угол и силу · 6 маны","Удержи кубика, затем потяни в сторону полёта и отпусти. Пунктир показывает траекторию; стрелки нет. Сила растёт вместе с длиной жеста и ограничена изученными навыками. Базовый свайп вверх уже доступен бесплатно.",1,nil),
-            node(.momentum,mobility[m.form]!,"Предел прицела +1,7 м/с","Усиливает изученный направленный прыжок на 1,7 м/с. Короткое движение пальца остаётся мягким толчком; длинный жест позволяет преодолеть более широкий разрыв. Стоимость приёма не растёт.",1,.jump),
+            node(.momentum,mobility[m.form]!,gait[m.form]!.0+" · прицел +1,7 м/с",gait[m.form]!.1+" Также увеличивает предел изученного прицела на 1,7 м/с, сохраняя стоимость приёма.",1,.jump),
             node(.mastery,mastery.0,mastery.1,mastery.2,1,.passive),
             node(.doubleJump,"Двойной прыжок","Ещё один толчок в воздухе","После первого прыжка ещё раз сделай свайп вверх: кубик получит один дополнительный воздушный толчок за 10 маны. Заряд восстанавливается на опоре или в воде. Третьего прыжка этот навык не даёт.",2,.momentum),
             node(.control,"Воздушный манёвр","Рули в полёте · прицел +1,7 м/с","Коснись карты справа или слева во время полёта: кубик сможет менять горизонтальную скорость, продолжая падать под действием тяжести. Ещё +1,7 м/с к пределу прицела. У воздушной формы вместо нового руля усиливается уже доступное управление.",2,.doubleJump),
@@ -109,7 +115,15 @@ extension MonsterRecord {
         switch kind {
         case .passive:return [SkillEffect(label:"Работает",before:"",after:"Автоматически"),SkillEffect(label:"Стоимость",before:"",after:"0 маны"),SkillEffect(label:"Пассивный слот",before:"",after:"1 из 1")]
         case .jump:return [SkillEffect(label:"Прицельный прыжок",before:known ? "Недоступен" : "Ещё не изучен",after:"Доступен"),effect("Предел прицела",0,after.jumpSkill.maximumSpeed," м/с"),effect("Мана за приём",0,6*after.manaMultiplier,"")]
-        case .momentum:return [effect("Предел прицела",before.jumpSkill.maximumSpeed,after.jumpSkill.maximumSpeed," м/с"),effect("Мана за приём",6*before.manaMultiplier,6*after.manaMultiplier,"")]
+        case .momentum:
+            var result=[effect("Предел прицела",before.jumpSkill.maximumSpeed,after.jumpSkill.maximumSpeed," м/с")]
+            switch form {
+            case .ice,.fire:result.append(effect("Скорость на опоре",before.groundSpeed,after.groundSpeed," м/с"))
+            case .water:result.append(effect("Импульс скачка",before.hopImpulse,after.hopImpulse," м/с"))
+            case .air:result.append(effect("Высота полёта",before.hoverHeight,after.hoverHeight," м"))
+            case .stone:result.append(effect("Разрушительная энергия",before.impactMultiplier*100,after.impactMultiplier*100,"%"))
+            }
+            return result
         case .doubleJump:return [effect("Толчков в воздухе",0,1,""),effect("Мана за толчок",0,10*after.manaMultiplier,"")]
         case .control:return [SkillEffect(label:"Руль в полёте",before:form == .air ? "Базовый" : "Нет",after:form == .air ? "Усилен на 40%" : "Касание карты"),effect("Предел прицела",before.jumpSkill.maximumSpeed,after.jumpSkill.maximumSpeed," м/с")]
         case .mastery,.affinity:

@@ -1,4 +1,4 @@
-# ElementalCube — тексты карточки 0.1.0 (14)
+# ElementalCube — тексты карточки 0.1.0 (15)
 
 Ручной выпуск; фактический статус в [TESTFLIGHT.md](TESTFLIGHT.md).
 
@@ -10,50 +10,62 @@
 
 ### promotionalText
 
-Выбери маленького друга, погладь его и отправляйся в путь. Три карты, пять стихий, эволюция и новые кубики из слияния в уютной физической песочнице.
+Семь этапов, две ветки пути и пять разных стихий. Веди маленького друга к маяку, собирай находки, изучай навыки и открывай новые поколения.
 
 ### description
 
 Маленький куб. Большой мир.
 
-Выбери первого друга из пяти стихий или создай случайного. Льдинка скользит и замораживает воду касанием; Капля подпрыгивает, плавает и просачивается в низкие проходы; Ветерок парит; Камушек катится и исследует дно; Огонёк обжигает траву и испаряет воду за здоровье.
+Выбери первого друга из пяти стихий или создай случайного. Льдинка быстро скользит и замораживает воду касанием. Капля — гладкий водный куб без шерсти: сжимается перед коротким скачком, плавает и просачивается в низкий проход. Ветерок летит над поверхностью и дольше держится в воздухе. Камушек катится, тонет и разбивает разрешённые преграды сильным ударом. Огонёк медленнее перетекает, обжигает траву и дерево, испаряет воду за здоровье.
 
-Свайп вверх по игровому экрану — бесплатный обычный прыжок с небольшим направлением. Коснись карты или веди по ней пальцем, чтобы двигаться. Погладь кубика — он обрадуется. После изучения прицельного прыжка удержи кубика, потяни в сторону и отпусти: пунктир показывает полёт. Двойной прыжок тоже нужно изучить. У нового кубика известна только автоматическая пассивка, которая не расходует ману.
+Свайп вверх по игровому экрану — бесплатный базовый прыжок с небольшим направлением. Касание или движение пальцем по карте задаёт движение. Погладь кубика — он обрадуется. Прицельный и двойной прыжки открываются изучением. У нового друга известна только автоматическая пассивка, она не тратит ману.
 
-У каждого друга своё дерево из восьми узлов с отдельными рисунками, условиями и сравнением параметров. Изучение сохраняется. Вода усиливает плавание, воздух учится рулить в полёте; завершающие свойства стихий работают в своих условиях.
+На большой карте путешествия семь этапов. От берега выбери ледяную ветку через Тропу мхов или тёплую через Забытые гроты. Пути сходятся на Ветреном перевале и ведут к Древнему маяку. Можно вернуться и исследовать другую ветку. Каждый этап имеет собственную геометрию и начало; это связанные уровни, а не бесшовный общий мир.
 
-В коллекции первый выбор бесплатный, последующие смены и новые друзья стоят найденного игрового эфира. В лаборатории можно вырасти или сменить поколение через слияние. Будущая форма известна заранее: вода и огонь дают Парика, а Парик с огнём снова становится огненным. Утраченные ветви не возвращаются из родословной.
+Кристаллы дают личные очки навыков и эфир. Золотые монеты — отдельные находки; за 30 покупается ещё одно очко выбранному другу. Финиш показывает время, находки и награды, открывает продолжение. Медали скорости платят только за улучшение, повтор не дублирует награду. Уже найденные предметы не появляются заново после перезапуска.
 
-Подготовь паспорт из четырёх отпечатков. Наследуются ровно два из четырёх у каждого источника. Несовместимые карточки теряются, дубликаты не заменяются, доступные фиксаторы меняют вероятности. Предпросмотр показывает потери, отчёт сохраняет результат. Донор остаётся в коллекции, прежнее поколение выбранной линии — в родословной. Вещи донора не копируются. Блок развития пока не раскрыт; обучение бота и серверная арена ещё не реализованы.
+Личное дерево содержит восемь узлов с рисунками, условиями и реальным сравнением параметров. Изученные узлы отмечены печатью и галочкой. Каждая стихия по-своему усиливает движение. Талисманы имеют отдельные рисунки и формы; Сердце глубин можно найти и после осушения воды.
 
-Тихий берег, Хрустальные высоты и Сад тёплых искр предлагают разные маршруты, по 12 кристаллов и собственный финиш. Толкай физический ящик, нагружай подвесной мост, наблюдай волны, брызги и постепенное замерзание. Портреты дышат, моргают и реагируют на ласку в меню. Льдинка пушистая, вода гладкая и без шерсти, воздух окружён потоками, камень похож на квадратный метеорит, огонь покрыт пламенем.
+Первый друг бесплатный. Дальше смена и новые друзья оплачиваются заработанным эфиром. Эволюция сохраняет личность, слияние меняет поколение выбранной линии; донор остаётся. Предпросмотр объясняет будущую форму, потери и наследование. Память и обучаемый бот ещё не реализованы.
 
-Ранняя альфа для iPhone и iPad, портретной и горизонтальной ориентаций. Интерфейс на русском. Без регистрации, рекламы, покупок и игрового сервера. Прогресс сохраняется на устройстве. Жидкость моделируется в двухмерной плоскости с объёмным изображением.
+Ранняя нативная альфа для iPhone и iPad. Русский интерфейс. Вода, мех, разрушение и баланс продолжают дорабатываться. Без аккаунтов, рекламы и покупок за деньги; прогресс хранится на устройстве.
+
+### keywords
+
+куб,физика,прыжки,головоломка,лёд,вода,платформер,пушистик,приключение
 
 ### betaDescription
 
-ElementalCube 0.1.0 (14)
+Маленький куб. Большой мир.
 
-Текущая форма, явные реакции и последовательные слияния. Паспорт из четырёх отпечатков: ровно два от каждого источника. Предпросмотр потерь, вероятности, фиксаторы и сохранённый отчёт. Донор остаётся, прежнее поколение линии хранится в родословной. Предметы не дублируются.
+Выбери первого друга из пяти стихий или создай случайного. Льдинка быстро скользит и замораживает воду касанием. Капля — гладкий водный куб без шерсти: сжимается перед коротким скачком, плавает и просачивается в низкий проход. Ветерок летит над поверхностью и дольше держится в воздухе. Камушек катится, тонет и разбивает разрешённые преграды сильным ударом. Огонёк медленнее перетекает, обжигает траву и дерево, испаряет воду за здоровье.
 
-Три карты, пять стартовых стихий, живые портреты, личные навыки с рисунками. Свайп вверх — базовый прыжок, карта — движение, кубик — ласка. Прицельный и двойной прыжки изучаются; пассивки бесплатны.
+Свайп вверх по игровому экрану — бесплатный базовый прыжок с небольшим направлением. Касание или движение пальцем по карте задаёт движение. Погладь кубика — он обрадуется. Прицельный и двойной прыжки открываются изучением. У нового друга известна только автоматическая пассивка, она не тратит ману.
 
-Ранняя альфа на русском. Блок развития — зачатки; полноценные заклинания, обучение бота и арена ещё впереди.
+На большой карте путешествия семь этапов. От берега выбери ледяную ветку через Тропу мхов или тёплую через Забытые гроты. Пути сходятся на Ветреном перевале и ведут к Древнему маяку. Можно вернуться и исследовать другую ветку. Каждый этап имеет собственную геометрию и начало; это связанные уровни, а не бесшовный общий мир.
+
+Кристаллы дают личные очки навыков и эфир. Золотые монеты — отдельные находки; за 30 покупается ещё одно очко выбранному другу. Финиш показывает время, находки и награды, открывает продолжение. Медали скорости платят только за улучшение, повтор не дублирует награду. Уже найденные предметы не появляются заново после перезапуска.
+
+Личное дерево содержит восемь узлов с рисунками, условиями и реальным сравнением параметров. Изученные узлы отмечены печатью и галочкой. Каждая стихия по-своему усиливает движение. Талисманы имеют отдельные рисунки и формы; Сердце глубин можно найти и после осушения воды.
+
+Первый друг бесплатный. Дальше смена и новые друзья оплачиваются заработанным эфиром. Эволюция сохраняет личность, слияние меняет поколение выбранной линии; донор остаётся. Предпросмотр объясняет будущую форму, потери и наследование. Память и обучаемый бот ещё не реализованы.
+
+Ранняя нативная альфа для iPhone и iPad. Русский интерфейс. Вода, мех, разрушение и баланс продолжают дорабатываться. Без аккаунтов, рекламы и покупок за деньги; прогресс хранится на устройстве.
 
 ### whatToTest
 
-Альфа 0.1.0 (14).
+Альфа 15: маршрут и разные движения.
 
-• Открой инвентарь → «Отпечатки наследия». Выбери до четырёх изученных приёмов; пассивка туда не входит. Изменение паспорта не должно отключать нынешние навыки.
-• В лаборатории подготовь слияние. Форма известна до подтверждения, конкретный отбор — после. «Оставить как есть» не меняет коллекцию и эфир.
-• Лёд + огонь дают Парика. Холодовая ветвь помечена потерянной; её вероятность попасть в геном отличается от возможности проявиться в новом теле.
-• На ступени Росток доступен один фиксатор, Хранитель — два. Несовместимый приём нельзя закрепить. При одном своём фиксаторе: 100% у него, 33% у остальных своих и 50% у донора.
-• После подтверждения донор остаётся неизменным; прежний получатель находится только в родословной. Вещи и свободные очки донора не копируются.
-• Проверь отчёт: четыре карточки умений с происхождением, потерями/повторами и ещё четыре зачатка развития. Отчёт открывается повторно без нового розыгрыша.
-• Парик не замораживает и не обжигает, защищён от обычного огня, не сплющивается через водную щель. Парик + огонь даёт обычную огненную форму без прежних ветвей. Неизвестная пара не тратит эфир.
-• Перезапусти приложение: поколение, донор, предметы, паспорт и исход должны сохраниться. Старые гибриды 13 сохраняют прежний вид до следующего слияния.
-• Проверь iPhone/iPad, поворот, прокрутку и живые портреты. Свайп вверх прыгает, карта двигает, касание кубика радует. Пассивки не тратят ману.
-• Сверь «АЛЬФА · 14». При проблеме укажи устройство, форму, поколение и место. Обучаемого бота, полноценного набора заклинаний и сервера пока нет.
+• Семь этапов на карте с двумя ветками. Пройди берег, выбери высоты или сад, затем дойди через лес/гроты до перевала и маяка. Новые участки начинаются у собственного пути.
+• Финиш: время, точные находки, +6 эфира и +10 монет за первый этап. Бронза/серебро/золото дают 5/12/20 монет только за улучшение медали. При изменённой физике нет рекорда скорости.
+• Монетки отличаются от кристаллов. За 30 в лавке на главном экране можно купить очко выбранному другу. Повтор и перезапуск не дублируют находки.
+• Изученный навык заметнее: заполненная печать, галочка и статус в описании. Улучшения движения различаются по стихиям.
+• Капля сжимается и скачет, Ветерок летит выше и медленнее падает, Огонёк вязко перетекает медленнее Льдинки. Камушек сильным ударом разбивает ящик и отдельную преграду; шесть обломков сохраняют массу и взаимодействуют с водой. Слабое касание не разрушает предмет.
+• Два талисмана с отдельными иллюстрациями; глубинная реликвия доступна любой форме при реальном контакте, в том числе после осушения воды.
+
+Свайп вверх — обычный прыжок. Касание карты — движение. Поглаживание кубика — реакция. Прицел и двойной прыжок изучаются. Пассивки бесплатны.
+
+Сохраняются правила наследования альфы 14: известная форма, ровно две из четырёх карточек от каждого источника, потери и фиксаторы, донор остаётся. Память, обучаемый бот, полные заклинания, разрушение зданий и серверная арена пока отсутствуют. Сообщи форму, участок и действие, если вода, удар или финиш ведут себя неверно.
 
 ## en-US
 
@@ -63,47 +75,59 @@ Small cube. Big world.
 
 ### promotionalText
 
-Choose a tiny friend, give it a gentle stroke and explore. Three maps, five elements, evolution and hybrid cubes in a cozy physics sandbox.
+Seven stages, branching routes and five distinct elements. Guide a little friend to the lighthouse, collect treasures, learn skills and discover new generations.
 
 ### description
 
-Small cube. Big world.
+Small cube. Big worlds.
 
-Choose your first friend from five elements or generate a random one. Ice slides and freezes water on contact. Water moves in tiny hops, swims and squeezes through low passages. Air hovers. Stone rolls and explores the bottom. Fire scorches grass and evaporates water at a health cost.
+Choose a first friend from five elements or create a random one. Ice slides quickly and freezes water by touch. Water is a smooth cubic droplet without fur: it squashes before a small hop, swims and squeezes through low passages. Air flies above surfaces and stays aloft longer. Stone rolls, sinks and breaks designated obstacles with strong impacts. Fire flows more slowly, scorches grass and wood, and evaporates water at a health cost.
 
-Swipe up on the playfield for a free basic jump with slight steering. Tap or drag the map to move. Stroke the cube to make it happy. After learning precise jumping, hold the cube, drag toward flight and release along a dotted trajectory. Double jumping is also learned. A new cube starts with only its automatic, mana-free passive.
+Swipe upward anywhere in the game world for a free basic jump with slight steering. Tap or drag on the map to move. Pet the cube to make it happy. Aimed and double jumps must be learned. A new friend starts with one automatic passive that uses no mana.
 
-Each friend has a personal eight-node tree, distinct artwork, prerequisites and real before/after stats. Learning persists. Water strengthens swimming, Air learns in-flight steering, and elemental signatures work under their stated conditions.
+A connected journey map contains seven stages. From the shore, take the icy branch through the Moss Trail or the warm branch through the Forgotten Grottos. Both meet at Windy Pass and lead to the Ancient Lighthouse. Return to explore the other branch. Each stage has its own geometry and starting point; these are connected levels, not one seamless physical world.
 
-Your first choice is free. Later switches and new friends use aether earned in the world. In the lab, grow or change generations by merging. The future form is known: Water and Fire create Steam; Steam with Fire becomes Fire again. Lost branches do not return from ancestry.
+Crystals grant personal skill points and aether. Gold coins are separate collectibles; spend 30 for another skill point for the selected friend. The finish shows time, finds and rewards, then opens the next route. Speed medals pay only for improvement. Repeating a result or restarting does not duplicate rewards or respawn already found items.
 
-Prepare four inheritance imprints. Exactly two of four are selected from each source. Incompatible cards are lost, duplicates are not replaced, and available pins condition the probabilities. Preview losses before confirming and reopen the saved outcome. The donor stays in your collection; the previous receiving generation remains in ancestry. Donor belongings are not copied. Development imprints are still latent; bot learning and a server arena are not implemented.
+A personal eight-node skill tree includes illustrations, requirements and real before-and-after values. Learned nodes have a filled seal and checkmark. Each element improves a different movement trait. Talismans have distinct illustrations and shapes; the Heart of the Depths can also be reached after draining the water.
 
-Quiet Shore, Crystal Heights and Garden of Warm Sparks offer distinct routes, twelve crystals each and separate finish flags. Push a physical crate, load a suspended bridge and watch waves, splashes and gradual freezing. Menu portraits breathe, blink and react to affection. Ice is fluffy, Water is smooth without fur, Air has flowing wisps, Stone resembles a square meteorite and Fire is covered in flames.
+The first friend is free. Later switches and recruits cost earned aether. Evolution keeps the individual; merging changes a line's generation while the donor stays. The preview explains the resulting form, losses and inheritance. Trained bots and memory are not implemented yet.
 
-Early alpha for iPhone and iPad in portrait and landscape. The interface is Russian. No account, ads, purchases or game server. Progress saves on the device. Fluid is simulated in a two-dimensional plane with dimensional visuals.
+Early native alpha for iPhone and iPad. Russian interface. Water, fur, destruction and balance are still being refined. No accounts, ads or real-money purchases. Progress is stored on the device.
+
+### keywords
+
+cube,physics,platformer,ice,water,jump,puzzle,adventure,cozy
 
 ### betaDescription
 
-ElementalCube 0.1.0 (14)
+Small cube. Big worlds.
 
-Current-form reactions and sequential merging. Prepare four imprints: exactly two from each source. Preview losses, conditional probabilities and pins; reopen the saved outcome. The donor stays, the prior receiving generation is archived. Belongings are not duplicated.
+Choose a first friend from five elements or create a random one. Ice slides quickly and freezes water by touch. Water is a smooth cubic droplet without fur: it squashes before a small hop, swims and squeezes through low passages. Air flies above surfaces and stays aloft longer. Stone rolls, sinks and breaks designated obstacles with strong impacts. Fire flows more slowly, scorches grass and wood, and evaporates water at a health cost.
 
-Three maps, five starters, live portraits and illustrated personal skills. Swipe up to jump, tap/drag the map to move, stroke the cube to pet it. Precise and double jumping require learning; passives are free.
+Swipe upward anywhere in the game world for a free basic jump with slight steering. Tap or drag on the map to move. Pet the cube to make it happy. Aimed and double jumps must be learned. A new friend starts with one automatic passive that uses no mana.
 
-Early alpha, Russian interface. Development imprints remain latent; complete spells, bot learning and an arena are future work.
+A connected journey map contains seven stages. From the shore, take the icy branch through the Moss Trail or the warm branch through the Forgotten Grottos. Both meet at Windy Pass and lead to the Ancient Lighthouse. Return to explore the other branch. Each stage has its own geometry and starting point; these are connected levels, not one seamless physical world.
+
+Crystals grant personal skill points and aether. Gold coins are separate collectibles; spend 30 for another skill point for the selected friend. The finish shows time, finds and rewards, then opens the next route. Speed medals pay only for improvement. Repeating a result or restarting does not duplicate rewards or respawn already found items.
+
+A personal eight-node skill tree includes illustrations, requirements and real before-and-after values. Learned nodes have a filled seal and checkmark. Each element improves a different movement trait. Talismans have distinct illustrations and shapes; the Heart of the Depths can also be reached after draining the water.
+
+The first friend is free. Later switches and recruits cost earned aether. Evolution keeps the individual; merging changes a line's generation while the donor stays. The preview explains the resulting form, losses and inheritance. Trained bots and memory are not implemented yet.
+
+Early native alpha for iPhone and iPad. Russian interface. Water, fur, destruction and balance are still being refined. No accounts, ads or real-money purchases. Progress is stored on the device.
 
 ### whatToTest
 
-Alpha 0.1.0 (14).
+Alpha 15: journey and distinct movement.
 
-• Open inventory → inheritance imprints. Choose up to four learned techniques; the innate passive is excluded. Editing the passport must not disable current skills.
-• Prepare a merge in the lab. Form is known before confirmation; actual selection happens afterwards. Cancel changes neither collection nor currency.
-• Ice + Fire creates Steam. Cold techniques are marked lost; genetic selection probability differs from the chance to express them in the new body.
-• Growth stage 1 unlocks one pin, stage 3 two. Incompatible techniques cannot be pinned. One receiving pin gives 100% for itself, 33% for the other receiving cards and 50% for donor cards.
-• After confirming, the donor remains unchanged; the previous receiver is only in ancestry. Donor items and unspent points are not copied.
-• Inspect four skill outcomes with origin/losses/duplicates and four latent development cards. Reopen the saved report without a new draw.
-• Steam cannot freeze, scorch or squeeze through the Water gap, and is immune to ordinary fire. Steam + Fire returns Fire without the old branches. Unsupported pairs spend no currency.
-• Relaunch: generation, donor, items, passport and outcome persist. Older build-13 hybrids keep their appearance until the next merge.
-• Test iPhone/iPad, rotation, scrolling and live portraits. Swipe up to jump, map to move, cube to pet. Passives never spend mana.
-• Verify badge 14. Include device, form, generation and location in feedback. Trained bots, the full spell catalogue and a server are not present.
+• Seven connected stages with two branches, a convergence at Windy Pass and a final lighthouse. New areas start by their own route.
+• Finish receipt: time, exact finds, 6 aether and 10 gold for a first clear. Bronze/silver/gold grant 5/12/20 gold only when improving a medal. Modified physics does not earn a speed record.
+• Gold coins are separate from crystals. Spend 30 in the home-screen shop for a selected friend's skill point. Restarts and repeated results cannot duplicate rewards.
+• Learned skills have a filled seal, checkmark and detail status. Movement upgrades affect a different trait for each element.
+• Water squashes and hops; Air flies higher and falls more slowly; Fire flows more slowly than Ice with less coasting. Strong Stone impacts break a crate or designated obstacle into six mass-conserving bodies coupled to water. Weak touches do not break them.
+• Two distinct talisman illustrations. The deep relic uses physical reachability, including after evaporation, rather than a Stone-only restriction.
+
+Swipe upward for a free basic jump. Tap/drag the map to move. Pet the cube for affection. Aimed and double jumps require learning. Passives use no mana.
+
+Alpha 14 inheritance remains: known resulting form, exactly two of four cards per source, losses and pins, donor stays. Memory, trained bots, the full spell catalog, building destruction and server arenas are not implemented. Please report the form, area and action when water, collision or finish behaves incorrectly.

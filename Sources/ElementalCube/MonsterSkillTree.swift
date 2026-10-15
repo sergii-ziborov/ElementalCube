@@ -73,10 +73,11 @@ struct MonsterSkillTree:View {
                     Text(node.kind == .passive ? "ПАССИВНАЯ" : (node.kind == .jump || node.kind == .doubleJump ? "ПРИЁМ" : "УЛУЧШЕНИЕ"))
                         .font(.system(size:7,weight:.bold)).tracking(0.8).foregroundStyle(palette.paper.opacity(0.45))
                     Spacer(minLength:0)
-                    Image(systemName:known ? "checkmark" : (locked ? "lock.fill" : "plus"))
-                        .font(.system(size:10,weight:.semibold)).foregroundStyle(known || available ? palette.accent : palette.paper.opacity(0.35))
+                    if known { Label("ИЗУЧЕН",systemImage:"checkmark.seal.fill").font(.system(size:8,weight:.heavy)).foregroundStyle(palette.background).padding(.horizontal,7).padding(.vertical,5).background(palette.accent,in:Capsule()) }
+                    else { Image(systemName:locked ? "lock.fill" : "plus").font(.system(size:10,weight:.semibold)).foregroundStyle(available ? palette.accent : palette.paper.opacity(0.35)) }
                 }
-                SkillArtwork(monster:monster,kind:node.kind,size:80).saturation(locked ? 0.5 : 1).opacity(locked ? 0.78 : 1)
+                SkillArtwork(monster:monster,kind:node.kind,size:80).saturation(locked ? 0.25 : 1).opacity(locked ? 0.5 : 1)
+                    .overlay(alignment:.bottomTrailing) { if known { Image(systemName:"checkmark.circle.fill").font(.system(size:23,weight:.bold)).foregroundStyle(palette.background,palette.accent).offset(x:8,y:4) } }
                 Text(node.title).font(.system(size:13,weight:.semibold)).multilineTextAlignment(.center).lineLimit(2).frame(maxWidth:.infinity,minHeight:34)
                     .foregroundStyle(palette.paper.opacity(locked ? 0.78 : 1))
                 Text(node.summary).font(.system(size:10)).lineSpacing(2).multilineTextAlignment(.center).lineLimit(3).frame(maxWidth:.infinity,minHeight:35)
@@ -85,8 +86,8 @@ struct MonsterSkillTree:View {
                     .font(.system(size:10,weight:known || available ? .semibold : .regular)).foregroundStyle(known || available ? palette.accent : palette.paper.opacity(0.4))
                     .padding(.horizontal,9).frame(height:25).background(palette.accent.opacity(known ? 0.12 : (available ? 0.08 : 0.025)),in:Capsule())
             }.padding(12).frame(maxWidth:.infinity,minHeight:230,alignment:.top)
-                .background(RoundedRectangle(cornerRadius:20).fill(palette.paper.opacity(known ? 0.055 : 0.023)))
-                .overlay(RoundedRectangle(cornerRadius:20).stroke(palette.accent.opacity(known ? 0.58 : (available ? 0.3 : 0.10)),lineWidth:known ? 1.3 : 1))
+                .background(RoundedRectangle(cornerRadius:20).fill(palette.paper.opacity(known ? 0.14 : 0.023)))
+                .overlay(RoundedRectangle(cornerRadius:20).stroke(palette.accent.opacity(known ? 0.95 : (available ? 0.3 : 0.10)),lineWidth:known ? 2.3 : 1))
                 .contentShape(RoundedRectangle(cornerRadius:20))
         }.buttonStyle(SkillPressStyle()).accessibilityIdentifier("skill.\(node.kind.rawValue)")
             .accessibilityLabel(node.title+". "+node.summary)
@@ -125,6 +126,7 @@ struct SkillDetailView:View {
                     let phase=reduced ? 0 : sin(time.date.timeIntervalSinceReferenceDate*1.7)
                     SkillArtwork(monster:monster,kind:kind,size:146).scaleEffect(1+phase*0.025).rotationEffect(.degrees(phase*1.4)).frame(maxWidth:.infinity).frame(height:158)
                 }
+                if known { Label("ИЗУЧЕНО ЭТИМ КУБИКОМ",systemImage:"checkmark.seal.fill").font(.system(size:11,weight:.bold)).tracking(0.7).foregroundStyle(palette.background).padding(12).frame(maxWidth:.infinity).background(palette.accent,in:RoundedRectangle(cornerRadius:14)).accessibilityIdentifier("skill.known.status") }
                 VStack(alignment:.leading,spacing:8) {
                     Text(monster.name+" · "+monster.typeName).font(.system(size:11)).foregroundStyle(palette.accent.opacity(0.8))
                     Text(node.title).font(.system(size:30,weight:.medium,design:.serif)).fixedSize(horizontal:false,vertical:true)

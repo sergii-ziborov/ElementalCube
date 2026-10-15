@@ -23,6 +23,8 @@ final class HapticFeedback {
                 if surface == .grass || surface == .wood { soft.impactOccurred(intensity:CGFloat(impact)) }
                 else { rigid.impactOccurred(intensity:CGFloat(impact)) }
             case let .enteredWater(strength): soft.impactOccurred(intensity:CGFloat(max(0.25,strength)))
+            case .collectedCoin: soft.impactOccurred(intensity:0.4)
+            case .collectedRelic: notification.notificationOccurred(.success)
             case .collectedCrystal: soft.impactOccurred(intensity:0.65)
             case .frozeWater: rigid.impactOccurred(intensity:0.5)
             case .hurt: rigid.impactOccurred(intensity:0.8)

@@ -40,7 +40,7 @@ struct MonsterInventoryView:View {
                 #endif
         }
         .task(id:learnedMessage) {
-            guard !learnedMessage.isEmpty else { return };try? await Task.sleep(nanoseconds:3_000_000_000)
+            guard !learnedMessage.isEmpty else { return };try? await Task.sleep(nanoseconds:6_000_000_000)
             if !Task.isCancelled { withAnimation { learnedMessage="" } }
         }
         .sheet(isPresented:$passport) {
@@ -76,21 +76,26 @@ struct MonsterInventoryView:View {
     var equipment:some View {
         VStack(alignment:.leading,spacing:16) {
             Text("Слот талисмана").font(.system(size:22,design:.serif))
-            Label(monster.equippedCharm?.name ?? "Пока пусто",systemImage:monster.equippedCharm?.symbol ?? "circle.dashed").padding(16).frame(maxWidth:.infinity,alignment:.leading).background(mint.opacity(0.6),in:RoundedRectangle(cornerRadius:16))
+            HStack(spacing:13) { if let item=monster.equippedCharm { ItemArtwork(item:item,size:58) };Text(monster.equippedCharm?.name ?? "Пока пусто").font(.system(size:18,design:.serif));Spacer();if monster.equippedCharm != nil { Label("НАДЕТ",systemImage:"checkmark.seal.fill").font(.system(size:9,weight:.bold)) } }.padding(16).frame(maxWidth:.infinity,alignment:.leading).background(mint.opacity(0.6),in:RoundedRectangle(cornerRadius:16))
             ForEach(MonsterItem.allCases.filter { $0.isEquipment && monster.quantity(of:$0)>0 }) { item in
                 VStack(alignment:.leading,spacing:12) {
-                    Label(item.name,systemImage:item.symbol).font(.system(size:19,design:.serif))
+                    HStack(spacing:15) { ItemArtwork(item:item,size:88);VStack(alignment:.leading,spacing:6) { Text(item.name).font(.system(size:22,design:.serif));Text(monster.equippedCharm==item ? "НАДЕТ И РАБОТАЕТ" : "В РЮКЗАКЕ").font(.system(size:9,weight:.bold)).tracking(1).opacity(0.5) } }.accessibilityIdentifier("item.art."+item.rawValue)
                     Text(item.explanation).font(.system(size:13)).lineSpacing(5)
-                    Button(monster.equippedCharm==item ? "Снять" : "Надеть") { session.equip(monster.equippedCharm==item ? nil : item) }.buttonStyle(PillButton()).accessibilityIdentifier("equip.\(item.rawValue)")
+                    Button { session.equip(monster.equippedCharm==item ? nil : item) } label: {
+                        Text(monster.equippedCharm==item ? "Снять" : "Надеть").contentTransition(.identity).transaction { $0.animation=nil }
+                    }.buttonStyle(PillButton()).accessibilityIdentifier("equip.\(item.rawValue)")
                 }.padding(18).frame(maxWidth:.infinity,alignment:.leading).background(ink.opacity(0.05),in:RoundedRectangle(cornerRadius:18))
             }
-            if !monster.deepRelic { Text("Другой талисман скрыт в глубине под мостом.").font(.system(size:12)).opacity(0.6) }
+            if !monster.deepRelic { Text("Сердце глубин спрятано под мостом. До него можно доплыть, докатиться по дну или добраться после испарения воды.").font(.system(size:12)).opacity(0.6) }
         }
     }
     var findings:some View {
         VStack(alignment:.leading,spacing:16) {
             Label("Эфирный кристалл · \(monster.quantity(of:.aetherShard))",systemImage:"diamond.fill").font(.system(size:21,design:.serif))
+            Text("В этой области: \(session.adventure.foundCrystals(on:session.adventure.map).count) / \(session.adventure.map.definition.shards.count). ").font(.system(size:13))
             Text("Всего найдено этим кубиком: \(monster.crystals.count).").font(.system(size:13))
+            Label("Золотые монеты профиля · \(session.adventure.gold)",systemImage:"circle.inset.filled").font(.system(size:18,design:.serif)).foregroundStyle(Color(red:0.63,green:0.46,blue:0.19))
+            Text("Монеты собираются отдельно от кристаллов. За 30 монет в лагере можно получить очко навыка.").font(.system(size:12)).lineSpacing(4).opacity(0.65)
             Text(MonsterItem.aetherShard.explanation).font(.system(size:12)).lineSpacing(4).opacity(0.65)
             Text("Материалы и снаряжение хранятся у своего владельца. Повторный сбор того же кристалла не создаёт копии.").font(.system(size:12)).lineSpacing(4).opacity(0.65)
         }.padding(18).frame(maxWidth:.infinity,alignment:.leading).background(ink.opacity(0.05),in:RoundedRectangle(cornerRadius:18))

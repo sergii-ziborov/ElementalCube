@@ -75,10 +75,10 @@ final class AlphaTenTests:XCTestCase {
         XCTAssertTrue(ice.particles.contains { $0.kind==6 })
     }
     func testMapsHaveDistinctRoutesAndReachableSupportedFinishes() {
-        XCTAssertEqual(Set(WorldMap.allCases.map { $0.definition.goal.x.description+","+$0.definition.goal.y.description }).count,3)
+        XCTAssertEqual(Set(WorldMap.allCases.map { $0.definition.goal.x.description+","+$0.definition.goal.y.description }).count,7)
         for map in WorldMap.allCases {
             let s=Simulation(map:map);s.wind=0
-            XCTAssertEqual(s.definition.map,map);XCTAssertEqual(s.shards.count,12)
+            XCTAssertEqual(s.definition.map,map);XCTAssertEqual(s.shards.count,[12,12,12,10,9,11,8][WorldMap.allCases.firstIndex(of:map)!])
             XCTAssertTrue(s.platforms.contains { !$0.boundary && abs($0.x-s.definition.goal.x)<$0.width/2 && abs($0.y+$0.height/2-s.definition.goal.y)<0.01 })
             s.placeCube(Vec(s.definition.goal.x,s.definition.goal.y+0.75));advance(s,0.75)
             XCTAssertTrue(s.won,"\(map)")

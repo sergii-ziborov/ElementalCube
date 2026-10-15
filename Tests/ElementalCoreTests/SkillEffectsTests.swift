@@ -74,7 +74,7 @@ final class SkillEffectsTests:XCTestCase {
         var m=skilled(.air,[.mastery,.affinity]);let a=Simulation(form:.air),b=Simulation(form:.air);a.applySkills(of:m)
         XCTAssertTrue(m.learn(m.tree.first { $0.kind == .resilience }!));b.applySkills(of:m)
         for s in [a,b] { s.wind=0;s.waterEnabled=false;s.placeCube(Vec(1.5,15));advance(s,2) }
-        XCTAssertLessThan(a.health,99)
+        XCTAssertLessThan(a.health,99.9)
         XCTAssertEqual(100-b.health,(100-a.health)*0.65,accuracy:0.1)
     }
     func testStoneSignatureChangesTheActualRollingMotor() {

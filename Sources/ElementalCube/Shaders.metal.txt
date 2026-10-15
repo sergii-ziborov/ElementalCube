@@ -147,7 +147,11 @@ fragment float4 background_fragment(Screen v [[stage_in]], constant Uniforms &u 
     }
     sky=mix(sky,float3(.25,.43,.40),smoothstep(.35,.29,uv.y));
     float grain=fract(sin(dot(v.position.xy,float2(12.9898,78.233)))*43758.5453);
-    if(u.world.x>1.5) sky=mix(sky,float3(sky.r*1.13,sky.g*.78,sky.b*.67),.75);
+    if(u.world.x>5.5) sky=mix(sky,float3(.90,.74,.49),.22);
+    else if(u.world.x>4.5) sky=mix(sky,float3(.65,.81,.88),.36);
+    else if(u.world.x>3.5) sky=mix(sky,float3(.19,.29,.38),.52);
+    else if(u.world.x>2.5) sky=mix(sky,float3(.53,.70,.43),.3);
+    else if(u.world.x>1.5) sky=mix(sky,float3(sky.r*1.13,sky.g*.78,sky.b*.67),.75);
     else if(u.world.x>.5) sky=mix(sky,float3(sky.r*.82,sky.g*.94,min(1.,sky.b*1.13)),.8);
     return float4(sky+(grain-.5)*.012,1);
 }

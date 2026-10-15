@@ -160,6 +160,9 @@ final class Renderer: NSObject, MTKViewDelegate {
             let pos=s.shards[i];details.diamond(V3(pos.x,pos.y+sin(s.time*2+Float(i))*0.12,0.6),size:0.30,color:tint(0x7be6ed))
             details.ellipse(center:V3(pos.x,pos.y-0.38,0.65),rx:0.13,ry:0.018,color:tint(0xdcffdd,0.4))
         }
+        for i in s.definition.coins.indices where !s.collectedCoins.contains(i) {
+            let p=s.definition.coins[i];details.vertices.append(contentsOf:Geometry.coin(at:V3(p.x,p.y+sin(s.time*2+Float(i))*0.07,0.72),time:s.time+Float(i)).vertices)
+        }
         for particle in s.particles {
             let color:[C4]=[tint(0xe4deba),tint(0xb8f5ee),tint(0xc2f9ff),tint(0xfaf0b4),tint(0xffab4d),tint(0xdfece5,0.55),tint(0xf3a8be)]
             let alpha=min(1,particle.life*2),at=V3(particle.position.x,particle.position.y,particle.kind==1 || particle.kind==6 ? 1.5 : 0.9)
@@ -183,8 +186,8 @@ final class Renderer: NSObject, MTKViewDelegate {
                 details.ellipse(center:at,rx:particle.kind==1 ? 0.022 : 0.035,ry:particle.kind==1 ? min(0.07,0.028+abs(particle.velocity.y)*0.004) : 0.035,color:color[max(0,min(color.count-1,particle.kind))]*SIMD4(1,1,1,alpha),segments:6)
             }
         }
-        if !s.deepRelic {
-            details.diamond(V3(12,-3.35,0.85),size:0.22,color:tint(0xebc77d))
+        if !s.deepRelic,let relic=s.definition.relicPosition {
+            details.vertices.append(contentsOf:Geometry.relic(at:V3(relic.x,relic.y,0.85),time:s.time).vertices)
         }
         for patch in s.patches where patch.fuel<0.99 || patch.frost>0.05 {
             guard patch.x<7 || patch.x>17 else { continue }
@@ -243,10 +246,17 @@ final class Renderer: NSObject, MTKViewDelegate {
             var box=Geometry.crate()
             for i in box.vertices.indices { box.vertices[i].color=mix(box.vertices[i].color*SIMD4(0.3+s.crateFuel*0.7,0.3+s.crateFuel*0.7,0.3+s.crateFuel*0.7,1),tint(0xc4edff),s.crateFrost*0.8) }
             drawMesh(box,translation(V3(s.crate.position.x,s.crate.position.y,0.55))*rotationZ(s.crate.angle))
-        } else {
+        } else if !s.crateWasShattered {
             var ash=Mesh();ash.box(center:V3(s.crate.position.x,s.crate.position.y-0.5,0.65),size:V3(0.9,0.12,0.7),color:tint(0x383936));drawMesh(ash)
         }
-        let model=translation(V3(p.x,p.y,0.55))*rotationZ(s.bodyAngle)*rotationY(0.12)*scale(s.bodyStretch)
+        for piece in s.obstacles {
+            drawMesh(Geometry.breakable(width:piece.width,height:piece.height,material:piece.material,fuel:piece.fuel),translation(V3(piece.state.position.x,piece.state.position.y,0.55))*rotationZ(piece.state.angle))
+        }
+        for piece in s.debris {
+            drawMesh(Geometry.breakable(width:piece.width,height:piece.height,material:piece.material,fuel:piece.fuel,fragment:true),translation(V3(piece.state.position.x,piece.state.position.y,0.55))*rotationZ(piece.state.angle))
+        }
+        let squishOffset=s.form == .water && s.cube.grounded ? (s.bodyStretch.y-1)*s.cubeHeight/2 : 0
+        let model=translation(V3(p.x,p.y+squishOffset,0.55))*rotationZ(s.bodyAngle)*rotationY(0.12)*scale(s.bodyStretch)
         let steam=s.form == .water && session.inventory.selected.secondaryForm == .fire
         drawBuffer(cube,cubeCount,model,character:true,furSurface:s.form.hasFur,material:steam ? 5 : (s.form == .water ? 1 : (s.form == .fire ? 2 : (s.form == .air ? 3 : (s.form == .stone ? 4 : 0)))))
         drawMesh(steam ? Geometry.steam(time:s.time) : Geometry.elementDetail(form:s.form,time:s.time),model,character:true)
@@ -275,7 +285,8 @@ final class Renderer: NSObject, MTKViewDelegate {
             drawMesh(mist)
         }
         if let charm=session.inventory.selected.equippedCharm {
-            var ornament=Mesh();ornament.diamond(V3(0,-0.34,1.14),size:0.075,color:charm == .deepRelic ? tint(0xebc77d) : tint(0xb3c6b2));drawMesh(ornament,model,character:true)
+            let at=V3(0,-0.34,0.64)
+            drawMesh(charm == .deepRelic ? Geometry.relic(at:at,size:0.24,time:s.time) : Geometry.charm(at:at,size:0.3),model,character:true)
         }
         if (s.form == .fire || s.burning>0) && !s.dead { drawMesh(Geometry.flames(time:s.time,active:s.passiveWorking || s.burning>0,wind:s.windVelocity),model) }
         let blinkPhase=s.time.truncatingRemainder(dividingBy:4.7)

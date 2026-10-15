@@ -4,6 +4,7 @@ import ElementalCore
 struct HomeView:View {
     @ObservedObject var session:GameSession
     @State private var picked:MonsterRecord?
+    @State private var routeSelection:WorldMap?
     @State private var recruiting=false
     @State private var secondID:UUID?
     @State private var mergePreparation:MergePlan?
@@ -72,9 +73,11 @@ struct HomeView:View {
         }
     }
     private var wallet:some View {
-        Label("\(session.adventure.coins)",systemImage:"diamond.fill").font(.system(size:17,weight:.semibold)).monospacedDigit()
-            .padding(.horizontal,15).padding(.vertical,12).background(.white.opacity(0.55),in:Capsule())
-            .accessibilityLabel("Эфир: \(session.adventure.coins)").accessibilityIdentifier("home.wallet")
+        VStack(alignment:.trailing,spacing:5) {
+            Label("\(session.adventure.coins)",systemImage:"diamond.fill").foregroundStyle(ink)
+            Label("\(session.adventure.gold)",systemImage:"circle.inset.filled").foregroundStyle(Color(red:0.63,green:0.46,blue:0.19))
+        }.font(.system(size:13,weight:.semibold)).monospacedDigit().padding(12).background(.white.opacity(0.55),in:RoundedRectangle(cornerRadius:17))
+            .accessibilityElement(children:.ignore).accessibilityLabel("Эфир: \(session.adventure.coins). Золотые монеты: \(session.adventure.gold)").accessibilityIdentifier("home.wallet")
     }
     private var starter:some View {
         VStack(alignment:.leading,spacing:20) {
@@ -116,27 +119,46 @@ struct HomeView:View {
             .overlay(RoundedRectangle(cornerRadius:30).stroke(.white.opacity(0.6)))
     }
     private var journey:some View {
-        VStack(alignment:.leading,spacing:20) {
-            hero(monster)
-            HStack(spacing:10) {
-                Button { session.play(session.adventure.map) } label: { Label("Продолжить",systemImage:"play.fill").frame(maxWidth:.infinity) }.buttonStyle(PillButton()).accessibilityIdentifier("home.play")
-                Button { session.forms=true } label: { Image(systemName:"square.grid.2x2").frame(width:25) }.buttonStyle(PillButton(filled:false)).accessibilityLabel("Инвентарь и навыки").accessibilityIdentifier("home.inventory")
+        let map=routeSelection ?? session.adventure.map
+        let unlocked=session.adventure.canVisit(map),world=map.definition
+        return VStack(alignment:.leading,spacing:18) {
+            HStack(spacing:15) {
+                MonsterPortrait(form:monster.form,secondary:monster.secondaryForm,seed:monster.appearanceSeed,stage:monster.evolutionStage,interactive:true).frame(width:72,height:82).accessibilityIdentifier("home.portrait")
+                VStack(alignment:.leading,spacing:7) {
+                    Text(monster.name).font(.system(size:26,design:.serif))
+                    Text(monster.typeName+" · "+monster.stageName).font(.system(size:11)).opacity(0.6)
+                    Text("Навыки: \(monster.learned.count) / \(monster.tree.count)").font(.system(size:10)).opacity(0.5)
+                }
+                Spacer(minLength:0)
+                Button { session.forms=true } label: { Image(systemName:"square.grid.2x2").frame(width:23,height:25) }.buttonStyle(PillButton(filled:false)).accessibilityLabel("Инвентарь и навыки").accessibilityIdentifier("home.inventory")
             }
-            Text("Куда отправимся?").font(.system(size:26,weight:.medium,design:.serif))
-            ForEach(WorldMap.allCases) { map in
-                Button { session.play(map) } label: {
-                    VStack(alignment:.leading,spacing:12) {
-                        HStack {
-                            Label(map.name,systemImage:map.symbol).font(.system(size:20,weight:.medium,design:.serif))
-                            Spacer()
-                            Image(systemName:session.adventure.completedMaps.contains(map) ? "checkmark.seal.fill" : "arrow.up.right")
-                        }
-                        Text(map.subtitle).font(.system(size:12)).opacity(0.65)
-                        MapPreview(map:map).frame(height:90).clipShape(RoundedRectangle(cornerRadius:12))
-                        Text("12 кристаллов · +6 эфира за первое прохождение").font(.system(size:10)).opacity(0.5)
-                    }.padding(18).frame(maxWidth:.infinity,alignment:.leading).background(.white.opacity(0.47),in:RoundedRectangle(cornerRadius:22)).contentShape(RoundedRectangle(cornerRadius:22))
-                }.buttonStyle(.plain).accessibilityIdentifier("map."+map.rawValue)
+            Button { session.play(session.adventure.map) } label: { Label("Продолжить · "+session.adventure.map.name,systemImage:"play.fill").frame(maxWidth:.infinity) }.buttonStyle(PillButton()).accessibilityIdentifier("home.play")
+            VStack(alignment:.leading,spacing:7) {
+                Text("Дорога к маяку").font(.system(size:29,design:.serif))
+                Text("От берега — по одной из двух веток. За перевалом пути встречаются. Можно вернуться и исследовать другую.").font(.system(size:12)).lineSpacing(4).opacity(0.6)
+                Text("\(session.adventure.completedMaps.count) / \(WorldMap.allCases.count) этапов пройдено").font(.system(size:10,weight:.semibold)).opacity(0.5)
             }
+            JourneyMapView(adventure:session.adventure,selection:Binding(get:{ routeSelection ?? session.adventure.map },set:{ routeSelection=$0 }))
+            VStack(alignment:.leading,spacing:13) {
+                HStack { Label(map.name,systemImage:map.symbol).font(.system(size:24,design:.serif));Spacer();if session.adventure.completedMaps.contains(map) { Image(systemName:"checkmark.seal.fill").foregroundStyle(map.mapColor) } }
+                    .accessibilityIdentifier("journey.selection")
+                Text(map.subtitle).font(.system(size:13)).lineSpacing(4).opacity(0.65)
+                MapPreview(map:map).frame(height:110).clipShape(RoundedRectangle(cornerRadius:14))
+                HStack {
+                    Label("\(session.adventure.foundCrystals(on:map).count) / \(world.shards.count)",systemImage:"diamond.fill")
+                    Spacer();Label("\(session.adventure.foundCoins(on:map).count) / \(world.coins.count)",systemImage:"circle.inset.filled")
+                }.font(.system(size:13,weight:.medium)).monospacedDigit().accessibilityIdentifier("journey.finds")
+                if let time=session.adventure.record(for:map)?.bestTime { Label("Лучшее время · "+formatDuration(time),systemImage:"stopwatch").font(.system(size:12)) }
+                Text("Золото до "+formatDuration(map.times.gold)+" · серебро до "+formatDuration(map.times.silver)+" · бронза до "+formatDuration(map.times.bronze)).font(.system(size:10)).lineSpacing(4).opacity(0.6)
+                if !unlocked { Text("Сначала заверши: "+CampaignRoute.previous(map).map(\.name).joined(separator:" или ")).font(.system(size:12,weight:.medium)).foregroundStyle(map.mapColor) }
+                Button { session.play(map) } label: { Text(unlocked ? (session.adventure.completedMaps.contains(map) ? "Пройти ещё раз" : "Отправиться") : "Маршрут пока закрыт").frame(maxWidth:.infinity) }.buttonStyle(PillButton()).disabled(!unlocked).accessibilityIdentifier("journey.start")
+                Text("Первый финиш: +6 эфира, +10 монет. Медаль скорости: до +20 монет за её улучшение.").font(.system(size:10)).lineSpacing(4).opacity(0.55)
+            }.padding(20).background(.white.opacity(0.5),in:RoundedRectangle(cornerRadius:24))
+            VStack(alignment:.leading,spacing:10) {
+                Text("Лавка наставника").font(.system(size:23,design:.serif))
+                Text("Монетки — отдельные находки. За 30 можно получить ещё одно очко навыка для выбранного друга.").font(.system(size:12)).lineSpacing(4).opacity(0.6)
+                Button { _=session.buyStudyPoint() } label: { Label("Очко навыка · 30 монет",systemImage:"sparkles").frame(maxWidth:.infinity) }.buttonStyle(PillButton(filled:false)).disabled(session.adventure.gold<AdventureState.studyGoldPrice).accessibilityIdentifier("journey.study")
+            }.padding(18).background(mint.opacity(0.3),in:RoundedRectangle(cornerRadius:20))
         }
     }
     private var collection:some View {
@@ -249,7 +271,7 @@ private struct MapPreview:View {
     var body:some View {
         Canvas { context,size in
             let world=map.definition,b=world.bounds
-            let color:Color=map == .glacier ? Color(red:0.39,green:0.62,blue:0.73) : (map == .forge ? Color(red:0.65,green:0.43,blue:0.33) : ink.opacity(0.65))
+            let color=map.mapColor
             context.fill(Path(CGRect(origin:.zero,size:size)),with:.color(color.opacity(0.08)))
             func point(_ v:Vec)->CGPoint { CGPoint(x:CGFloat((v.x-b.minX)/b.width)*size.width,y:CGFloat(1-(v.y-b.minY)/b.height)*size.height) }
             for p in world.terrain {

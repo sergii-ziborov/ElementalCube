@@ -21,7 +21,7 @@ public enum MonsterItem:String,Codable,CaseIterable,Identifiable {
         switch self {
         case .travelerCharm:return "Стартовый оберег. Уменьшает урон от жёстких приземлений на 10%. Занимает слот талисмана."
         case .aetherShard:return "Найден в мире этим монстром. При первом сборе также даёт одно очко для его дерева навыков."
-        case .deepRelic:return "Добыта каменным кубом под мостом. Уменьшает урон от приземлений на 20% и расход маны активными приёмами на 10%. Занимает слот талисмана."
+        case .deepRelic:return "Скрыта под мостом. Доберись до неё любым телом: по дну или после осушения воды. Уменьшает урон от приземлений на 20% и расход маны активными приёмами на 10%. Занимает слот талисмана."
         }
     }
 }
@@ -139,6 +139,7 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
         if let item=item,(!item.isEquipment || quantity(of:item)==0) { return false }
         equippedCharm=item;return true
     }
+    fileprivate mutating func addStudyPoint() { skillPoints+=1 }
     public var isHybrid:Bool { morphology.map { $0.style != nil } ?? !parents.isEmpty }
     public var typeName:String { morphology?.name ?? (hybridStyle?.name ?? form.name) }
     public var treeIdentity:String { id.uuidString+"/"+form.rawValue+"/"+parents.map { $0.id.uuidString }.joined(separator:"+") }
@@ -181,7 +182,7 @@ public struct MonsterRecord:Identifiable,Codable,Equatable {
         guard form == .ice || hybridStyle == .crystal else { return 1 }
         return (hybridStyle == .blizzard ? 1.2 : (hybridStyle == .crystal ? 1.1 : 1))*(1+Float(masteryRanks)*0.25)*coldSignatureMultiplier
     }
-    public var hopImpulse:Float { (hybridStyle == .geyser ? 2.0 : (hybridStyle == .mud ? 1.2 : (hybridStyle == .steam ? 1.45 : 1.6)))*(signature == .spring && learned.contains(.resilience) ? 1.35 : 1) }
+    public var hopImpulse:Float { (hybridStyle == .geyser ? 2.7 : (hybridStyle == .mud ? 1.8 : (hybridStyle == .steam ? 2.0 : 2.35)))*(learned.contains(.momentum) ? 1.2 : 1)*(signature == .spring && learned.contains(.resilience) ? 1.35 : 1) }
     public var manaMultiplier:Float { (equippedCharm == .deepRelic ? 0.9 : 1)*(learned.contains(.affinity) ? 0.85 : 1) }
     public var airControlMultiplier:Float { form == .air ? 1+Float(masteryRanks)*0.2 : 1 }
     fileprivate mutating func migrateStarterJump() { learned.remove(.jump) }
@@ -216,6 +217,9 @@ public struct MonsterInventory:Codable,Equatable {
     }
     @discardableResult public mutating func setInheritanceSelection(_ kinds:[SkillNode.Kind])->Bool {
         guard let i=monsters.firstIndex(where:{ $0.id==selectedID }) else { return false };return monsters[i].setInheritanceSelection(kinds)
+    }
+    @discardableResult public mutating func addStudyPoint()->Bool {
+        guard let i=monsters.firstIndex(where:{ $0.id==selectedID }) else { return false };monsters[i].addStudyPoint();return true
     }
     public mutating func recordFinds(crystals:Set<Int>,relic:Bool) {
         guard let i=monsters.firstIndex(where:{ $0.id==selectedID }) else { return };monsters[i].recordFinds(crystals:crystals,relic:relic)

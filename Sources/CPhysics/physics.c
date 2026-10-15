@@ -143,3 +143,18 @@ bool ec_resize_dynamic(ECWorld *w,int id,float x,float y,float width,float heigh
     b2Shape_SetPolygon(shape,&poly);b2Body_ApplyMassFromShapes(body);b2Body_SetAwake(body,true);
     return true;
 }
+
+// Post-step narrow-phase contact data, not a distance-based damage trigger.
+float ec_contact_speed(ECWorld *w,int a,int b) {
+    if(a<0 || b<0 || a>=w->count || b>=w->count || !b2Body_IsValid(w->bodies[a]) || !b2Body_IsValid(w->bodies[b])) return 0;
+    b2ContactData contacts[32];int n=b2Body_GetContactData(w->bodies[a],contacts,32);float speed=0;
+    for(int i=0;i<n;i++) {
+        b2BodyId x=b2Shape_GetBody(contacts[i].shapeIdA),y=b2Shape_GetBody(contacts[i].shapeIdB);
+        if(!B2_ID_EQUALS(x,w->bodies[b]) && !B2_ID_EQUALS(y,w->bodies[b])) continue;
+        for(int j=0;j<contacts[i].manifold.pointCount;j++) {
+            b2ManifoldPoint p=contacts[i].manifold.points[j];
+            if(p.totalNormalImpulse>0 && p.separation<.025f) speed=fmaxf(speed,-p.normalVelocity);
+        }
+    }
+    return speed;
+}

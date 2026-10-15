@@ -31,8 +31,7 @@ let mint=Color(red:0.68,green:0.92,blue:0.84)
 
 struct GameView:View {
     @ObservedObject var session:GameSession
-    @State private var dismissVictory=false
-    var controlHint:String { "Свайп вверх — прыжок · Карта — движение" }
+        var controlHint:String { "Свайп вверх — прыжок · Карта — движение" }
     var buildLabel:String { "АЛЬФА · " + (Bundle.main.object(forInfoDictionaryKey:"CFBundleVersion") as? String ?? "DEV") }
     var body:some View {
         GeometryReader { geo in
@@ -45,11 +44,20 @@ struct GameView:View {
                     HStack(alignment:.top) {
                         VStack(alignment:.leading,spacing:8) {
                             if !short { Label(session.simulation.definition.map.name.uppercased(),systemImage:session.simulation.definition.map.symbol).font(.system(size:10,weight:.bold)).tracking(2).opacity(0.6) }
-                            Text(session.won ? "Берег пройден!" : "Доберись до флага").font(.system(size:short ? 14 : (compact ? 18 : 22),weight:.medium,design:.serif))
+                            Text(session.won ? "Этап пройден!" : "Доберись до флага").font(.system(size:short ? 14 : (compact ? 18 : 22),weight:.medium,design:.serif))
                             HStack(spacing:7) {
                                 Image(systemName:"diamond.fill")
                                 Text("\(session.shards) / \(session.simulation.shards.count) кристаллов").font(.system(size:11)).opacity(0.7)
                                 if session.deepRelic { Image(systemName:"seal.fill").foregroundStyle(.orange).accessibilityLabel("Глубинная реликвия найдена") }
+                            }
+                            HStack(spacing:10) {
+                                Label("\(session.coinFinds) / \(session.simulation.definition.coins.count)",systemImage:"circle.inset.filled").foregroundStyle(Color(red:0.62,green:0.45,blue:0.19))
+                                Label(formatDuration(session.elapsed),systemImage:"stopwatch")
+                            }.font(.system(size:10)).monospacedDigit().accessibilityIdentifier("game.progress")
+                            if !short {
+                                let dx=session.simulation.definition.goal.x-session.simulation.cube.position.x
+                                let dy=session.simulation.definition.goal.y-session.simulation.cube.position.y
+                                Label("Флаг · \(Int(hypot(dx,dy))) м",systemImage:abs(dy)>abs(dx) ? (dy>0 ? "arrow.up" : "arrow.down") : (dx>0 ? "arrow.right" : "arrow.left")).font(.system(size:10,weight:.medium)).opacity(0.6)
                             }
                             if compact {
                                 HStack(spacing:5) {
@@ -78,22 +86,13 @@ struct GameView:View {
                         MonsterPortrait(form:session.form,secondary:session.inventory.selected.secondaryForm,seed:session.inventory.selected.appearanceSeed,stage:session.inventory.selected.evolutionStage,wetness:Double(session.wetness),health:0).frame(width:76,height:84)
                         Text("Нужна новая попытка").font(.system(size:24,design:.serif))
                         Text("Здоровье закончилось. Огонь теряет его в воде; жёсткие падения тоже оставляют след.").font(.system(size:13)).multilineTextAlignment(.center).frame(maxWidth:280)
-                        Button("Вернуться на берег") { session.reset() }.buttonStyle(PillButton())
+                        Button("Новая попытка") { session.reset() }.buttonStyle(PillButton())
                     }.padding(30).background(cream,in:RoundedRectangle(cornerRadius:24)).foregroundStyle(ink)
                 }
-                if session.won && !dismissVictory {
+                if let receipt=session.completion {
                     ZStack {
-                        ink.opacity(0.12).ignoresSafeArea()
-                        VStack(spacing:17) {
-                            MonsterPortrait(form:session.form,secondary:session.inventory.selected.secondaryForm,seed:session.inventory.selected.appearanceSeed,stage:session.inventory.selected.evolutionStage,celebration:3,interactive:true).frame(width:80,height:88)
-                            Image(systemName:"flag.checkered").font(.system(size:34)).foregroundStyle(Color(red:0.64,green:0.54,blue:0.27))
-                            Text("Маленький куб.\nПервое приключение.").font(.system(size:30,weight:.medium,design:.serif)).multilineTextAlignment(.center)
-                            Text("Берег пройден за \(session.jumps) прыжков.\nСобрано кристаллов: \(session.shards) из \(session.simulation.shards.count).").font(.system(size:14)).lineSpacing(5).opacity(0.7).multilineTextAlignment(.center)
-                            HStack(spacing:10) {
-                                Button("Ещё раз") { dismissVictory=false;session.reset() }.buttonStyle(PillButton())
-                                Button("Исследовать") { dismissVictory=true }.buttonStyle(PillButton(filled:false))
-                            }.padding(.top,7)
-                        }.padding(36).background(cream,in:RoundedRectangle(cornerRadius:26)).shadow(color:ink.opacity(0.15),radius:35,y:10)
+                        ink.opacity(0.3).ignoresSafeArea()
+                        RouteFinishView(session:session,receipt:receipt).frame(maxWidth:570,maxHeight:geo.size.height-24).clipShape(RoundedRectangle(cornerRadius:28)).padding(12)
                     }
                 }
             }
@@ -103,7 +102,6 @@ struct GameView:View {
             .onChange(of:session.abilityInfo) { _ in session.cancelAim() }
             .onChange(of:session.forms) { _ in session.cancelAim() }
             .onChange(of:session.settings) { _ in session.cancelAim() }
-            .onChange(of:session.won) { won in if !won { dismissVictory=false } }
             .onReceive(NotificationCenter.default.publisher(for:appInactiveNotification)) { _ in session.cancelAim();session.saveInventory();session.paused=true }
         }
     }
@@ -170,6 +168,7 @@ struct GameView:View {
             VStack(alignment:.trailing,spacing:6) {
                 Text(session.aiming ? "ОТПУСТИ, ЧТОБЫ ПРЫГНУТЬ" : (session.grounded ? "НА ОПОРЕ" : (session.inWater ? "В ВОДЕ" : "В ПОЛЁТЕ")))
                     .font(.system(size:9,weight:.medium)).tracking(1).opacity(0.7)
+                if session.inventory.selected.learned.contains(.jump) { Text("✓ Прицел изучен"+(session.inventory.selected.learned.contains(.doubleJump) ? " · ✓ Двойной" : "")).font(.system(size:9,weight:.semibold)).foregroundStyle(mint) }
                 if !short { Text(controlHint).font(.system(size:compact ? 10 : 12)) }
             }.foregroundStyle(cream).padding(.vertical,12).allowsHitTesting(false)
         }.padding(.top,8).background {

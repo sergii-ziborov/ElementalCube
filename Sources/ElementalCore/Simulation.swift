@@ -11,7 +11,7 @@ public struct BodyState {
 public enum Mood { case curious, focused, delighted, startled, displeased, sleepy }
 public enum Surface:String { case grass="трава",stone="камень",ice="лёд",wood="дерево",water="вода" }
 public enum SimulationFeedback:Equatable {
-    case jumped, landed(impact:Float,surface:Surface), enteredWater(strength:Float), collectedCrystal, frozeWater, finished, hurt, died
+    case jumped, landed(impact:Float,surface:Surface), enteredWater(strength:Float), collectedCrystal, collectedCoin, collectedRelic, frozeWater, finished, hurt, died
 }
 public struct Platform {
     public let x:Float,y:Float,width:Float,height:Float
@@ -25,6 +25,17 @@ public struct Mote { public var position:Vec;public var velocity:Vec;public var 
 public final class Simulation {
     public static let timestep:Float=1/120
     public let definition:WorldDefinition
+    public let attemptID=UUID()
+    private var runStartedAt:Float?,finishedAt:Float?
+    public private(set) var standardPhysics=true
+    public var elapsed:Double? { runStartedAt.map { Double((finishedAt ?? time)-$0) } }
+    public var outcome:RunOutcome? { won ? RunOutcome(attemptID:attemptID,map:definition.map,seconds:elapsed,standardPhysics:standardPhysics,crystals:collected.count,coins:collectedCoins.count) : nil }
+    private func startRun() { if runStartedAt == nil && !won && !dead { runStartedAt=time } }
+    public func restoreFinds(crystals:Set<Int>,coins:Set<Int>,relic:Bool) {
+        collected.formUnion(crystals.filter { shards.indices.contains($0) })
+        collectedCoins.formUnion(coins.filter { definition.coins.indices.contains($0) })
+        deepRelic=deepRelic || relic
+    }
     public let form:ElementForm
     public let fur:FurPhysics
     public let waterField:WaterField
@@ -37,6 +48,11 @@ public final class Simulation {
     public private(set) var burning:Float=0
     private var ignitionHeat:Float=0,burnTime:Float=0,burnFeedbackClock:Float=0
     public private(set) var crateExists=true
+    public private(set) var crateWasShattered=false
+    public private(set) var obstacles:[BreakableObject]=[]
+    public private(set) var debris:[DebrisPiece]=[]
+    public private(set) var mobilityUnlocked=false
+    private var waterWindup:Float=0
     public private(set) var crateFuel:Float=1
     public private(set) var crateFrost:Float=0
     public private(set) var crateBurning:Float=0
@@ -53,6 +69,7 @@ public final class Simulation {
     public private(set) var surface:Surface = .grass
     public private(set) var jumps=0,respawns=0,won=false,deepRelic=false
     public private(set) var collected:Set<Int>=[]
+    public private(set) var collectedCoins:Set<Int>=[]
     public private(set) var particles:[Mote]=[]
     public let shards:[Vec]
     public private(set) var trails:[SurfaceTrail]=[]
@@ -61,7 +78,8 @@ public final class Simulation {
     public private(set) var freezesOnContact=false,burnsOnContact=false,heatImmune=false,compresses=false
     public private(set) var evolutionStage=0
     public private(set) var cubeWidth:Float=1.12,cubeHeight:Float=1.12
-    private var hopImpulse:Float=1.6
+    private var hopImpulse:Float=2.35
+    public private(set) var movementSpeed:Float=0,hoverHeight:Float=0
     private var hopClock:Float=0,trailClock:Float=0,petTime:Float=0
     public var compressed:Bool { cubeHeight<0.8 }
     public var jumpSkill:JumpSkill
@@ -85,21 +103,24 @@ public final class Simulation {
     private var airJumpUsed=false
     public private(set) var airControlMultiplier:Float=1
     private var lastSupportTime:Float = -10
-    public var gravity:Float=18 { didSet { ec_gravity(world,gravity) } }
-    public var waterEnabled=true
+    public var gravity:Float=18 { didSet { ec_gravity(world,gravity);if gravity != 18 { standardPhysics=false } } }
+    public var waterEnabled=true { didSet { if !waterEnabled { standardPhysics=false } } }
     public var manaCostMultiplier:Float=1,landingDamageMultiplier:Float=1,fireDamageMultiplier:Float=1
     public func applySkills(of monster:MonsterRecord) {
         guard monster.form==form else { return }
         creatureForm=monster.currentForm;freezesOnContact=monster.freezesOnContact;burnsOnContact=monster.burnsOnContact;heatImmune=monster.heatImmune;compresses=monster.compresses
         hybridStyle=monster.hybridStyle;evolutionStage=monster.evolutionStage;hopImpulse=monster.hopImpulse
-        directionalJumpUnlocked=monster.learned.contains(.jump);doubleJumpUnlocked=monster.learned.contains(.doubleJump);airControlMultiplier=monster.airControlMultiplier
+        movementSpeed=monster.groundSpeed;hoverHeight=monster.hoverHeight
+        mobilityUnlocked=monster.learned.contains(.momentum);directionalJumpUnlocked=monster.learned.contains(.jump);doubleJumpUnlocked=monster.learned.contains(.doubleJump);airControlMultiplier=monster.airControlMultiplier
         airManeuverUnlocked=monster.learned.contains(.control)
         swimSpeedMultiplier=monster.swimSpeedMultiplier;dryingMultiplier=monster.dryingMultiplier;regenerationRate=monster.regenerationRate
         rollingMultiplier=monster.rollingMultiplier;evaporationMultiplier=monster.evaporationMultiplier;windForceMultiplier=monster.windForceMultiplier
         jumpSkill=monster.jumpSkill;waterField.conductivity=monster.conductivity
         manaCostMultiplier=monster.manaMultiplier;landingDamageMultiplier=monster.landingDamageMultiplier;fireDamageMultiplier=monster.fireDamageMultiplier
     }
-    public var jumpScale:Float=1,movement:Float=0,wind:Float=1
+    public var jumpScale:Float=1 { didSet { if jumpScale != 1 { standardPhysics=false } } }
+    public var movement:Float=0 { didSet { if abs(movement)>0.05 { startRun() } } }
+    public var wind:Float=1 { didSet { if wind != 1 { standardPhysics=false } } }
     public let waterLeft:Float=7,waterRight:Float=17
     public var waterLevel:Float { waterField.surface(at:cube.position.x) }
     public var inWater:Bool {
@@ -114,7 +135,7 @@ public final class Simulation {
     public var nextJumpManaCost:Float { (nextJumpIsAirJump ? 10 : 6)*manaCostMultiplier }
     public var hovering:Bool {
         guard form == .air else { return false }
-        return abs(cube.position.y-supportHeight(at:cube.position.x)-0.76)<0.35 && abs(cube.velocity.y)<1.5
+        return abs(cube.position.y-supportHeight(at:cube.position.x)-hoverHeight)<0.4 && abs(cube.velocity.y)<1.5
     }
     public var bodyAngle:Float {
         if form == .stone { return cube.angle }
@@ -125,6 +146,12 @@ public final class Simulation {
     }
     public var bodyStretch:SIMD3<Float> {
         if form == .stone { return SIMD3(repeating:1) }
+        if form == .water {
+            let airborne = !cube.grounded && !inWater ? max(-0.12,min(0.2,abs(cube.velocity.y)*0.055)) : 0
+            let y=max(0.62,min(1.3,1-squash+airborne+sin(time*3)*0.012))
+            // The liquid body bulges sideways rather than losing volume.
+            return SIMD3(cubeWidth/1.12/sqrt(y),cubeHeight/1.12*y,1/sqrt(y))
+        }
         let breathing=sin(time*2.7)*0.012
         let flow:Float=form == .fire ? sin(time*7-cube.position.x*0.8)*0.045 : 0
         let hello=petTime>0 ? sin(petTime*12)*0.025 : 0
@@ -133,10 +160,11 @@ public final class Simulation {
         let y=1-squash-breathing-flow-hello-hybrid
         return SIMD3(x*cubeWidth/1.12,y*cubeHeight/1.12,1)
     }
-    public var windVelocity:Float { wind*(1.2+sin(time*0.9)*0.6+sin(time*2.3)*0.25) }
+    public var windVelocity:Float { definition.map.windFactor*wind*(1.2+sin(time*0.9)*0.6+sin(time*2.3)*0.25) }
     public init(form:ElementForm = .ice,map:WorldMap = .shore) {
         definition=map.definition;shards=definition.shards;fireSources=definition.campfires
         self.form=form;jumpSkill=JumpSkill.initial(for:form);fur=FurPhysics(form:form)
+        movementSpeed=form.motion.speed;hoverHeight=form.motion.hoverHeight
         let profile=CreatureForm(form);creatureForm=profile;freezesOnContact=profile.freezesOnContact;burnsOnContact=profile.burnsOnContact;heatImmune=profile.heatImmune;compresses=profile.compresses
         platforms=definition.platforms
         waterField=WaterField(platforms:platforms)
@@ -162,8 +190,12 @@ public final class Simulation {
             ec_material(world,id,p.surface == .ice ? 0.015 : (i<2 ? 0.85 : 0.62),i<2 ? 0.02 : 0.10)
         }
         _=ec_slope(world,7,9.4,false);_=ec_slope(world,14.6,17,true)
-        cubeID=ec_box(world,2.7,0.75,1.12,1.12,form.density,true,form != .stone)
+        cubeID=ec_box(world,definition.spawn.x,definition.spawn.y,1.12,1.12,form.density,true,form != .stone)
         crateID=ec_box(world,5.1,0.7,1.25,1.25,0.48,true,false)
+        for object in definition.obstacles {
+            let id=ec_box(world,object.position.x,object.position.y,object.width,object.height,object.material.density,false,false)
+            if id>=0 { obstacles.append(BreakableObject(id:id,width:object.width,height:object.height,material:object.material,state:state(id))) }
+        }
         let points=(0...6).map { i -> Vec in
             let t=Float(i)/6;return Vec(10.1+3.8*t,-0.2-sin(t*Float.pi)*0.12)
         }
@@ -191,6 +223,8 @@ public final class Simulation {
     }
     private func sync() {
         cube=state(cubeID);if crateExists { crate=state(crateID) }
+        for i in obstacles.indices { obstacles[i].state=state(obstacles[i].id) }
+        for i in debris.indices { debris[i].state=state(debris[i].id) }
         bridge=bridgeIDs.enumerated().map { BridgeSection(fuel:bridgeFuel[$0.offset],burning:bridgeBurning[$0.offset],state:state($0.element),width:bridgeWidths[$0.offset]) }
     }
     public var fluidBodies:[FluidBody] {
@@ -200,6 +234,8 @@ public final class Simulation {
         var result=[body(cubeID,cube,cubeWidth,cubeHeight)]
         if crateExists { result.append(body(crateID,crate,1.25,1.25)) }
         for (i,section) in bridge.enumerated() { result.append(body(bridgeIDs[i],section.state,section.width,section.height)) }
+        for piece in debris { result.append(body(piece.id,piece.state,piece.width,piece.height)) }
+        for piece in obstacles { result.append(body(piece.id,piece.state,piece.width,piece.height)) }
         return result
     }
     public func intersectsSolid(at position:Vec)->Bool { ec_blocked(world,cubeID,position.x,position.y) }
@@ -240,7 +276,7 @@ public final class Simulation {
         guard !directed || directionalJumpUnlocked else { return false }
         let cost:Float=nextJumpIsAirJump ? 10*manaCostMultiplier : (directed ? 6*manaCostMultiplier : 0)
         guard canLaunch,mana+0.0001>=cost else { return false }
-        guard jump(directed ? request : Vec(max(-3.2,min(3.2,request.x)),7.2),buffered:false) else { return false }
+        guard jump(directed ? request : Vec(max(-3.2,min(3.2,request.x)),form.motion.jump),buffered:false) else { return false }
         mana=max(0,mana-cost);return true
     }
     /// Physical launch primitive; gesture input must use performJump for skill/cost checks.
@@ -254,7 +290,7 @@ public final class Simulation {
         ec_impulse(world,cubeID,velocity.x-cube.velocity.x,velocity.y-cube.velocity.y)
         lastSupportTime = -10;cooldown=swimming ? 0.4 : 0.16
         if swimming { waterField.liquid.addFoam(at:Vec(cube.position.x,waterLevel),strength:0.8) }
-        squash = form == .stone ? 0 : -0.28;jumps+=1;buffer=nil;mood = .focused;emotionTime=0.3
+        startRun();waterWindup=0;squash = form == .stone ? 0 : -0.28;jumps+=1;buffer=nil;mood = .focused;emotionTime=0.3
         record(.jumped);emit(cube.position,kind:0,count:12);sync();return true
     }
     public func resetCube() {
@@ -264,6 +300,7 @@ public final class Simulation {
         won=false;health=100;mana=100;sync();updateFur()
     }
     public func placeCube(_ p:Vec) { guard p.x.isFinite,p.y.isFinite else { return };ec_teleport(world,cubeID,p.x,p.y);lastSupportTime = -10;sync();updateFur() }
+    public func placeCube(_ p:Vec,velocity:Vec) { placeCube(p);ec_velocity(world,cubeID,velocity.x,velocity.y,0);sync() }
     public func placeCrate(_ p:Vec,angle:Float=0,velocity:Vec=Vec(0,0),omega:Float=0) {
         guard crateExists,p.x.isFinite,p.y.isFinite,angle.isFinite else { return }
         ec_teleport(world,crateID,p.x,p.y);ec_rotate(world,crateID,angle);ec_velocity(world,crateID,velocity.x,velocity.y,omega);sync()
@@ -276,7 +313,7 @@ public final class Simulation {
     public func step() {
         let dt=Self.timestep;time+=dt;ticks+=1;cooldown=max(0,cooldown-dt)
         if ticks%4==0 { updateWaterShape() }
-        let old=cube!,wasInWater=inWater
+        let old=cube!,oldCrate=crate!,wasInWater=inWater
         passiveWorking=passiveEquipped && !dead
         mana=min(100,mana+dt*4)
         if waterEnabled {
@@ -293,21 +330,24 @@ public final class Simulation {
         shakeTime=max(0,shakeTime-dt);shakeCooldown=max(0,shakeCooldown-dt)
         if !dead {
             if form == .air {
-                ec_drive(world,cubeID,movement,0.85*airControlMultiplier*(airManeuverUnlocked ? 1.4 : 1),true)
+                ec_drive(world,cubeID,movement*movementSpeed/2.7,form.motion.grip*airControlMultiplier*(airManeuverUnlocked ? 1.4 : 1),true)
                 ec_force(world,cubeID,windVelocity*cube.mass*0.5*windForceMultiplier,0)
+                if passiveWorking { ec_force(world,cubeID,0,cube.mass*gravity*(1-form.motion.gravityFraction)) }
                 if passiveWorking && cooldown<=0 {
                     let height=max(supportHeight(at:cube.position.x),supportHeight(at:cube.position.x+movement*0.9))
-                    let gap=cube.position.y-height-0.76
+                    let gap=cube.position.y-height-hoverHeight-sin(time*2.2)*0.045
                     if gap<0.8 && cube.velocity.y<2 {
-                        let lift=max(0,min(gravity*3*airControlMultiplier,gravity-gap*75*airControlMultiplier-cube.velocity.y*12))
+                        let lift=max(0,min(gravity*3*airControlMultiplier,gravity*form.motion.gravityFraction-gap*60*airControlMultiplier-cube.velocity.y*12))
                         ec_force(world,cubeID,0,cube.mass*lift)
                     }
                 }
             } else if cube.grounded {
-                ec_drive(world,cubeID,movement,surface == .ice ? 0.55 : (form == .stone && passiveWorking ? 1.6*rollingMultiplier : 1),form != .stone)
+                ec_drive(world,cubeID,movement*movementSpeed/(form == .stone ? 3.4 : 2.7),surface == .ice ? 0.55 : form.motion.grip*(form == .stone && passiveWorking ? rollingMultiplier : 1),form != .stone)
+                if form == .fire { ec_force(world,cubeID,-cube.velocity.x*cube.mass*2.8,0) }
                 if form == .water && abs(movement)>0.15 && !compressed && hopClock<=0 && !inWater {
-                    ec_impulse(world,cubeID,0,hopImpulse);hopClock=0.35;squash = -0.12
-                }
+                    waterWindup+=dt;squash=0.3*min(1,waterWindup/0.11)
+                    if waterWindup>=0.11 { ec_impulse(world,cubeID,0,hopImpulse);hopClock=0.48;waterWindup=0;squash = -0.19 }
+                } else { waterWindup=0 }
             } else if inWater {
                 // Stone keeps its rolling motor in water: loss of a floor contact
                 // for one step must not turn a heavy walker into a weak swimmer.
@@ -331,7 +371,7 @@ public final class Simulation {
         }
         if waterEnabled { applyLiquidForces(dt:dt) }
         if form != .air { ec_force(world,cubeID,windVelocity*cube.mass*0.035*windForceMultiplier,0) }
-        ec_step(world,dt);sync();if cube.grounded { lastSupportTime=time;if cooldown<=0 && cube.velocity.y<0.3 { airJumpUsed=false } };if inWater { airJumpUsed=false }
+        ec_step(world,dt);sync();updateBreakables(previous:old,previousCrate:oldCrate,dt:dt);if cube.grounded { lastSupportTime=time;if cooldown<=0 && cube.velocity.y<0.3 { airJumpUsed=false } };if inWater { airJumpUsed=false }
         wetness=inWater ? min(1,wetness+dt*2) : max(0,wetness-dt*0.065*dryingMultiplier)
         if form == .fire { wetness=0 }
         if !wasInWater && inWater {
@@ -374,8 +414,13 @@ public final class Simulation {
                 let p=shards[i],d=cube.position
                 if hypot(p.x-d.x,p.y-d.y)<1 { collected.insert(i);emit(p,kind:3,count:24);mood = .delighted;emotionTime=1.8;record(.collectedCrystal) }
             }
-            if form == .stone && hypot(cube.position.x-12,cube.position.y+3.3)<0.7 && !deepRelic { deepRelic=true;emit(Vec(12,-3.3),kind:3,count:40);record(.collectedCrystal) }
-            if hypot(cube.position.x-definition.goal.x,cube.position.y-definition.goal.y-0.56)<1.1 && cube.grounded && !won { won=true;emit(Vec(definition.goal.x,definition.goal.y+2),kind:3,count:55);record(.finished) }
+            for i in definition.coins.indices where !collectedCoins.contains(i) {
+                let p=definition.coins[i]
+                if hypot(p.x-cube.position.x,p.y-cube.position.y)<0.82 { collectedCoins.insert(i);emit(p,kind:3,count:8);record(.collectedCoin) }
+            }
+            if let relic=definition.relicPosition,!deepRelic,hypot(cube.position.x-relic.x,cube.position.y-relic.y)<0.8 { deepRelic=true;emit(relic,kind:3,count:40);mood = .delighted;emotionTime=2;record(.collectedRelic) }
+            let finishHeight=form == .air ? hoverHeight : 0.56
+            if hypot(cube.position.x-definition.goal.x,cube.position.y-definition.goal.y-finishHeight)<1.1 && (cube.grounded || hovering) && !won { won=true;finishedAt=time;movement=0;emit(Vec(definition.goal.x,definition.goal.y+2),kind:3,count:55);record(.finished) }
         }
         if cube.position.y < definition.bounds.minY-2 || !cube.position.x.isFinite { respawns+=1;resetCube() }
         for i in particles.indices {
@@ -436,6 +481,78 @@ public final class Simulation {
             trails.append(SurfaceTrail(position:Vec(cube.position.x,cube.position.y-cubeHeight/2+0.015),life:kind == .ice ? 2.2 : 2.6,form:kind))
             if trails.count>180 { trails.removeFirst(trails.count-180) }
         }
+    }
+    private func fragment(id:Int32,origin:String,body:BodyState,width:Float,height:Float,material:BreakMaterial,mass:Float,fuel:Float=1,kick:Vec=Vec(0,0),spreadEnergy:Float=0) {
+        ec_remove(world,id)
+        let cols=3,rows=2,w=width/Float(cols),h=height/Float(rows),c=cos(body.angle),s=sin(body.angle)
+        var created:[Int32]=[]
+        for y in 0..<rows { for x in 0..<cols {
+            let local=Vec((Float(x)+0.5)*w-width/2,(Float(y)+0.5)*h-height/2)
+            let d=Vec(local.x*c-local.y*s,local.x*s+local.y*c),p=Vec(body.position.x+d.x,body.position.y+d.y)
+            let fragment=ec_box(world,p.x,p.y,w,h,material.density,true,false)
+            guard fragment>=0 else { continue }
+            ec_rotate(world,fragment,body.angle)
+            ec_velocity(world,fragment,body.velocity.x-body.angularVelocity*d.y+kick.x,body.velocity.y+body.angularVelocity*d.x+kick.y,body.angularVelocity)
+            created.append(fragment)
+        } }
+        let rawMass=created.reduce(Float(0)) { $0+state($1).mass }
+        let radialMoment=created.reduce(Float(0)) { sum,id in
+            let p=state(id).position,d=Vec(p.x-body.position.x,p.y-body.position.y)
+            return sum+mass/Float(created.count)*(d.x*d.x+d.y*d.y)
+        }
+        let spread=sqrt(2*max(0,spreadEnergy)/max(0.0001,radialMoment))
+        for fragment in created {
+            ec_density(world,fragment,material.density*mass/max(0.0001,rawMass))
+            let q=state(fragment),d=Vec(q.position.x-body.position.x,q.position.y-body.position.y)
+            // Symmetric equal-mass kicks sum to zero momentum and torque. Their
+            // kinetic energy comes from measured contact dissipation, not RNG.
+            ec_velocity(world,fragment,q.velocity.x+d.x*spread,q.velocity.y+d.y*spread,q.angularVelocity)
+            debris.append(DebrisPiece(id:fragment,origin:origin,width:w,height:h,material:material,state:state(fragment),fuel:fuel))
+        }
+        emit(body.position,kind:0,count:25);record(.landed(impact:0.9,surface:material == .wood ? .wood : .stone))
+    }
+    private func updateBreakables(previous:BodyState,previousCrate:BodyState,dt:Float) {
+        func linearEnergy(_ b:BodyState)->Float { 0.5*b.mass*(b.velocity.x*b.velocity.x+b.velocity.y*b.velocity.y) }
+        let cubeInertia=cube.mass*(cubeWidth*cubeWidth+cubeHeight*cubeHeight)/12
+        let cubeLoss=linearEnergy(previous)-linearEnergy(cube)-0.5*cubeInertia*(cube.angularVelocity*cube.angularVelocity-previous.angularVelocity*previous.angularVelocity)
+        let impactGain:Float=form == .stone && mobilityUnlocked ? 1.25 : 1
+        if crateExists {
+            let speed=ec_contact_speed(world,cubeID,crateID)
+            if 0.5*cube.mass*speed*speed*impactGain>20 {
+                let body=crate!;crateExists=false;crateWasShattered=true;crateBurning=0
+                let inertia=body.mass*2*1.25*1.25/12
+                let lost=max(0,cubeLoss+linearEnergy(previousCrate)-linearEnergy(body)-0.5*inertia*(body.angularVelocity*body.angularVelocity-previousCrate.angularVelocity*previousCrate.angularVelocity))
+                fragment(id:crateID,origin:"crate",body:body,width:1.25,height:1.25,material:.wood,mass:body.mass,fuel:crateFuel,spreadEnergy:lost*0.2)
+            }
+        }
+        var broken:[Int]=[]
+        for i in obstacles.indices {
+            let object=obstacles[i],speed=ec_contact_speed(world,cubeID,object.id)
+            if 0.5*cube.mass*speed*speed*impactGain>object.material.energy {
+                let radius=min(0.08,min(object.width,object.height)*0.2)
+                let mass=(object.width*object.height-(4-Float.pi)*radius*radius)*object.material.density
+                let raw=Vec((previous.velocity.x-cube.velocity.x)*cube.mass/mass,(previous.velocity.y-cube.velocity.y)*cube.mass/mass)
+                let limit=sqrt(2*max(0,cubeLoss)*0.7/mass),speed=hypot(raw.x,raw.y)
+                let gain=min(1,limit/max(0.0001,speed)),kick=Vec(raw.x*gain,raw.y*gain)
+                broken.append(i)
+                fragment(id:object.id,origin:"obstacle/"+String(object.id),body:object.state,width:object.width,height:object.height,material:object.material,mass:mass,fuel:object.fuel,kick:kick,spreadEnergy:max(0,cubeLoss)*0.15)
+            } else if object.material == .wood {
+                let wet=waterEnabled && waterField.contains(object.state.position)
+                let heat=burnsOnContact && passiveWorking && hypot(cube.position.x-object.state.position.x,cube.position.y-object.state.position.y)<1.3
+                if heat && !wet { obstacles[i].fuel=max(0,obstacles[i].fuel-dt*0.18) }
+                if obstacles[i].fuel<=0 { ec_remove(world,object.id);broken.append(i) }
+            }
+        }
+        for i in broken.reversed() { obstacles.remove(at:i) }
+        // Physical wood fragments can burn or be quenched as well. No fragment
+        // is deleted just because it leaves the camera or touches water.
+        var ash:[Int]=[]
+        for i in debris.indices where debris[i].material == .wood {
+            let p=debris[i].state.position
+            if burnsOnContact && passiveWorking && hypot(cube.position.x-p.x,cube.position.y-p.y)<0.9 && !(waterEnabled && waterField.contains(p)) { debris[i].fuel=max(0,debris[i].fuel-dt*0.18) }
+            if debris[i].fuel<=0 { ec_remove(world,debris[i].id);ash.append(i) }
+        }
+        for i in ash.reversed() { debris.remove(at:i) }
     }
     private func updateBurning(dt:Float) {
         guard !heatImmune else { burning=0;burnTime=0;ignitionHeat=0;return }
@@ -525,7 +642,7 @@ public final class Simulation {
         if materialClock>=1/30 {
             // Retained water adds mass and rotational inertia to furry forms.
             if form.hasFur { ec_density(world,cubeID,form.density*(1+wetness*0.16)) }
-            waterField.step(dt:materialClock,coldSource:cold && waterEnabled ? cube.position : nil,heatSource:fire ? cube.position : nil,occupied:crateExists ? [cube.position,crate.position] : [cube.position],coldFoot:fluidBodies[0].corners.map(\.y).min())
+            waterField.step(dt:materialClock,coldSource:cold && waterEnabled ? cube.position : nil,heatSource:fire ? cube.position : nil,occupied:fluidBodies.map(\.center),coldFoot:fluidBodies[0].corners.map(\.y).min())
             materialClock=0
             syncIceColliders()
             // A cold contact changes the actual body's friction as well as its appearance.

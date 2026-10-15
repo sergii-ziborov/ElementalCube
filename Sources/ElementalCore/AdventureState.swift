@@ -60,8 +60,14 @@ public struct AdventureState:Codable,Equatable {
     public private(set) var completedMaps:Set<WorldMap>=[]
     public var map:WorldMap = .shore
     private var lineageArchive:[MonsterRecord]?=nil
+    private var journey:JourneyLedger?=nil
     public var archivedGenerations:[MonsterRecord] { lineageArchive ?? [] }
-    public static let switchPrice=2,recruitPrice=4,mergePrice=4
+    public var gold:Int { journey?.gold ?? 0 }
+    public func record(for map:WorldMap)->RouteRecord? { journey?.records[map.rawValue] }
+    public func canVisit(_ map:WorldMap)->Bool { CampaignRoute.available(map,completed:completedMaps) || (started && map==self.map) }
+    public func foundCrystals(on map:WorldMap)->Set<Int> { Set(map.definition.shards.indices.filter { inventory.selected.crystals.contains(map.crystalOffset+$0) }) }
+    public func foundCoins(on map:WorldMap)->Set<Int> { Set(map.definition.coins.indices.filter { journey?.claimedCoins.contains(map.rawValue+"/"+String($0)) ?? false }) }
+    public static let switchPrice=2,recruitPrice=4,mergePrice=4,studyGoldPrice=30
     public init(inventory:MonsterInventory=MonsterInventory(),migratingLegacy:Bool=false) {
         self.inventory=inventory
         if migratingLegacy {
@@ -91,13 +97,40 @@ public struct AdventureState:Codable,Equatable {
     }
     public mutating func recordFinds(_ indices:Set<Int>,relic:Bool) {
         guard started else { return }
-        let keys=Set(indices.map { map.rawValue+"/"+String($0) })
+        let valid=indices.filter { map.definition.shards.indices.contains($0) }
+        let keys=Set(valid.map { map.rawValue+"/"+String($0) })
         coins+=keys.subtracting(claimedRewards).count;claimedRewards.formUnion(keys)
-        inventory.recordFinds(crystals:Set(indices.map { map.crystalOffset+$0 }),relic:relic)
+        inventory.recordFinds(crystals:Set(valid.map { map.crystalOffset+$0 }),relic:relic && map.definition.relicPosition != nil)
     }
     public mutating func finishMap() {
         guard started,!completedMaps.contains(map) else { return }
         completedMaps.insert(map);coins+=6
+    }
+    public mutating func recordCoins(_ indices:Set<Int>) {
+        guard started else { return };if journey == nil { journey=JourneyLedger() }
+        let keys=Set(indices.filter { map.definition.coins.indices.contains($0) }.map { map.rawValue+"/"+String($0) })
+        journey!.gold+=keys.subtracting(journey!.claimedCoins).count;journey!.claimedCoins.formUnion(keys)
+    }
+    @discardableResult public mutating func buyStudyPoint(for owner:UUID)->Bool {
+        guard started,owner==inventory.selectedID,gold>=Self.studyGoldPrice else { return false }
+        guard inventory.addStudyPoint() else { return false };journey!.gold-=Self.studyGoldPrice;return true
+    }
+    @discardableResult public mutating func finishRun(_ run:RunOutcome)->FinishReceipt? {
+        guard started,run.map==map,run.isValid,canVisit(map) else { return nil }
+        if let old=journey?.receipts.first(where:{ $0.attemptID==run.attemptID }) { return old.map==run.map ? old : nil }
+        if journey == nil { journey=JourneyLedger() }
+        var record=journey!.records[map.rawValue] ?? RouteRecord()
+        let first = !completedMaps.contains(map),clearGold=record.clearGoldClaimed ? 0 : 10
+        let medal=run.standardPhysics ? run.seconds.map { map.times.medal(seconds:$0) } ?? .none : .none
+        let speedGold=max(0,medal.reward-record.medal.reward)
+        let ranked=run.standardPhysics && (run.seconds.map { $0>=1 } ?? false)
+        let newBest=ranked && (record.bestTime.map { run.seconds!<$0 } ?? true)
+        if newBest { record.bestTime=run.seconds };record.medal=max(record.medal,medal);record.clearGoldClaimed=true
+        let receipt=FinishReceipt(attemptID:run.attemptID,map:map,seconds:run.seconds,standardPhysics:run.standardPhysics,medal:medal,newBest:newBest,crystals:run.crystals,crystalTotal:map.definition.shards.count,coins:run.coins,coinTotal:map.definition.coins.count,aetherAward:first ? 6 : 0,clearGold:clearGold,speedGold:speedGold)
+        completedMaps.insert(map);coins+=receipt.aetherAward;journey!.gold+=receipt.goldAward
+        journey!.records[map.rawValue]=record;journey!.receipts.append(receipt)
+        if journey!.receipts.count>64 { journey!.receipts.removeFirst() }
+        return receipt
     }
     public var canEvolve:Bool {
         let m=inventory.selected
@@ -138,7 +171,7 @@ public struct AdventureState:Codable,Equatable {
     }
     public var isValid:Bool {
         let active=Set(inventory.monsters.map(\.id)),retired=Set(archivedGenerations.map(\.id))
-        return inventory.isValid && coins>=0 && owned.isSubset(of:active) && (!started || owned.contains(inventory.selectedID)) &&
+        return inventory.isValid && (journey?.isValid ?? true) && coins>=0 && owned.isSubset(of:active) && (!started || owned.contains(inventory.selectedID)) &&
         retired.count==archivedGenerations.count && active.isDisjoint(with:retired) && archivedGenerations.allSatisfy { $0.geneticsValid }
     }
 }

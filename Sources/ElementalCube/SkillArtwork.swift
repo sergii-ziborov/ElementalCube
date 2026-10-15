@@ -16,7 +16,7 @@ struct SkillPalette {
     }
 }
 
-private enum SkillArtLibrary {
+enum SkillArtLibrary {
     #if os(macOS)
     static let images:[String:NSImage]=load()
     static func load()->[String:NSImage] {
@@ -28,7 +28,7 @@ private enum SkillArtLibrary {
         names.reduce(into:[:]) { result,name in if let url=bundle.url(forResource:name,withExtension:"png",subdirectory:"SkillArt"),let image=UIImage(contentsOfFile:url.path) { result[name]=image } }
     }
     #endif
-    static let names=["fire","ice","water","air","stone","aim","momentum","double","control","affinity"]+["fire","ice","water","air","stone"].flatMap { [$0+"-mastery",$0+"-resilience"] }
+    static let names=["item-traveler-charm","item-deep-relic","fire","ice","water","air","stone","aim","momentum","double","control","affinity"]+["fire","ice","water","air","stone"].flatMap { [$0+"-mastery",$0+"-resilience"] }
     static var bundle:Bundle {
         #if SWIFT_PACKAGE
         return .module
@@ -90,5 +90,24 @@ struct SkillArtwork:View {
     }
     private var gem:Path {
         Path { p in p.move(to:CGPoint(x:size*0.5,y:size*0.06));for q in [CGPoint(x:size*0.86,y:size*0.29),CGPoint(x:size*0.78,y:size*0.7),CGPoint(x:size*0.5,y:size*0.94),CGPoint(x:size*0.20,y:size*0.7),CGPoint(x:size*0.12,y:size*0.29)] { p.addLine(to:q) };p.closeSubpath() }
+    }
+}
+
+
+struct ItemArtwork:View {
+    let item:MonsterItem
+    var size:CGFloat=68
+    var body:some View {
+        Group {
+            if item == .aetherShard {
+                Image(systemName:"diamond.fill").resizable().scaledToFit().foregroundStyle(Color(red:0.24,green:0.73,blue:0.83)).padding(size*0.21)
+            } else if let image=SkillArtLibrary.images[item == .deepRelic ? "item-deep-relic" : "item-traveler-charm"] {
+                #if os(macOS)
+                Image(nsImage:image).resizable().interpolation(.high).scaledToFit()
+                #else
+                Image(uiImage:image).resizable().interpolation(.high).scaledToFit()
+                #endif
+            }
+        }.frame(width:size,height:size).accessibilityHidden(true)
     }
 }

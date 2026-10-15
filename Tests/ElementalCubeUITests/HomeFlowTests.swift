@@ -60,10 +60,11 @@ final class HomeFlowTests:XCTestCase {
         XCTAssertTrue(app.otherElements["game.cube"].waitForExistence(timeout:10));XCTAssertEqual(worldValue("form"),"water")
     }
     func testEveryMapOpensItsOwnPhysicalWorld() {
-        app.launchArguments=["--ui-testing"];app.launch()
-        for map in ["glacier","forge","shore"] {
+        app.launchArguments=["--ui-testing","--ui-testing-rich"];app.launch()
+        for map in ["glacier","forge","meadow","grotto","windridge","sanctuary","shore"] {
             XCTAssertTrue(app.buttons["home.open"].waitForExistence(timeout:15));app.buttons["home.open"].tap()
             let entry=app.buttons["map."+map];reveal(entry);entry.tap()
+            let start=app.buttons["journey.start"];reveal(start);XCTAssertTrue(start.isEnabled);start.tap()
             XCTAssertTrue(app.otherElements["game.cube"].waitForExistence(timeout:10))
             XCTAssertEqual(worldValue("map"),map)
         }

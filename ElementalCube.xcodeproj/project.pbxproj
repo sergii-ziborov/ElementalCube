@@ -16,6 +16,7 @@
 		46B2D0008C4E2CB113E37EDD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = DCA21A3F0F39D6F8AF5FB880 /* PrivacyInfo.xcprivacy */; };
 		4AC2C2884C638BF8C8251A98 /* PortraitAnimationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5246294C5A43CEC72A790ACE /* PortraitAnimationTests.swift */; };
 		5278B1EC015B920E61D8FB9B /* HomeFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A8880634436BF2F6E5FF0B2 /* HomeFlowTests.swift */; };
+		5FC1DA72143CD8FB37FAC6F6 /* JourneyMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E0BC9EC009BF90F3A978D3A /* JourneyMapView.swift */; };
 		6FE515883904C1D0FDA0B0D0 /* MetamorphosisView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 755845CDEA8FDC3990610492 /* MetamorphosisView.swift */; };
 		821A39A544EF4D8151CD918C /* Shaders.metal.txt in Resources */ = {isa = PBXBuildFile; fileRef = 97261F415D73C9626802614D /* Shaders.metal.txt */; };
 		889D5A0ED68D0E9649667918 /* Geometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC396B4A3B7C80D027BB9ACF /* Geometry.swift */; };
@@ -29,6 +30,7 @@
 		CE09702B7CEFC681ADF56B34 /* ElementalCore in Frameworks */ = {isa = PBXBuildFile; productRef = FB5057996CF37D2F9733E2B8 /* ElementalCore */; };
 		D7A6B962EA6F8411A6046CB4 /* MonsterInventoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45FDB19C14061EC60CA49FFE /* MonsterInventoryView.swift */; };
 		D91EC89ED0F941130850CAB6 /* WaterRenderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3838B3A949861E097C0151E8 /* WaterRenderingTests.swift */; };
+		DBC48DD0FA4731BA59A82829 /* JourneyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D9074F51866FB50E8B113B4 /* JourneyUITests.swift */; };
 		DF584476488943933C2C2721 /* MonsterPortraitGallery.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13F256399449FE2A0782472 /* MonsterPortraitGallery.swift */; };
 		E8E500AB556F8BF24D5BF68E /* CharacterPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF7C05E30092DE633FD1CE96 /* CharacterPreview.swift */; };
 		F2A6F9FCD391A1960ACCF7A7 /* DirectInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32855687569320763186F2E9 /* DirectInteractionTests.swift */; };
@@ -53,6 +55,7 @@
 		32855687569320763186F2E9 /* DirectInteractionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectInteractionTests.swift; sourceTree = "<group>"; };
 		3838B3A949861E097C0151E8 /* WaterRenderingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaterRenderingTests.swift; sourceTree = "<group>"; };
 		3CFD35AE5C340B06920CFE10 /* Renderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Renderer.swift; sourceTree = "<group>"; };
+		3D9074F51866FB50E8B113B4 /* JourneyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyUITests.swift; sourceTree = "<group>"; };
 		438C0E63FC590D7D069405AD /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		45FDB19C14061EC60CA49FFE /* MonsterInventoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonsterInventoryView.swift; sourceTree = "<group>"; };
 		5246294C5A43CEC72A790ACE /* PortraitAnimationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PortraitAnimationTests.swift; sourceTree = "<group>"; };
@@ -63,6 +66,7 @@
 		827340D774BED81ABE7C2E5D /* MetalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetalView.swift; sourceTree = "<group>"; };
 		8C34F4DA1110D88BE16AE28B /* SkillArtwork.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillArtwork.swift; sourceTree = "<group>"; };
 		8DC2A708111F3151AD170F1B /* SkillTreeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillTreeTests.swift; sourceTree = "<group>"; };
+		8E0BC9EC009BF90F3A978D3A /* JourneyMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyMapView.swift; sourceTree = "<group>"; };
 		97261F415D73C9626802614D /* Shaders.metal.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Shaders.metal.txt; sourceTree = "<group>"; };
 		ACD70767405358A8EC3E4192 /* GameSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameSession.swift; sourceTree = "<group>"; };
 		B173F3C3F688479006701C5F /* HapticFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticFeedback.swift; sourceTree = "<group>"; };
@@ -94,6 +98,7 @@
 				FEE2D03440ACC0A8C3900CAD /* BoilingTests.swift */,
 				32855687569320763186F2E9 /* DirectInteractionTests.swift */,
 				1A8880634436BF2F6E5FF0B2 /* HomeFlowTests.swift */,
+				3D9074F51866FB50E8B113B4 /* JourneyUITests.swift */,
 				0F8A17F89C63959F7EE89082 /* MetamorphosisTests.swift */,
 				5246294C5A43CEC72A790ACE /* PortraitAnimationTests.swift */,
 				8DC2A708111F3151AD170F1B /* SkillTreeTests.swift */,
@@ -138,6 +143,7 @@
 				EC396B4A3B7C80D027BB9ACF /* Geometry.swift */,
 				B173F3C3F688479006701C5F /* HapticFeedback.swift */,
 				5F4D79D741B81C81E5829C57 /* HomeView.swift */,
+				8E0BC9EC009BF90F3A978D3A /* JourneyMapView.swift */,
 				827340D774BED81ABE7C2E5D /* MetalView.swift */,
 				755845CDEA8FDC3990610492 /* MetamorphosisView.swift */,
 				45FDB19C14061EC60CA49FFE /* MonsterInventoryView.swift */,
@@ -271,6 +277,7 @@
 				889D5A0ED68D0E9649667918 /* Geometry.swift in Sources */,
 				0B68F27132DD33DE57F4C35E /* HapticFeedback.swift in Sources */,
 				2CDB6CD0DD516F07652E112A /* HomeView.swift in Sources */,
+				5FC1DA72143CD8FB37FAC6F6 /* JourneyMapView.swift in Sources */,
 				3CBA114B3AEB50B9C91AE17D /* MetalView.swift in Sources */,
 				6FE515883904C1D0FDA0B0D0 /* MetamorphosisView.swift in Sources */,
 				D7A6B962EA6F8411A6046CB4 /* MonsterInventoryView.swift in Sources */,
@@ -289,6 +296,7 @@
 				3E586F77A620315D608515E2 /* BoilingTests.swift in Sources */,
 				F2A6F9FCD391A1960ACCF7A7 /* DirectInteractionTests.swift in Sources */,
 				5278B1EC015B920E61D8FB9B /* HomeFlowTests.swift in Sources */,
+				DBC48DD0FA4731BA59A82829 /* JourneyUITests.swift in Sources */,
 				3CFC9B6968011CF84E4FCB20 /* MetamorphosisTests.swift in Sources */,
 				4AC2C2884C638BF8C8251A98 /* PortraitAnimationTests.swift in Sources */,
 				BF79B5EAA44AE6B7EEB62B54 /* SkillTreeTests.swift in Sources */,
@@ -432,7 +440,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = XMS5ZC28UJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ElementalCube;
@@ -494,7 +502,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = XMS5ZC28UJ;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = ElementalCube;

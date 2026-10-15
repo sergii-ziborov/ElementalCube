@@ -44,6 +44,40 @@ enum Geometry {
     // Ice's coat fills this difference. Smooth Water must reach its 1.12 m
     // collider itself, otherwise the waterline outlines an invisible larger box.
     private static let waterScale:Float=1.12/0.96
+    static func coin(at p:V3,time:Float)->Mesh {
+        var m=Mesh();let width:Float=0.10+abs(cos(time*2))*0.09
+        m.ellipse(center:p,rx:width,ry:0.21,color:tint(0xae7028),segments:24)
+        m.ellipse(center:p+V3(-0.015,0.01,0.025),rx:width*0.83,ry:0.18,color:tint(0xf5ce66),segments:24)
+        m.line(p+V3(0,-0.08,0.03),p+V3(0,0.08,0.03),width:0.025,color:tint(0xfff0ae))
+        return m
+    }
+    static func relic(at p:V3,size:Float=1,time:Float=0)->Mesh {
+        var m=Mesh()
+        for i in 0..<40 {
+            let a=Float(i)*2*Float.pi/40,b=Float(i+1)*2*Float.pi/40
+            func point(_ a:Float,_ r:Float,_ z:Float)->V3 { p+V3(cos(a)*r*size,sin(a)*r*size,z*size) }
+            m.quad(point(a,0.34,0.03),point(b,0.34,0.03),point(b,0.23,0.03),point(a,0.23,0.03),tint(i%5==0 ? 0xe7c77d : 0xb58b52),V3(0,0,1))
+            m.quad(point(a,0.34,-0.1),point(b,0.34,-0.1),point(b,0.34,0.03),point(a,0.34,0.03),tint(0x806545))
+        }
+        m.ellipse(center:p,rx:0.23*size,ry:0.23*size,color:tint(0x42bab6),segments:32)
+        for i in 0..<32 {
+            let a=Float(i)*0.2+time*0.4,b=a+0.2,r=Float(i)/32*0.20
+            m.line(p+V3(cos(a)*r*size,sin(a)*r*size,0.045*size),p+V3(cos(b)*(r+0.006)*size,sin(b)*(r+0.006)*size,0.045*size),width:0.022*size,color:tint(0xc4ffec))
+        }
+        m.ellipse(center:p+V3(0,0,0.06*size),rx:0.06*size,ry:0.06*size,color:tint(0xf3ebc6))
+        for i in 0..<3 {
+            let a=Float(i)*2*Float.pi/3+0.4
+            m.line(p+V3(cos(a)*0.26*size,sin(a)*0.26*size,0.05*size),p+V3(cos(a)*0.42*size,sin(a)*0.42*size,0.05*size),width:0.09*size,color:tint(0xd7b576))
+        }
+        return m
+    }
+    static func charm(at p:V3,size:Float)->Mesh {
+        var m=Mesh();m.box(center:p,size:V3(0.55*size,0.6*size,0.18*size),color:tint(0x818376))
+        for i in 0..<25 {
+            let a=Float(i)*0.28,r=Float(i)/25*0.2*size,b=a+0.28
+            m.line(p+V3(cos(a)*r,sin(a)*r,0.11*size),p+V3(cos(b)*(r+0.006*size),sin(b)*(r+0.006*size),0.11*size),width:0.035*size,color:tint(0xe9bd69))
+        };return m
+    }
     static func cube(form:ElementForm = .ice)->Mesh {
         var mesh=Mesh(),r=RNG()
         // Rounded solid cube: six subdivided faces, with physical depth.
@@ -514,3 +548,22 @@ enum Geometry {
     }
 }
 func mix(_ a:C4,_ b:C4,_ t:Float)->C4 { a+(b-a)*t }
+
+extension Geometry {
+    static func breakable(width:Float,height:Float,material:BreakMaterial,fuel:Float,fragment:Bool=false)->Mesh {
+        var mesh=Mesh()
+        let base=material == .wood ? tint(0xa88354) : tint(0x808479)
+        let color=mix(tint(0x302b25),base,fuel)
+        mesh.box(center:V3(0,0,0),size:V3(width,height,fragment ? 0.55 : 0.9),color:color)
+        if material == .wood {
+            for i in 0..<3 {
+                let y=(Float(i)/3-0.33)*height
+                mesh.line(V3(-width*0.4,y,0.46),V3(width*0.4,y+height*0.04,0.46),width:0.012,color:tint(0x604c35,0.65))
+            }
+        } else if !fragment {
+            mesh.line(V3(-width/2,0.07,0.46),V3(0.1,-0.04,0.46),width:0.018,color:tint(0x4b554e))
+            mesh.line(V3(0.1,-0.04,0.46),V3(0.2,-height/2,0.46),width:0.016,color:tint(0x4b554e))
+        }
+        return mesh
+    }
+}

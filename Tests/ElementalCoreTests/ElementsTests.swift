@@ -45,9 +45,9 @@ final class ElementsTests:XCTestCase {
         XCTAssertFalse(s.crateExists)
         XCTAssertFalse(s.intersectsSolid(at:Vec(5.1,0.7)))
     }
-    func testAirSlidesWithoutRollingAndSkimsWater() {
+    func testAirFliesWithoutRollingAndStaysAboveWater() {
         let s=Simulation(form:.air);s.wind=0;s.equipPassive(true);s.placeCube(Vec(9.4,0.1));advance(s,4)
-        XCTAssertLessThan(s.wetness,0.1);XCTAssertEqual(s.cube.position.y,s.waterLevel+0.76,accuracy:0.2)
+        XCTAssertLessThan(s.wetness,0.1);XCTAssertEqual(s.cube.position.y,s.waterLevel+s.hoverHeight,accuracy:0.2)
         s.movement=1;advance(s,1)
         XCTAssertGreaterThan(s.cube.position.x,11)
         XCTAssertEqual(s.cube.angle,0,accuracy:0.001);XCTAssertEqual(s.cube.angularVelocity,0,accuracy:0.001)
